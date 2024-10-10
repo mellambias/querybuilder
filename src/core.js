@@ -1,0 +1,562 @@
+/*
+@description Implementa el SQL 2006
+*/
+import QueryBuilder from "./querybuilder.js";
+import { privilegios, objectTypes, splitCommand } from "./utils/utils.js";
+class Core {
+	constructor() {
+		this.dataType = "sql2006";
+	}
+
+	createDatabase(name, options) {
+		let query = `CREATE DATABASE ${name}`;
+		for (const option in options) {
+			query += `\n ${option} ${option[option]}`;
+		}
+		return query;
+	}
+	dropDatabase(name, options) {
+		const query = `DROP DATABASE ${name}`;
+		return query;
+	}
+
+	use(database) {
+		return `USE ${database}`;
+	}
+	createSchema(name, options) {
+		let query = `CREATE SCHEMA ${name}`;
+		if (options?.authorization) {
+			query += ` AUTHORIZATION ${options.authorization}`;
+		}
+		if (options?.charset) {
+			query += `\n DEFAULT CHARACTER SET ${options?.charset}`;
+		}
+		return query;
+	}
+	dropSchema(name, options) {
+		const query = `DROP SCHEMA ${name}`;
+		if (/^(CASCADE|RESTRICT)$/i.test(options?.drop)) {
+			return `${query} ${options.drop.toUpperCase()}`;
+		}
+		return query;
+	}
+
+	/*
+	CREATE [ {GLOBAL | LOCAL} TEMPORARY ] TABLE <nombre de la tabla>
+( <elemento de la tabla> [ {, <elemento de la tabla> }... ] )
+[ ON COMMIT { PRESERVE | DELETE } ROWS ]
+ */
+	createTable(name, options) {
+		try {
+			let sql = "CREATE";
+			if (/^(GLOBAL|LOCAL)$/i.test(options?.temporary)) {
+				sql += ` ${options.temporary.toUpperCase()} TEMPORARY`;
+			}
+			sql += ` TABLE ${name}`;
+			if (options?.cols) {
+				const columns = Object.keys(options.cols).map((key) => {
+					return this.column(key, options.cols[key]);
+				});
+
+				if (options?.constraints) {
+					columns.push(this.tableConstraints(options.constraints));
+				}
+
+				sql += `\n ( ${columns.join(",\n ")} )`;
+			}
+			if (
+				options?.temporary &&
+				/^(PRESERVE|DELETE)$/i.test(options?.onCommit)
+			) {
+				sql += `\n ON COMMIT ${options?.onCommit.toUpperCase()} ROWS`;
+			}
+			return sql;
+		} catch (error) {
+			throw new Error(error.message);
+		}
+	}
+	column(name, options) {
+		let command = "";
+		if (typeof options === "string") {
+			const dataType = options.toDataType(this.dataType);
+			command = `${name.validSqlId()} ${dataType}`;
+		}
+		if (options?.type) {
+			command = `${name.validSqlId()} ${options.type.toDataType(this.dataType)}`;
+		}
+		// Restricciones de tabla
+		if (options?.values) {
+			for (const value of options.values) {
+				switch (value.toUpperCase()) {
+					case "NOT NULL":
+						command += " NOT NULL";
+						break;
+					case "UNIQUE":
+						command += " UNIQUE";
+						break;
+					case "PRIMARY KEY":
+						command += " PRIMARY KEY";
+						break;
+				}
+			}
+		}
+		// valor por defecto
+		if (options?.default !== undefined) {
+			command += ` DEFAULT ${typeof options.default === "string" ? `'${options.default}'` : options.default}`;
+		}
+		if (options?.foreingKey) {
+			const { table, column, match } = options.foreingKey;
+			command += `\nREFERENCES ${table}`;
+			if (column) {
+				command += ` (${column})`;
+			}
+			if (/^(FULL|PARTIAL|SIMPLE)$/i.test(match)) {
+				command += `\nMATCH ${match.toUpperCase()}`;
+			}
+		}
+		if (options?.check) {
+			command += ` CHECK ( ${options.check} )`;
+		}
+		return command;
+	}
+
+	tableConstraints(constraints) {
+		function acction(value) {
+			if (/^(CASCADE|SET NULL|SET DEFAULT|RESTRICT|NO ACTION)$/i.test(value)) {
+				return value.toUpperCase();
+			}
+			return "";
+		}
+		const command = [];
+		for (const constraint of constraints) {
+			if (/^(NOT NULL|UNIQUE|PRIMARY KEY)$/i.test(constraint.type)) {
+				command.push(
+					`CONSTRAINT ${constraint.name} ${constraint.type.toUpperCase()} (${constraint.cols.join(", ")})`,
+				);
+			}
+			if (/^(FOREIGN KEY)$/i.test(constraint.type) || constraint?.foreignKey) {
+				const { table, cols, match, actions } = constraint.foreignKey;
+				let foreignKey = `CONSTRAINT ${constraint.name} FOREIGN KEY (${constraint.cols.join(", ")}) REFERENCES ${table}`;
+				if (cols) {
+					foreignKey += ` (${cols})`;
+				}
+
+				if (/^(FULL|PARTIAL|SIMPLE)$/i.test(match)) {
+					foreignKey += ` MATCH ${match.toUpperCase()}`;
+				}
+				if (actions?.onUpdate) {
+					foreignKey += ` ON UPDATE ${acction(actions.onUpdate)}`;
+				}
+				if (actions?.onDelete) {
+					foreignKey += ` ON DELETE ${acction(actions.onDelete)}`;
+				}
+				command.push(foreignKey);
+			}
+			if (constraint?.check) {
+				command.push(
+					`CONSTRAINT ${constraint.name} CHECK ( ${constraint.check} )`,
+				);
+			}
+		}
+		return command.join(",\n ");
+	}
+	alterTable(name, builder) {
+		return `ALTER TABLE ${name}\n`;
+	}
+	addColumn(name, options) {
+		return `ADD COLUMN ${this.column(name, options)}`;
+	}
+	alterColumn(name) {
+		return `ALTER COLUMN ${name}`;
+	}
+
+	dropColumn(name, option) {
+		let sql = `DROP COLUMN ${name}`;
+		if (/^(CASCADE|RESTRICT)$/i.test(option)) {
+			sql += ` ${option.toUpperCase()}`;
+		}
+		return sql;
+	}
+	setDefault(value) {
+		return ` SET DEFAULT ${typeof value === "string" ? `'${value}'` : value}`;
+	}
+
+	dropDefault() {
+		return " DROP DEFAULT";
+	}
+
+	addConstraint(name, option) {
+		const constraint = [
+			{
+				name,
+				check: option.check,
+			},
+		];
+		return `ADD ${this.tableConstraints(constraint)}`;
+	}
+
+	dropTable(name, option) {
+		let sql = `DROP TABLE ${name}`;
+		if (/^(CASCADE|RESTRICT)$/i.test(option)) {
+			sql += ` ${option.toUpperCase()}`;
+		}
+		return sql;
+	}
+
+	createType(name, options) {
+		let sql = `CREATE TYPE ${name}`;
+		if (options?.as) {
+			sql += ` AS ${options.as}`;
+		}
+		if (options?.final !== undefined) {
+			sql += options.final ? "\nFINAL" : "\nNOT FINAL";
+		}
+		return sql;
+	}
+	createAssertion(name, assertion) {
+		return `CREATE ASSERTION ${name} CHECK ( ${assertion} )`;
+	}
+	createDomain(name, options) {
+		let sql = `CREATE DOMAIN ${name} AS ${options.as}`;
+		if (options?.default !== undefined) {
+			sql += ` DEFAULT ${options.default}`;
+		}
+		if (options?.constraint) {
+			sql += `\n CONSTRAINT ${options.constraint.name} CHECK ( ${options.constraint.check} )`;
+		}
+		return sql;
+	}
+	createView(name, options) {
+		let sql = `CREATE VIEW ${name}`;
+		if (options?.cols) {
+			sql += `\n( ${options.cols.join(", ")} )`;
+		}
+		sql += ` AS\n${options.as}`;
+		if (options?.check === true) {
+			sql += " WITH CHECK OPTION";
+		}
+		return sql;
+	}
+	dropView(name) {
+		return `DROP VIEW ${name}`;
+	}
+	// Seguridad
+
+	createRole(name, options) {
+		let sql = `CREATE ROLE ${name}`;
+		if (/^(CURRENT_USER|CURRENT_ROLE)$/i.test(options?.admin)) {
+			sql += ` WITH ADMIN ${options.admin}`;
+		}
+		return sql;
+	}
+	dropRoles(names) {
+		const stack = [];
+		if (typeof names === "string") {
+			return `DROP ROLE ${names}`;
+		}
+		for (const name of names) {
+			stack.push(this.dropRoles(name));
+		}
+		return stack.join(";\n");
+	}
+	checkPrivilegio(name) {
+		const nameUppercase = name.toUpperCase();
+		const [command, length] = splitCommand(nameUppercase);
+		return privilegios.find((item) => item === command);
+	}
+	checkObjectType(name) {
+		const nameUppercase = name.toUpperCase();
+		return objectTypes.find((item) => item === nameUppercase);
+	}
+
+	privilegios(names) {
+		let sql = "";
+		if (typeof names === "string") {
+			if (/^(ALL PRIVILEGES|ALL)$/i.test(names)) {
+				sql += "ALL PRIVILEGES\n";
+			}
+		} else {
+			sql += `${names.filter((name) => this.checkPrivilegio(name)).join(", ")}\n`;
+		}
+		return sql;
+	}
+	onObjects(on) {
+		let sql = "";
+		if (typeof on === "string") {
+			sql += `ON TABLE ${on}`;
+		} else {
+			if (on?.objectType !== undefined) {
+				sql += `ON ${this.checkObjectType(on.objectType)} ${on.name}`;
+			} else if (on?.objectType === undefined) {
+				sql += `ON TABLE ${on.name}`;
+			} else {
+				throw new Error("El objectType no es correcto");
+			}
+		}
+		return sql;
+	}
+	grant(privilegios, on, to, options) {
+		let sql = "GRANT ";
+		sql += this.privilegios(privilegios);
+		sql += this.onObjects(on);
+		if (typeof to === "string") {
+			if (/^(PUBLIC|ALL)$/i.test(to)) {
+				sql += "\nTO PUBLIC ";
+			}
+		} else {
+			sql += `\nTO ${to.join(", ")}`;
+		}
+		if (options?.withGrant === true) {
+			sql += " WITH GRANT OPTION";
+		}
+		if (options?.grantBy !== undefined) {
+			if (/^(CURRENT_USER|CURRENT_ROLE)$/i.test(options.grantBy)) {
+				sql += `\nGRANTED BY ${options.grantBy.toUpperCase()}`;
+			}
+		}
+		return sql;
+	}
+	revoke(privilegios, on, from, options) {
+		let sql = "REVOKE ";
+		if (options?.grantOption === true) {
+			sql += "GRANT OPTION FOR ";
+		}
+		sql += this.privilegios(privilegios);
+		sql += this.onObjects(on);
+		if (typeof from === "string") {
+			if (/^(PUBLIC|ALL)$/i.test(from)) {
+				sql += "\nFROM PUBLIC";
+			}
+		} else {
+			sql += `\nFROM ${from.join(", ")}`;
+		}
+		if (options?.with !== undefined) {
+			sql += " WITH GRANT OPTION";
+		}
+		if (options?.grantBy !== undefined) {
+			if (/^(CURRENT_USER|CURRENT_ROLE)$/i.test(options.grantBy)) {
+				sql += `\nGRANTED BY ${options.grantBy.toUpperCase()}`;
+			}
+		}
+		if (options?.restrict !== undefined) {
+			sql += " RESTRICT";
+		} else {
+			sql += " CASCADE";
+		}
+		return sql;
+	}
+	grantRoles(roles, users, options) {
+		let sql = "GRANT";
+		if (typeof roles === "string") {
+			sql += ` ${roles}`;
+		} else {
+			sql += ` ${roles.join(", ")}`;
+		}
+		if (typeof users === "string") {
+			sql += ` TO ${users}`;
+		} else {
+			sql += ` TO ${users.join(", ")}`;
+		}
+		if (options?.admin === true) {
+			sql += " WITH ADMIN OPTION";
+		}
+		if (/^(CURRENT_USER|CURRENT_ROLE)$/i.test(options?.granted)) {
+			sql += `\nGRANTED BY ${options?.granted.toUpperCase()}`;
+		}
+		return sql;
+	}
+	revokeRoles(roles, from, options) {
+		let sql = "";
+		const sqlStack = [];
+		if (typeof from === "string") {
+			sql = "REVOKE ";
+			if (options?.adminOption === true) {
+				sql += "ADMIN OPTION FOR ";
+			}
+			if (typeof roles === "string") {
+				sql += `${roles}`;
+			} else {
+				sql += `${roles.join(", ")}`;
+			}
+
+			if (/^(PUBLIC|ALL)$/i.test(from)) {
+				sql += " FROM PUBLIC";
+			} else {
+				sql += ` FROM ${from}`;
+			}
+			if (options?.grantBy !== undefined) {
+				if (/^(CURRENT_USER|CURRENT_ROLE)$/i.test(options.grantBy)) {
+					sql += `\nGRANTED BY ${options.grantBy.toUpperCase()}`;
+				}
+			}
+			if (options?.restrict !== undefined) {
+				sql += " RESTRICT";
+			} else {
+				sql += " CASCADE";
+			}
+			return sql;
+		}
+		for (const userId of from) {
+			sqlStack.push(`${this.revokeRoles(roles, userId, options)}`);
+		}
+
+		return sqlStack.join(";\n");
+	}
+	//Consulta de datos SQL
+	// SELECT [ DISTINCT | ALL ] { * | < selección de lista > }
+	select(columns, options) {
+		let sql = "SELECT";
+		const colStack = [];
+		if (options?.unique === true) {
+			sql += " DISTINCT";
+		}
+		if (options?.all === true) {
+			sql += " ALL";
+		}
+		if (typeof columns === "string") {
+			sql += ` ${columns}`;
+			return sql;
+		}
+		for (const column of columns) {
+			if (typeof column === "string") {
+				colStack.push(`${column}`);
+			}
+			if (column?.col !== undefined) {
+				if (column.as !== undefined) {
+					colStack.push(`${column.col} AS ${column.as}`);
+				} else {
+					colStack.push(`${column.col}`);
+				}
+			}
+		}
+		return `${sql} ${colStack.join(", ")}`;
+	}
+	from(tables) {
+		if (typeof tables === "string") {
+			return `FROM ${tables}`;
+		}
+		return `FROM ${tables.join(", ")}`;
+	}
+	where(predicados) {
+		const sql = "WHERE";
+		if (typeof predicados === "string") {
+			return `${sql} ${predicados}`;
+		}
+
+		return `${sql} ${predicados.join("\n")}`;
+	}
+
+	operador(oper, a, b) {
+		const operadores = {
+			eq: "=",
+			ne: "<>",
+		};
+		if (operadores[oper] !== undefined) {
+			return `${typeof a === "string" ? `'${a}'` : a} ${operadores[oper]} ${typeof b === "string" ? `'${b}'` : b}`;
+		}
+		throw new Error(`El operador ${oper} no esta definido para este lenguaje`);
+	}
+	groupBy(columns, options) {
+		const sql = "GROUP BY";
+		if (typeof columns === "string") {
+			return `${sql} ${columns}`;
+		}
+		if (typeof columns === "object") {
+			if (columns?.rollup !== undefined) {
+				return `${sql} ROLLUP (${columns.rollup.join(", ")})`;
+			}
+			if (columns?.cube !== undefined) {
+				return `${sql} CUBE (${columns.cube.join(", ")})`;
+			}
+		}
+		return `${sql} ${columns.join(", ")}`;
+	}
+	having(predicado, options) {
+		return `HAVING ${predicado}`;
+	}
+	orderBy(columns) {
+		const colStack = [];
+		const sql = "ORDER BY";
+		if (Array.isArray(columns)) {
+			for (const column of columns) {
+				colStack.push(this.orderBy(column).replace(sql, "").trim());
+			}
+			return `${sql} ${colStack.join(", ")}`;
+		}
+		if (typeof columns === "string") {
+			return `${sql} ${columns}`;
+		}
+		if (typeof columns === "object") {
+			if (columns?.col !== undefined) {
+				if (/^(ASC|DESC)/i.test(columns?.order)) {
+					return `${sql} ${columns.col} ${columns.order.toUpperCase()}`;
+				}
+				return `${sql} ${columns.col}`;
+			}
+			throw new Error(`Falta el atributo 'col'`);
+		}
+	}
+	// Mofificacion de Datos
+	insert(table, cols, values) {
+		let sql = "INSERT INTO";
+		if (table !== undefined) {
+			sql = `${sql} ${table}`;
+		} else {
+			throw new Error("Tiene que definir una tabla");
+		}
+		if (Array.isArray(cols)) {
+			if (cols.length > 0) {
+				sql = `${sql}\n( ${cols.join(", ")} )`;
+			}
+		}
+		if (Array.isArray(values)) {
+			if (Array.isArray(values[0])) {
+				return `${sql}\nVALUES\n${values
+					.map(
+						(value) =>
+							`(${value
+								.map((item) => {
+									if (typeof item === "string") {
+										return `'${item}'`;
+									}
+									return item;
+								})
+								.join(", ")})`,
+					)
+					.join(",\n")}`;
+			}
+			sql = `${sql}\nVALUES ( ${values
+				.map((value) => {
+					if (typeof value === "string") {
+						return `'${value}'`;
+					}
+					return value;
+				})
+				.join(", ")} )`;
+		} else if (values instanceof QueryBuilder) {
+			sql = `${sql}\n${values.toString().replace(";", "")}`;
+		} else if (typeof values === "string") {
+			sql = `${sql}\n${values}`;
+		}
+
+		return sql;
+	}
+	update(table, sets) {
+		const sql = `UPDATE ${table}`;
+		const setStack = [];
+		for (const col in sets) {
+			if (typeof sets[col] === "string") {
+				setStack.push(`${col} = '${sets[col]}'`);
+			} else if (sets[col] instanceof QueryBuilder) {
+				setStack.push(`${col} =\n( ${sets[col].toString().replace(";", "")} )`);
+			} else {
+				setStack.push(`${col} = ${sets[col]}`);
+			}
+		}
+		return `${sql}\nSET ${setStack.join(",\n")}`;
+	}
+	delete(from) {
+		return `DELETE FROM ${from}`;
+	}
+}
+export default Core;

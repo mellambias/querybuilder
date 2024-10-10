@@ -1,0 +1,753 @@
+import { test, after, describe, beforeEach } from "node:test";
+import assert from "node:assert";
+import QueryBuilder from "../querybuilder.js";
+import Core from "../core.js";
+
+describe("El Core del lenguaje SQL2006", () => {
+	let sql;
+	beforeEach(async () => {
+		sql = new QueryBuilder(Core, {
+			typeIdentificator: "regular",
+		});
+	});
+	test("Comando para crear una base de datos", () => {
+		const result = sql.createDatabase("testing").toString();
+		assert.equal(result, "CREATE DATABASE testing;");
+	});
+
+	test("Falla cuando se crea una base de datos con un nombre reservado", () => {
+		try {
+			sql.createDatabase("DAY").toString();
+		} catch (error) {
+			assert.equal(error, "Error: DAY no es un identificador valido");
+		}
+	});
+
+	test("Crear una tabla", () => {
+		const result = sql.use("testing").createTable("table_test").toString();
+		assert.equal(result, "USE testing;\nCREATE TABLE table_test;");
+	});
+	test("Crear una tabla temporal global", () => {
+		const result = sql
+			.use("testing")
+			.createTable("table_test", { temporary: "global", onCommit: "delete" })
+			.toString();
+		assert.equal(
+			result,
+			"USE testing;\nCREATE GLOBAL TEMPORARY TABLE table_test\n ON COMMIT DELETE ROWS;",
+		);
+	});
+	test("Crear una tabla temporal local", () => {
+		const result = sql
+			.use("testing")
+			.createTable("table_test", { temporary: "local", onCommit: "PRESERVE" })
+			.toString();
+		assert.equal(
+			result,
+			"USE testing;\nCREATE LOCAL TEMPORARY TABLE table_test\n ON COMMIT PRESERVE ROWS;",
+		);
+	});
+	test("Crear una tabla con varias columnas", () => {
+		const cols = {
+			ID_ARTISTA: "INTEGER",
+			NOMBRE_ARTISTA: { type: "CHARACTER(60)", default: "artista" },
+			FDN_ARTISTA: "DATE",
+			POSTER_EN_EXISTENCIA: "BOOLEAN",
+		};
+		const result = sql
+			.use("testing")
+			.createTable("table_test", { cols })
+			.toString();
+		assert.equal(
+			result,
+			"USE testing;\nCREATE TABLE table_test\n ( ID_ARTISTA INTEGER,\n NOMBRE_ARTISTA CHARACTER(60) DEFAULT 'artista',\n FDN_ARTISTA DATE,\n POSTER_EN_EXISTENCIA BOOLEAN );",
+		);
+	});
+	test("No puede Crear una tabla si una columna no es valida", () => {
+		try {
+			const cols = {
+				DAY: "INTEGER",
+				NOMBRE_ARTISTA: { type: "CHARACTER(60)" },
+			};
+			sql.use("testing").createTable("table_test", { cols }).toString();
+		} catch (error) {
+			assert.equal(error.message, "DAY no es un identificador valido");
+		}
+	});
+
+	test("Crear un tipo definido por el usuario", () => {
+		const result = sql
+			.use("testing")
+			.createType("SALARIO", { as: "NUMERIC(8,2)", final: false })
+			.toString();
+		assert.equal(
+			result,
+			"USE testing;\nCREATE TYPE SALARIO AS NUMERIC(8,2)\nNOT FINAL;",
+		);
+	});
+	test("Crea la base de datos inventario", () => {
+		const cols = {
+			DISCOS_COMPACTOS: {
+				ID_DISCO_COMPACTO: "INT",
+				TITULO_CD: "VARCHAR(60)",
+				ID_DISQUERA: "INT",
+			},
+			DISQUERAS_CD: {
+				ID_DISQUERA: "INT",
+				NOMBRE_COMPANYI: "VARCHAR(60)",
+			},
+			TIPOS_MUSICA: {
+				ID_TIPO: "INT",
+				NOMBRE_TIPO: "VARCHAR(20)",
+			},
+		};
+
+		const result = sql
+			.createDatabase("INVENTARIO")
+			.use("INVENTARIO")
+			.createTable("DISCOS_COMPACTOS", { cols: cols.DISCOS_COMPACTOS })
+			.createTable("DISQUERAS_CD", { cols: cols.DISQUERAS_CD })
+			.createTable("TIPOS_MUSICA", { cols: cols.TIPOS_MUSICA })
+			.toString();
+	});
+	describe("Alter TABLE", () => {
+		test("Añade una columna a la tabla", () => {
+			const result = sql
+				.use("INVENTARIO")
+				.alterTable("DISCOS_COMPACTOS")
+				.addColumn("CANTIDAD", "INT")
+				.toString();
+
+			assert.equal(
+				result,
+				"USE INVENTARIO;\nALTER TABLE DISCOS_COMPACTOS\nADD COLUMN CANTIDAD INT;",
+			);
+		});
+		test("Modifica una columna a la tabla", () => {
+			const result = sql
+				.use("INVENTARIO")
+				.alterTable("DISCOS_COMPACTOS")
+				.alterColumn("CANTIDAD")
+				.setDefault("DESCONOCIDO")
+				.alterColumn("CIUDAD")
+				.dropDefault()
+				.toString();
+
+			assert.equal(
+				result,
+				`USE INVENTARIO;
+ALTER TABLE DISCOS_COMPACTOS
+ALTER COLUMN CANTIDAD SET DEFAULT 'DESCONOCIDO',
+ALTER COLUMN CIUDAD DROP DEFAULT;`,
+			);
+		});
+		test("Elimina una columna a la tabla", () => {
+			const result = sql
+				.use("INVENTARIO")
+				.alterTable("DISCOS_COMPACTOS")
+				.dropColumn("CANTIDAD", "CASCADE")
+				.toString();
+
+			assert.equal(
+				result,
+				"USE INVENTARIO;\nALTER TABLE DISCOS_COMPACTOS\nDROP COLUMN CANTIDAD CASCADE;",
+			);
+		});
+	});
+	test("Elimina una tabla", () => {
+		const result = sql
+			.use("INVENTARIO")
+			.dropTable("DISCOS_COMPACTOS", "cascade")
+			.toString();
+		assert.equal(
+			result,
+			"USE INVENTARIO;\nDROP TABLE DISCOS_COMPACTOS CASCADE;",
+		);
+	});
+	describe("Restricciones de columna", () => {
+		test("Aplicación de not null", () => {
+			const tabla = {
+				ID_ARTISTA: { type: "INT", values: ["not null"] },
+			};
+			const result = sql.createTable("ARTISTAS", { cols: tabla }).toString();
+			assert.equal(
+				result,
+				"CREATE TABLE ARTISTAS\n ( ID_ARTISTA INT NOT NULL );",
+			);
+		});
+		test("Aplicación de UNIQUE", () => {
+			const tabla = {
+				ID_ARTISTA: { type: "INT", values: ["not null", "unique"] },
+			};
+			const result = sql.createTable("ARTISTAS", { cols: tabla }).toString();
+			assert.equal(
+				result,
+				"CREATE TABLE ARTISTAS\n ( ID_ARTISTA INT NOT NULL UNIQUE );",
+			);
+		});
+		test("Aplicacion de PRIMARY KEY", () => {
+			const tabla = {
+				ID_ARTISTA: { type: "INT", values: ["primary key"] },
+			};
+			const result = sql.createTable("ARTISTAS", { cols: tabla }).toString();
+			assert.equal(
+				result,
+				"CREATE TABLE ARTISTAS\n ( ID_ARTISTA INT PRIMARY KEY );",
+			);
+		});
+		test("Aplicacion de FOREIGN KEY", () => {
+			const tabla = {
+				ID_ARTISTA: {
+					type: "INT",
+					values: ["not null"],
+					foreingKey: {
+						table: "CD_ARTISTA",
+						column: "CD_ARTISTA_ID",
+						match: "full",
+					},
+				},
+			};
+			const result = sql.createTable("ARTISTAS", { cols: tabla }).toString();
+			assert.equal(
+				result,
+				"CREATE TABLE ARTISTAS\n ( ID_ARTISTA INT NOT NULL\nREFERENCES CD_ARTISTA (CD_ARTISTA_ID)\nMATCH FULL );",
+			);
+		});
+		test("Restriccion de CHECK", () => {
+			const TITULOS_CD = {
+				ID_DISCO_COMPACTO: "INT",
+				TITULO_CD: { type: "VARCHAR(60)", values: ["NOT NULL"] },
+				EN_EXISTENCIA: {
+					type: "INT",
+					values: ["NOT NULL"],
+					check: "EN_EXISTENCIA > 0 AND EN_EXISTENCIA < 30",
+				},
+			};
+			const result = sql
+				.createTable("TITULOS_CD", {
+					cols: TITULOS_CD,
+				})
+				.toString();
+			assert.equal(
+				result,
+				`CREATE TABLE TITULOS_CD
+ ( ID_DISCO_COMPACTO INT,
+ TITULO_CD VARCHAR(60) NOT NULL,
+ EN_EXISTENCIA INT NOT NULL CHECK ( EN_EXISTENCIA > 0 AND EN_EXISTENCIA < 30 ) );`,
+			);
+		});
+	});
+	describe("Restriccion de Tabla", () => {
+		test("Aplicacion de UNIQUE y NOT NULL", () => {
+			const tabla = {
+				ID_ARTISTA: { type: "INT", values: ["not null", "unique"] },
+				NOMBRE_ARTISTA: { type: "VARCHAR(60)", values: ["not null", "unique"] },
+			};
+			const result = sql
+				.createTable("ARTISTAS", {
+					cols: tabla,
+					constraints: [
+						{
+							name: "unicos",
+							type: "unique",
+							cols: ["ID_ARTISTA", "NOMBRE_ARTISTA"],
+						},
+						{
+							name: "not_null",
+							type: "not null",
+							cols: ["ID_ARTISTA"],
+						},
+					],
+				})
+				.toString();
+			assert.equal(
+				result,
+				"CREATE TABLE ARTISTAS\n ( ID_ARTISTA INT NOT NULL UNIQUE,\n NOMBRE_ARTISTA VARCHAR(60) NOT NULL UNIQUE,\n CONSTRAINT unicos UNIQUE (ID_ARTISTA, NOMBRE_ARTISTA),\n CONSTRAINT not_null NOT NULL (ID_ARTISTA) );",
+			);
+		});
+		test("Aplicacion de PRIMARY KEY", () => {
+			const tabla = {
+				ID_ARTISTA: "INT",
+				NOMBRE_ARTISTA: {
+					type: "VARCHAR(60)",
+					values: ["not null"],
+				},
+			};
+			const result = sql
+				.createTable("ARTISTAS", {
+					cols: tabla,
+					constraints: [
+						{
+							name: "PK_ID",
+							type: "primary key",
+							cols: ["ID_ARTISTA", "NOMBRE_ARTISTA"],
+						},
+					],
+				})
+				.toString();
+			assert.equal(
+				result,
+				"CREATE TABLE ARTISTAS\n ( ID_ARTISTA INT,\n NOMBRE_ARTISTA VARCHAR(60) NOT NULL,\n CONSTRAINT PK_ID PRIMARY KEY (ID_ARTISTA, NOMBRE_ARTISTA) );",
+			);
+		});
+		test("Aplicacion de FOREIGN KEY", () => {
+			const tabla = {
+				ID_ARTISTA: {
+					type: "INT",
+					values: ["not null"],
+				},
+			};
+			const result = sql
+				.createTable("ARTISTAS", {
+					cols: tabla,
+					constraints: [
+						{
+							name: "FK_CD_ARTISTA",
+							type: "foreign key",
+							cols: ["ID_ARTISTA"],
+							foreignKey: {
+								table: "CD_ARTISTA",
+								cols: ["CD_ARTISTA_ID"],
+								match: "partial",
+							},
+						},
+					],
+				})
+				.toString();
+			assert.equal(
+				result,
+				`CREATE TABLE ARTISTAS
+ ( ID_ARTISTA INT NOT NULL,
+ CONSTRAINT FK_CD_ARTISTA FOREIGN KEY (ID_ARTISTA) REFERENCES CD_ARTISTA (CD_ARTISTA_ID) MATCH PARTIAL );`,
+			);
+		});
+		test("Aplicacion de FOREIGN KEY ON UPDATE Y ON DELETE", () => {
+			const tabla = {
+				ID_ARTISTA: {
+					type: "INT",
+					values: ["not null"],
+				},
+			};
+			const result = sql
+				.createTable("ARTISTAS", {
+					cols: tabla,
+					constraints: [
+						{
+							name: "FK_CD_ARTISTA",
+							type: "foreign key",
+							cols: ["ID_ARTISTA"],
+							foreignKey: {
+								table: "CD_ARTISTA",
+								cols: ["CD_ARTISTA_ID"],
+								actions: {
+									onUpdate: "cascade",
+									onDelete: "set null",
+								},
+							},
+						},
+					],
+				})
+				.toString();
+			assert.equal(
+				result,
+				`CREATE TABLE ARTISTAS
+ ( ID_ARTISTA INT NOT NULL,
+ CONSTRAINT FK_CD_ARTISTA FOREIGN KEY (ID_ARTISTA) REFERENCES CD_ARTISTA (CD_ARTISTA_ID) ON UPDATE CASCADE ON DELETE SET NULL );`,
+			);
+		});
+		test("Restriccion de CHECK", () => {
+			const TITULOS_CD = {
+				ID_DISCO_COMPACTO: "INT",
+				TITULO_CD: { type: "VARCHAR(60)", values: ["NOT NULL"] },
+				EN_EXISTENCIA: { type: "INT", values: ["NOT NULL"] },
+			};
+			const result = sql
+				.createTable("TITULOS_CD", {
+					cols: TITULOS_CD,
+					constraints: [
+						{
+							name: "CK_EN_EXISTENCIA",
+							check: "EN_EXISTENCIA > 0 AND EN_EXISTENCIA < 30",
+						},
+					],
+				})
+				.toString();
+			assert.equal(
+				result,
+				`CREATE TABLE TITULOS_CD
+ ( ID_DISCO_COMPACTO INT,
+ TITULO_CD VARCHAR(60) NOT NULL,
+ EN_EXISTENCIA INT NOT NULL,
+ CONSTRAINT CK_EN_EXISTENCIA CHECK ( EN_EXISTENCIA > 0 AND EN_EXISTENCIA < 30 ) );`,
+			);
+		});
+		test("Crear un DOMINIO", () => {
+			const result = sql
+				.createDomain("CANTIDAD_EN_EXISTENCIA", {
+					as: "INT",
+					default: 0,
+					constraint: {
+						name: "CK_CANTIDAD_EN_EXISTENCIA",
+						check: "VALUE BETWEEN 0 AND 30",
+					},
+				})
+				.toString();
+			assert.equal(
+				result,
+				`CREATE DOMAIN CANTIDAD_EN_EXISTENCIA AS INT DEFAULT 0
+ CONSTRAINT CK_CANTIDAD_EN_EXISTENCIA CHECK ( VALUE BETWEEN 0 AND 30 );`,
+			);
+		});
+	});
+	describe("Opciones poco o nada soportadas", () => {
+		test("CREATE ASSERTION", () => {
+			const result = sql
+				.createAssertion(
+					"LIMITE_EN_EXISTENCIA",
+					"( SELECT SUM (EN_EXISTENCIA) FROM TITULOS_CD ) < 5000",
+				)
+				.toString();
+			assert.equal(
+				result,
+				"CREATE ASSERTION LIMITE_EN_EXISTENCIA CHECK ( ( SELECT SUM (EN_EXISTENCIA) FROM TITULOS_CD ) < 5000 );",
+			);
+		});
+	});
+	describe("Vistas", () => {
+		test("crear una vista de una sola tabla", () => {
+			const query = `SELECT TITULO_CD, DERECHOSDEAUTOR, EN_EXISTENCIA
+FROM INVENTARIO_DISCO_COMPACTO`;
+			const result = sql
+				.createView("DISCOS_COMPACTOS_EN_EXISTENCIA", {
+					cols: ["DISCO_COMPACTO", "DERECHOSDEAUTOR", "EN_EXISTENCIA"],
+					as: query,
+					check: true,
+				})
+				.toString();
+			assert.equal(
+				result,
+				`CREATE VIEW DISCOS_COMPACTOS_EN_EXISTENCIA
+( DISCO_COMPACTO, DERECHOSDEAUTOR, EN_EXISTENCIA ) AS
+SELECT TITULO_CD, DERECHOSDEAUTOR, EN_EXISTENCIA
+FROM INVENTARIO_DISCO_COMPACTO WITH CHECK OPTION;`,
+			);
+		});
+		test("eliminar una vista", () => {
+			assert.equal(
+				sql.dropView("DISCOS_COMPACTOS_EN_EXISTENCIA").toString(),
+				"DROP VIEW DISCOS_COMPACTOS_EN_EXISTENCIA;",
+			);
+		});
+	});
+	describe("SEGURIDAD", () => {
+		test("crear un ROL de usuario", () => {
+			const result = sql
+				.createRole("CLIENTES", { admin: "CURRENT_USER" })
+				.toString();
+			assert.equal(result, "CREATE ROLE CLIENTES WITH ADMIN CURRENT_USER;");
+		});
+		test("elimina un ROL de usuario", () => {
+			const result = sql.dropRoles("CLIENTES").toString();
+			assert.equal(result, "DROP ROLE CLIENTES;");
+		});
+		test("autorizar privilegios", () => {
+			const result = sql
+				.grant(
+					["SELECT", "UPDATE(TITULO_CD)", "INSERT"],
+					"INVENTARIO_CD",
+					["VENTAS", "CONTABILIDAD"],
+					{
+						withGrant: true,
+						grantBy: "current_user",
+					},
+				)
+				.toString();
+			assert.equal(
+				result,
+				`GRANT SELECT, UPDATE(TITULO_CD), INSERT
+ON TABLE INVENTARIO_CD
+TO VENTAS, CONTABILIDAD WITH GRANT OPTION
+GRANTED BY CURRENT_USER;`,
+			);
+		});
+		test("revocar privilegios", () => {
+			const result = sql
+				.revoke(["SELECT", "UPDATE", "INSERT"], "INVENTARIO_CD", [
+					"VENTAS",
+					"CONTABILIDAD",
+				])
+				.toString();
+			assert.equal(
+				result,
+				`REVOKE SELECT, UPDATE, INSERT
+ON TABLE INVENTARIO_CD
+FROM VENTAS, CONTABILIDAD CASCADE;`,
+			);
+		});
+		test("asignar rol a un identificador de usuario", () => {
+			const result = sql.grantRoles("ADMINISTRADORES", "LindaN").toString();
+			assert.equal(result, "GRANT ADMINISTRADORES TO LindaN;");
+		});
+		test("conceder múltiples roles a múltiples identificadores de usuario", () => {
+			const result = sql
+				.grantRoles(
+					["ADMINISTRADORES", "CONTABILIDAD"],
+					["LindaN", "MARKETING"],
+					{ admin: true },
+				)
+				.toString();
+			assert.equal(
+				result,
+				"GRANT ADMINISTRADORES, CONTABILIDAD TO LindaN, MARKETING WITH ADMIN OPTION;",
+			);
+		});
+		test("revocar un rol", () => {
+			const result = sql
+				.revokeRoles("ADMINISTRADORES", "LindaN", {})
+				.toString();
+			assert.equal(result, "REVOKE ADMINISTRADORES FROM LindaN CASCADE;");
+		});
+		test("revocar varios roles a varios  identificadores", () => {
+			const result = sql
+				.revokeRoles(
+					["ADMINISTRADORES", "CONTABILIDAD"],
+					["LindaN", "MARKETING"],
+					{ adminOption: true, grantBy: "current_user" },
+				)
+				.toString();
+			assert.equal(
+				result,
+				`REVOKE ADMIN OPTION FOR ADMINISTRADORES, CONTABILIDAD FROM LindaN
+GRANTED BY CURRENT_USER CASCADE;
+REVOKE ADMIN OPTION FOR ADMINISTRADORES, CONTABILIDAD FROM MARKETING
+GRANTED BY CURRENT_USER CASCADE;`,
+			);
+		});
+	});
+	describe("Consultas de SQL", () => {
+		test("SELECT todas las filas distintas y todas las columnas ", () => {
+			const result = sql.select("*", { unique: true }).from("MUSICA");
+			assert.equal(result.toString(), "SELECT DISTINCT *\nFROM MUSICA;");
+		});
+		test("SELECT todas las filas distintas y algunas columnas", () => {
+			const result = sql
+				.select(
+					[{ col: "DISCOS", as: "ID_DISCO" }, "PRECIO", { col: "CANTIDAD" }],
+					{
+						unique: true,
+					},
+				)
+				.from("MUSICA");
+			assert.equal(
+				result.toString(),
+				"SELECT DISTINCT DISCOS AS ID_DISCO, PRECIO, CANTIDAD\nFROM MUSICA;",
+			);
+		});
+		test("Filtrado de datos con WHERE", () => {
+			const result = sql
+				.select(["TITULO_CD", "DERECHOSDEAUTOR", "EN_EXISTENCIA"])
+				.from("INVENTARIO_DISCO_COMPACTO")
+				.where(["DERECHOSDEAUTOR > 1989", "AND", "DERECHOSDEAUTOR < 2000"]);
+			assert.equal(
+				result.toString(),
+				`SELECT TITULO_CD, DERECHOSDEAUTOR, EN_EXISTENCIA
+FROM INVENTARIO_DISCO_COMPACTO
+WHERE DERECHOSDEAUTOR > 1989
+AND
+DERECHOSDEAUTOR < 2000;`,
+			);
+		});
+		test("agrupar filas cuyos valores de columna son iguales", () => {
+			const result = sql
+				.select([
+					"CATEGORIA",
+					"PRECIO",
+					{ col: "SUM(A_LA_MANO)", as: "TOTAL_A_LA_MANO" },
+				])
+				.from("EXISTENCIA_DISCO_COMPACTO")
+				.groupBy(["CATEGORIA", "PRECIO"]);
+			assert.equal(
+				result.toString(),
+				`SELECT CATEGORIA, PRECIO, SUM(A_LA_MANO) AS TOTAL_A_LA_MANO
+FROM EXISTENCIA_DISCO_COMPACTO
+GROUP BY CATEGORIA, PRECIO;`,
+			);
+		});
+		test("GROUP BY ROLLUP", () => {
+			const result = sql
+				.select([
+					"CATEGORIA",
+					"PRECIO",
+					{ col: "SUM(A_LA_MANO)", as: "TOTAL_A_LA_MANO" },
+				])
+				.from("EXISTENCIA_DISCO_COMPACTO")
+				.groupBy({ rollup: ["CATEGORIA", "PRECIO"] });
+			assert.equal(
+				result.toString(),
+				`SELECT CATEGORIA, PRECIO, SUM(A_LA_MANO) AS TOTAL_A_LA_MANO
+FROM EXISTENCIA_DISCO_COMPACTO
+GROUP BY ROLLUP (CATEGORIA, PRECIO);`,
+			);
+		});
+		test("HAVING", () => {
+			const result = sql
+				.select([
+					"PRECIO",
+					"CATEGORIA",
+					{ col: "SUM(A_LA_MANO)", as: "TOTAL_A_LA_MANO" },
+				])
+				.from("EXISTENCIA_DISCO_COMPACTO")
+				.groupBy(["CATEGORIA", "PRECIO"])
+				.having("SUM(A_LA_MANO) > 10");
+			assert.equal(
+				result.toString(),
+				`SELECT PRECIO, CATEGORIA, SUM(A_LA_MANO) AS TOTAL_A_LA_MANO
+FROM EXISTENCIA_DISCO_COMPACTO
+GROUP BY CATEGORIA, PRECIO
+HAVING SUM(A_LA_MANO) > 10;`,
+			);
+		});
+		test("ORDER BY", () => {
+			const result = sql
+				.select("*")
+				.from("EXISTENCIA_DISCO_COMPACTO")
+				.where("PRECIO < 16.00")
+				.orderBy(["PRECIO", { col: "A_LA_MANO", order: "desc" }]);
+			assert.equal(
+				result.toString(),
+				`SELECT *
+FROM EXISTENCIA_DISCO_COMPACTO
+WHERE PRECIO < 16.00
+ORDER BY PRECIO, A_LA_MANO DESC;`,
+			);
+		});
+	});
+	describe("Modificacion de datos", () => {
+		test("Insertar datos en una tabla sin especificar las columnas", () => {
+			const result = sql.insert(
+				"INVENTARIO_CD",
+				[],
+				["Patsy Cline: 12 Greatest Hits", "Country", "MCA Records", 32],
+			);
+			assert.equal(
+				result.toString(),
+				`INSERT INTO INVENTARIO_CD
+VALUES ( 'Patsy Cline: 12 Greatest Hits', 'Country', 'MCA Records', 32 );`,
+			);
+		});
+		test("Insertar datos en una tabla especificando columnas", () => {
+			const result = sql.insert(
+				"INVENTARIO_CD",
+				["NOMBRE_CD", "EDITOR", "EN_EXISTENCIA"],
+				["Fundamental", "Capitol Records", 34],
+			);
+			assert.equal(
+				result.toString(),
+				`INSERT INTO INVENTARIO_CD\n( NOMBRE_CD, EDITOR, EN_EXISTENCIA )
+VALUES ( 'Fundamental', 'Capitol Records', 34 );`,
+			);
+		});
+		test("Insertar datos en una tabla usando SELECT", () => {
+			const sqlSelect = sql
+				.subSelect(["NOMBRE_CD", "EN_EXISTENCIA"])
+				.from("INVENTARIO_CD");
+			const result = sql.insert("INVENTARIO_CD_2", [], sqlSelect);
+			assert.equal(
+				result.toString(),
+				`INSERT INTO INVENTARIO_CD_2
+SELECT NOMBRE_CD, EN_EXISTENCIA
+FROM INVENTARIO_CD;`,
+			);
+		});
+		test("Insertar varias filas de datos", () => {
+			const result = sql.insert(
+				"INVENTARIO_CD",
+				[],
+				[
+					[827, "Private Music"],
+					[828, "Reprise Records"],
+					[829, "Asylum Records"],
+					[830, "Windham Hill Records"],
+				],
+			);
+			assert.equal(
+				result.toString(),
+				`INSERT INTO INVENTARIO_CD
+VALUES
+(827, 'Private Music'),
+(828, 'Reprise Records'),
+(829, 'Asylum Records'),
+(830, 'Windham Hill Records');`,
+			);
+		});
+		test("Actualizar el valor de una columna", () => {
+			const result = sql.update("INVENTARIO_CD", { EN_EXISTENCIA: 27 });
+			assert.equal(
+				result.toString(),
+				`UPDATE INVENTARIO_CD
+SET EN_EXISTENCIA = 27;`,
+			);
+		});
+		test("Actualizar el valor de varias columnas", () => {
+			const result = sql.update("INVENTARIO_CD", {
+				EN_EXISTENCIA: "27",
+				CANTIDAD: 10,
+			});
+			assert.equal(
+				result.toString(),
+				`UPDATE INVENTARIO_CD
+SET EN_EXISTENCIA = '27',
+CANTIDAD = 10;`,
+			);
+		});
+		test("Actualizar el valor de una columna solo de algunas filas usando where", () => {
+			const result = sql
+				.update("INVENTARIO_CD", { EN_EXISTENCIA: 27 })
+				.where(["NOMBRE_CD = 'Out of Africa'"]);
+			assert.equal(
+				result.toString(),
+				`UPDATE INVENTARIO_CD
+SET EN_EXISTENCIA = 27
+WHERE NOMBRE_CD = 'Out of Africa';`,
+			);
+		});
+		test("Actualizar el valor de una columna usando como valor el select", () => {
+			const sqlSelect = sql
+				.subSelect("AVG(EN_EXISTENCIA)")
+				.from("INVENTARIO_CD");
+
+			const result = sql
+				.update("INVENTARIO_CD_2", { EN_EXISTENCIA_2: sqlSelect })
+				.where(["NOMBRE_CD_2 = 'Orlando'"]);
+			assert.equal(
+				result.toString(),
+				`UPDATE INVENTARIO_CD_2
+SET EN_EXISTENCIA_2 =
+( SELECT AVG(EN_EXISTENCIA)
+FROM INVENTARIO_CD )
+WHERE NOMBRE_CD_2 = 'Orlando';`,
+			);
+		});
+		test("Eliminar filas de una tabla con DELETE FROM", () => {
+			const result = sql.delete("INVENTARIO_CD");
+			assert.equal(result.toString(), "DELETE FROM INVENTARIO_CD;");
+		});
+		test("Eliminar algunas filas de una tabla con DELETE y where", () => {
+			const result = sql
+				.delete("INVENTARIO_CD")
+				.where("TIPO_MUSICA = 'Country'");
+			assert.equal(
+				result.toString(),
+				`DELETE FROM INVENTARIO_CD
+WHERE TIPO_MUSICA = 'Country';`,
+			);
+		});
+	});
+	describe("Predicados de WHERE", () => {
+		test("operadores", () => {
+			assert.equal(sql.eq("2", 4), "'2' = 4");
+			assert.equal(sql.ne("2", 4), "'2' <> 4");
+			assert.equal(sql.gt("2", 4), "'2' > 4");
+		});
+	});
+});
