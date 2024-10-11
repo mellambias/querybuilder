@@ -547,14 +547,18 @@ GRANTED BY CURRENT_USER CASCADE;`,
 			const result = sql
 				.select(["TITULO_CD", "DERECHOSDEAUTOR", "EN_EXISTENCIA"])
 				.from("INVENTARIO_DISCO_COMPACTO")
-				.where(["DERECHOSDEAUTOR > 1989", "AND", "DERECHOSDEAUTOR < 2000"]);
+				.where(
+					sql.and(
+						sql.gt("DERECHOSDEAUTOR", 1989),
+						sql.lt("DERECHOSDEAUTOR", 2000),
+					),
+				);
 			assert.equal(
 				result.toString(),
 				`SELECT TITULO_CD, DERECHOSDEAUTOR, EN_EXISTENCIA
 FROM INVENTARIO_DISCO_COMPACTO
-WHERE DERECHOSDEAUTOR > 1989
-AND
-DERECHOSDEAUTOR < 2000;`,
+WHERE (DERECHOSDEAUTOR > 1989
+AND DERECHOSDEAUTOR < 2000);`,
 			);
 		});
 		test("agrupar filas cuyos valores de columna son iguales", () => {
@@ -703,7 +707,7 @@ CANTIDAD = 10;`,
 		test("Actualizar el valor de una columna solo de algunas filas usando where", () => {
 			const result = sql
 				.update("INVENTARIO_CD", { EN_EXISTENCIA: 27 })
-				.where(["NOMBRE_CD = 'Out of Africa'"]);
+				.where([sql.eq("NOMBRE_CD", "Out of Africa")]);
 			assert.equal(
 				result.toString(),
 				`UPDATE INVENTARIO_CD
@@ -718,7 +722,7 @@ WHERE NOMBRE_CD = 'Out of Africa';`,
 
 			const result = sql
 				.update("INVENTARIO_CD_2", { EN_EXISTENCIA_2: sqlSelect })
-				.where(["NOMBRE_CD_2 = 'Orlando'"]);
+				.where([sql.eq("NOMBRE_CD_2", "Orlando")]);
 			assert.equal(
 				result.toString(),
 				`UPDATE INVENTARIO_CD_2
@@ -735,7 +739,7 @@ WHERE NOMBRE_CD_2 = 'Orlando';`,
 		test("Eliminar algunas filas de una tabla con DELETE y where", () => {
 			const result = sql
 				.delete("INVENTARIO_CD")
-				.where("TIPO_MUSICA = 'Country'");
+				.where(sql.eq("TIPO_MUSICA", "Country"));
 			assert.equal(
 				result.toString(),
 				`DELETE FROM INVENTARIO_CD
@@ -745,9 +749,182 @@ WHERE TIPO_MUSICA = 'Country';`,
 	});
 	describe("Predicados de WHERE", () => {
 		test("operadores", () => {
-			assert.equal(sql.eq("2", 4), "'2' = 4");
-			assert.equal(sql.ne("2", 4), "'2' <> 4");
-			assert.equal(sql.gt("2", 4), "'2' > 4");
+			assert.equal(sql.eq("columna", "string"), "columna = 'string'");
+			assert.equal(sql.ne("columna", 4), "columna <> 4");
+			assert.equal(sql.gt("columna", 4), "columna > 4");
+			assert.equal(sql.gte("columna", 4), "columna >= 4");
+			assert.equal(sql.lt("columna", 4), "columna < 4");
+			assert.equal(sql.lte("columna", 4), "columna <= 4");
+		});
+		test("logicos", () => {
+			assert.equal(
+				sql.and(
+					sql.or(
+						sql.eq("columna", 1),
+						sql.eq("columna", 2),
+						sql.eq("columna", 3),
+					),
+					sql.gt("col", 25),
+				) + sql.or(sql.and(sql.gt("PEPE", 10), sql.lt("PEPE", 40))),
+				`((columna = 1
+OR columna = 2
+OR columna = 3)
+AND col > 25)
+OR (PEPE > 10
+AND PEPE < 40)`,
+			);
+		});
+		test("predicado NOT", () => {
+			assert.equal(sql.not(sql.eq("col", 24)), "NOT (col = 24)");
+			assert.equal(
+				sql.not(sql.or(sql.eq("col", 24), sql.gt("col", 10))),
+				`NOT ((col = 24
+OR col > 10))`,
+			);
+		});
+		test("Un valor entre un mínimo y un máximo", () => {
+			assert.equal(sql.between(12, 15), "BETWEEN 12 AND 15");
+		});
+		test("Valores que pueden ser Null o no Null", () => {
+			assert.equal(sql.isNull("col"), "col IS NULL");
+			assert.equal(
+				sql.isNull(["col1", "col2", "col3"]),
+				"col1 IS NULL\nAND col2 IS NULL\nAND col3 IS NULL",
+			);
+			assert.equal(
+				sql.isNotNull(["col1", "col2", "col3"]),
+				"col1 IS NOT NULL\nAND col2 IS NOT NULL\nAND col3 IS NOT NULL",
+			);
+			assert.equal(
+				sql.and(
+					sql.isNotNull("LUGAR_DE_NACIMIENTO"),
+					sql.gt("AÑO_NACIMIENTO", 1940),
+				),
+				`(LUGAR_DE_NACIMIENTO IS NOT NULL
+AND AÑO_NACIMIENTO > 1940)`,
+			);
+		});
+		test("Valor que coincide con una expresion usando comodines % y _", () => {
+			assert.equal(sql.like("ID_CD", "%01"), "ID_CD LIKE ('%01')");
+		});
+		test("valor dentro de una lista", () => {
+			assert.equal(
+				sql.in("EN_EXISTENCIA", [12, 22, 32, 42, "bocata"]),
+				"EN_EXISTENCIA IN ( 12, 22, 32, 42, 'bocata' )",
+			);
+			assert.equal(
+				sql
+					.select(["TITULO", "ARTISTA"])
+					.from("ARTISTAS_DISCO_COMPACTO")
+					.where(
+						sql.in(
+							"TITULO",
+							sql
+								.subSelect("NOMBRE_CD")
+								.from("INVENTARIO_DISCO_COMPACTO")
+								.where(sql.gt("EN_EXISTENCIA", 10)),
+						),
+					)
+					.toString(),
+				`SELECT TITULO, ARTISTA
+FROM ARTISTAS_DISCO_COMPACTO
+WHERE TITULO IN ( SELECT NOMBRE_CD
+FROM INVENTARIO_DISCO_COMPACTO
+WHERE EN_EXISTENCIA > 10 );`,
+			);
+		});
+		test("El valor existe en la subconsulta", () => {
+			assert.equal(
+				sql
+					.select(["TITULO", "ARTISTA"])
+					.from("ARTISTAS_DISCO_COMPACTO")
+					.where(
+						sql.exists(
+							sql
+								.subSelect("NOMBRE_CD")
+								.from("INVENTARIO_DISCO_COMPACTO")
+								.where(sql.gt("EN_EXISTENCIA", 10)),
+						),
+					)
+					.toString(),
+				`SELECT TITULO, ARTISTA
+FROM ARTISTAS_DISCO_COMPACTO
+WHERE EXISTS ( SELECT NOMBRE_CD
+FROM INVENTARIO_DISCO_COMPACTO
+WHERE EN_EXISTENCIA > 10 );`,
+			);
+		});
+		test("el valor coincide con algun valor en la sub consulta", () => {
+			assert.equal(
+				sql
+					.select(["TITULO", "REBAJA"])
+					.from("REBAJA_CD")
+					.where(
+						sql.lt(
+							"REBAJA",
+							sql.any(
+								sql
+									.subSelect("MENUDEO")
+									.from("MENUDEO_CD")
+									.where(sql.gt("EN_EXISTENCIA", 9)),
+							),
+						),
+					)
+					.toString(),
+				`SELECT TITULO, REBAJA
+FROM REBAJA_CD
+WHERE REBAJA < ANY ( SELECT MENUDEO
+FROM MENUDEO_CD
+WHERE EN_EXISTENCIA > 9 );`,
+			);
+		});
+		test("coincide con mas de un valor en la sub consulta", () => {
+			assert.equal(
+				sql
+					.select(["TITULO", "REBAJA"])
+					.from("REBAJA_CD")
+					.where(
+						sql.lt(
+							"REBAJA",
+							sql.some(
+								sql
+									.subSelect("MENUDEO")
+									.from("MENUDEO_CD")
+									.where(sql.gt("EN_EXISTENCIA", 9)),
+							),
+						),
+					)
+					.toString(),
+				`SELECT TITULO, REBAJA
+FROM REBAJA_CD
+WHERE REBAJA < SOME ( SELECT MENUDEO
+FROM MENUDEO_CD
+WHERE EN_EXISTENCIA > 9 );`,
+			);
+		});
+		test("coincide con todos los valores de la sub consulta", () => {
+			assert.equal(
+				sql
+					.select(["TITULO", "REBAJA"])
+					.from("REBAJA_CD")
+					.where(
+						sql.lt(
+							"REBAJA",
+							sql.all(
+								sql
+									.subSelect("MENUDEO")
+									.from("MENUDEO_CD")
+									.where(sql.gt("EN_EXISTENCIA", 9)),
+							),
+						),
+					)
+					.toString(),
+				`SELECT TITULO, REBAJA
+FROM REBAJA_CD
+WHERE REBAJA < ALL ( SELECT MENUDEO
+FROM MENUDEO_CD
+WHERE EN_EXISTENCIA > 9 );`,
+			);
 		});
 	});
 });

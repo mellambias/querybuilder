@@ -446,16 +446,102 @@ class Core {
 		return `${sql} ${predicados.join("\n")}`;
 	}
 
+	// Predicados
 	operador(oper, a, b) {
 		const operadores = {
 			eq: "=",
 			ne: "<>",
+			gt: ">",
+			gte: ">=",
+			lt: "<",
+			lte: "<=",
+			isNull: "IS NULL",
+			isNotNull: "IS NOT NULL",
 		};
 		if (operadores[oper] !== undefined) {
-			return `${typeof a === "string" ? `'${a}'` : a} ${operadores[oper]} ${typeof b === "string" ? `'${b}'` : b}`;
+			if (b !== undefined) {
+				return `${a} ${operadores[oper]} ${typeof b === "string" ? (/^(ANY|SOME|ALL)$/.test(b.match(/^\w+/)[0]) ? b : `'${b}'`) : b}`;
+			}
+			if (Array.isArray(a)) {
+				return `${a.join(` ${operadores[oper]}\nAND `)} ${operadores[oper]}`;
+			}
+			return `${a} ${operadores[oper]}`;
 		}
-		throw new Error(`El operador ${oper} no esta definido para este lenguaje`);
+		throw new Error(
+			`El operador '${oper}' no esta definido para este lenguaje`,
+		);
 	}
+	logicos(oper, ...predicados) {
+		if (/^(AND|OR)$/i.test(oper)) {
+			if (predicados.length > 1) {
+				return `(${predicados.join(`\n${oper.toUpperCase()} `)})`;
+			}
+			return `\n${oper.toUpperCase()} ${predicados}`;
+		}
+		if (/^(NOT)$/i.test(oper)) {
+			if (predicados.length > 1) {
+				return `(${predicados.join(`\n${oper.toUpperCase()} `)})`;
+			}
+			return `${oper.toUpperCase()} (${predicados})`;
+		}
+
+		if (/^(BETWEEN)$/i.test(oper)) {
+			return `${oper.toUpperCase()} ${predicados[0]} AND ${predicados[1]}`;
+		}
+		if (/^(LIKE)$/i.test(oper)) {
+			return `${predicados[0]} ${oper.toUpperCase()} ('${predicados[1]}')`;
+		}
+		if (/^(NOT LIKE)$/i.test(oper)) {
+			return `${predicados[0]} ${oper.toUpperCase()} ('${predicados[1]}')`;
+		}
+		throw new Error(`El operador '${oper}' no esta soportado`);
+	}
+
+	getListValues(...values) {
+		let arrayValues = [];
+		if (Array.isArray(values[0])) {
+			arrayValues = values[0].map((value) =>
+				typeof value === "string"
+					? `'${value}'`
+					: value instanceof QueryBuilder
+						? value.toString().replace(";", "")
+						: value,
+			);
+		} else {
+			arrayValues = values.map((value) =>
+				typeof value === "string"
+					? `'${value}'`
+					: value instanceof QueryBuilder
+						? value.toString().replace(";", "")
+						: value,
+			);
+		}
+		return arrayValues;
+	}
+	in(columna, ...values) {
+		return `${columna} IN ( ${this.getListValues(...values).join(", ")} )`;
+	}
+	notIn(columna, ...values) {
+		return `${columna} NOT IN ( ${this.getListValues(...values).join(", ")} )`;
+	}
+	exists(subSelect) {
+		return `EXISTS ( ${this.getListValues(subSelect).join(", ")} )`;
+	}
+	notExists(subSelect) {
+		return `NOT EXISTS ( ${this.getListValues(subSelect).join(", ")} )`;
+	}
+
+	any(subSelect) {
+		return `ANY ( ${this.getListValues(subSelect).join(", ")} )`;
+	}
+	some(subSelect) {
+		return `SOME ( ${this.getListValues(subSelect).join(", ")} )`;
+	}
+	all(subSelect) {
+		return `ALL ( ${this.getListValues(subSelect).join(", ")} )`;
+	}
+
+	// Agrupacion
 	groupBy(columns, options) {
 		const sql = "GROUP BY";
 		if (typeof columns === "string") {

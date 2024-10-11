@@ -294,7 +294,6 @@ class QueryBuilder {
 	}
 	where(predicados) {
 		if (this.selectCommand?.length > 0) {
-			console.log("comando", this.selectCommand);
 			this.selectStack.push(this.language.where(predicados));
 		} else {
 			throw new Error(
@@ -303,6 +302,8 @@ class QueryBuilder {
 		}
 		return this;
 	}
+
+	// Predicados
 	eq(a, b) {
 		return this.language.operador("eq", a, b);
 	}
@@ -312,6 +313,63 @@ class QueryBuilder {
 	gt(a, b) {
 		return this.language.operador("gt", a, b);
 	}
+	gte(a, b) {
+		return this.language.operador("gte", a, b);
+	}
+	lt(a, b) {
+		return this.language.operador("lt", a, b);
+	}
+	lte(a, b) {
+		return this.language.operador("lte", a, b);
+	}
+	isNull(columnas) {
+		return this.language.operador("isNull", columnas);
+	}
+	isNotNull(columnas) {
+		return this.language.operador("isNotNull", columnas);
+	}
+
+	in(columna, ...values) {
+		return this.language.in(columna, ...values);
+	}
+	notIn(columna, ...values) {
+		return this.language.notIn(columna, ...values);
+	}
+	exists(subSelect) {
+		return this.language.exists(subSelect);
+	}
+	notExists(subSelect) {
+		return this.language.notExists(subSelect);
+	}
+	any(subSelect) {
+		return this.language.any(subSelect);
+	}
+	some(subSelect) {
+		return this.language.some(subSelect);
+	}
+	all(subSelect) {
+		return this.language.all(subSelect);
+	}
+
+	and(...predicados) {
+		return this.language.logicos("AND", ...predicados);
+	}
+	or(...predicados) {
+		return this.language.logicos("OR", ...predicados);
+	}
+	not(...predicados) {
+		return this.language.logicos("NOT", ...predicados);
+	}
+	between(a, b) {
+		return this.language.logicos("between", a, b);
+	}
+	like(a, b) {
+		return this.language.logicos("like", a, b);
+	}
+	notLike(a, b) {
+		return this.language.logicos("NOT LIKE", a, b);
+	}
+
 	groupBy(columns, options) {
 		if (this.selectCommand?.length > 0) {
 			this.selectStack.push(this.language.groupBy(columns, options));
@@ -383,7 +441,6 @@ class QueryBuilder {
 			this.alterTableStack = [];
 		}
 		if (this.selectCommand?.length > 0) {
-			console.log("toString", this.selectCommand, this.selectStack);
 			if (this.selectStack.length > 0) {
 				this.selectCommand += `\n${this.selectStack.join("\n")}`;
 			}

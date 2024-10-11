@@ -400,14 +400,18 @@ DROP ROLE PERSONAL_VENTAS;`,
 		const result = sql
 			.select("*")
 			.from("INVENTARIO")
-			.where(["EN_EXISTENCIA < 20", "AND", "PRECIO_MENUDEO < 15.00"]);
+			.where([
+				sql.lt("EN_EXISTENCIA", 20),
+				"AND",
+				sql.lt("PRECIO_MENUDEO", 15),
+			]);
 		assert.equal(
 			result.toString(),
 			`SELECT *
 FROM INVENTARIO
 WHERE EN_EXISTENCIA < 20
 AND
-PRECIO_MENUDEO < 15.00;`,
+PRECIO_MENUDEO < 15;`,
 		);
 	});
 	test("Modificar datos SQL", () => {
@@ -423,16 +427,26 @@ PRECIO_MENUDEO < 15.00;`,
 				ID_DISQUERA: sql
 					.subSelect("ID_DISQUERA")
 					.from("DISQUERAS_CD")
-					.where("NOMBRE_COMPAÑIA = 'DRG Records'"),
+					.where(sql.eq("NOMBRE_COMPAÑIA", "DRG Records")),
 			})
 			.where("ID_DISCO_COMPACTO = 116")
 			.select("*")
 			.from("DISCOS_COMPACTOS")
-			.where(["ID_DISCO_COMPACTO = 116", "OR", "ID_DISCO_COMPACTO = 117"])
+			.where(
+				sql.or(
+					sql.eq("ID_DISCO_COMPACTO", 116),
+					sql.eq("ID_DISCO_COMPACTO", 117),
+				),
+			)
 			.delete("DISCOS_COMPACTOS")
-			.where(["ID_DISCO_COMPACTO = 116", "OR", "ID_DISCO_COMPACTO = 117"])
+			.where(
+				sql.or(
+					sql.eq("ID_DISCO_COMPACTO", 116),
+					sql.eq("ID_DISCO_COMPACTO", 117),
+				),
+			)
 			.delete("DISQUERAS_CD")
-			.where("ID_DISQUERA = 837");
+			.where(sql.eq("ID_DISQUERA", 837));
 
 		assert.equal(
 			result.toString(),
@@ -451,19 +465,67 @@ WHERE NOMBRE_COMPAÑIA = 'DRG Records' )
 WHERE ID_DISCO_COMPACTO = 116;
 SELECT *
 FROM DISCOS_COMPACTOS
-WHERE ID_DISCO_COMPACTO = 116
-OR
-ID_DISCO_COMPACTO = 117;
+WHERE (ID_DISCO_COMPACTO = 116
+OR ID_DISCO_COMPACTO = 117);
 DELETE FROM DISCOS_COMPACTOS
-WHERE ID_DISCO_COMPACTO = 116
-OR
-ID_DISCO_COMPACTO = 117;
+WHERE (ID_DISCO_COMPACTO = 116
+OR ID_DISCO_COMPACTO = 117);
 DELETE FROM DISQUERAS_CD
 WHERE ID_DISQUERA = 837;`,
 		);
 	});
-});
+	describe("Uso de predicados capitulo9", () => {
+		test("se consultará la tabla TIPOS_MUSICA para arrojar los nombres de aquellas filas cuyo valor ID_TIPO sea igual a 11 o 12", () => {
+			const result = sql
+				.select(["ID_TIPO", "NOMBRE_TIPO"])
+				.from("TIPOS_MUSICA")
+				.where(sql.or(sql.eq("ID_TIPO", 11), sql.eq("ID_TIPO", 12)));
 
-/**
- *
- */
+			assert.equal(
+				result.toString(),
+				`SELECT ID_TIPO, NOMBRE_TIPO
+FROM TIPOS_MUSICA
+WHERE (ID_TIPO = 11
+OR ID_TIPO = 12);`,
+			);
+		});
+		test("se consultará la tabla ARTISTAS para buscar artistas diferentes a Patsy Cline y Bing Crosby", () => {
+			const result = sql
+				.select(["NOMBRE_ARTISTA", "LUGAR_DE_NACIMIENTO"])
+				.from("ARTISTAS")
+				.where(
+					sql.and(
+						sql.ne("NOMBRE_ARTISTA", "Patsy Cline"),
+						sql.ne("NOMBRE_ARTISTA", "Bing Crosby"),
+					),
+				);
+
+			assert.equal(
+				result.toString(),
+				`SELECT NOMBRE_ARTISTA, LUGAR_DE_NACIMIENTO
+FROM ARTISTAS
+WHERE (NOMBRE_ARTISTA <> 'Patsy Cline'
+AND NOMBRE_ARTISTA <> 'Bing Crosby');`,
+			);
+		});
+		test("combinar un predicado LIKE con otro predicado LIKE", () => {
+			const result = sql
+				.select("*")
+				.from("CDS")
+				.where(
+					sql.and(
+						sql.notLike("TITULO_CD", "%Christmas%"),
+						sql.like("TITULO_CD", "%Blue%"),
+					),
+				);
+
+			assert.equal(
+				result.toString(),
+				`SELECT *
+FROM CDS
+WHERE (TITULO_CD NOT LIKE ('%Christmas%')
+AND TITULO_CD LIKE ('%Blue%'));`,
+			);
+		});
+	});
+});
