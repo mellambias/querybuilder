@@ -453,10 +453,126 @@ predicados, como cualquier predicado, están incluidos en la cláusula WHERE. Se
 una cláusula WHERE en una instrucción SELECT, UPDATE o DELETE, y en cada caso la cláusula
 puede contener uno o más predicados de comparación.
 
-#### Arrojar valores nulos
+- Arrojar valores nulos
+- Arrojar valores similares
+- Hacer referencia a fuentes adicionales de datos
+- Determinar la cantidad de predicados de comparación
 
-#### Arrojar valores similares
+### Capitulo 10 TRABAJAR CON FUNCIONES Y EXPRESIONES DE VALOR
 
-#### Hacer referencia a fuentes adicionales de datos
+- Utilizar funciones Set
+  - **COUNT** cuenta el número de filas en una tabla o el número de valores en una columna
+  Cuando se utiliza la función COUNT, se debe especificar
+un nombre de columna para contar el número de valores que no sean nulos en una columna, o
+un asterisco para contar todas las filas en una tabla independientemente de los valores nulos
+  - **MAX y MIN**
+  - **SUM** la función SUM agrupa valores de columna. Esto es particularmente útil cuando se
+necesita encontrar los totales para datos agrupados (a pesar de que la función SUM, al igual que
+cualquier otra función set, trata a la tabla entera como un grupo único si ningún dato ha sido explícitamente
+agrupado)
+  - **AVG** promedia los valores en una columna especificada.
+Al igual que la función SUM, es más efectiva cuando se utiliza junto con una cláusula
+GROUP BY
+- Utilizar funciones de valor
+  - funciones de valor de cadena
+    Una función de valor de cadena permite manipular datos de cadenas de caracteres para producir
+un valor preciso que esté basado en la cadena de caracteres original
+    - **SUBSTRING**
+    - **UPPER**
+    - **LOWER**
+  - funciones de valor fecha y hora
 
-#### Determinar la cantidad de predicados de comparación
+- Utilizar expresiones de valor
+- Utilizar valores especiales
+
+## ACCESO A MULTIPLES TABLAS (CAPITULO 11)
+
+- Realizar operaciones básicas join
+  tabla de producto cartesiano que es una lista de cada fila en una tabla,
+unida con cada una de las filas en la otra tabla
+- Unir tablas con nombres de columna compartidos
+- Utilizar el método join de condición
+- Realizar operaciones de unión
+
+- **CROSS join**
+- **SELF-JOIN**
+- **join natural**
+El método join natural hace coincidir automáticamente las filas de aquellas columnas con el
+mismo nombre. No es necesario especificar ningún tipo de condición equi-join para los joins naturales.
+
+utilizando una operación join de columna nombrada, que
+permite especificar qué columnas coincidentes serán agregadas
+Por ejemplo, supongamos que
+se quiere incluir solamente TITULO_CD en la condición join. Se puede modificar el ejemplo anterior
+de esta manera:
+
+```sql
+SELECT TITULO_CD, s.TIPO_CD, c.MENUDEO
+FROM TITULOS_EN_EXISTENCIA s JOIN COSTOS_TITULO c
+USING (TITULO_CD)
+WHERE s.INVENTARIO > 15;
+```
+
+El join de condición realiza un método diferente. En un join de condición, la condición equi-join está definida en la cláusula ON, que
+funciona de manera muy similar a la cláusula WHERE. Sin embargo, a pesar de utilizar la cláusula
+ON, una condición básica join es similar de muchas maneras a las operaciones join previas que
+se han visto, excepto que, a diferencia de las join naturales y de las join de columna nombrada, la
+condición join permite hacer coincidir cualquier columna compatible de una tabla con cualquier
+otra de otra tabla Los nombres de columna no necesitan ser iguales.
+
+>La join de condición es la
+sintaxis preferida por la mayoría de los programadores SQL debido a su claridad, flexibilidad y
+amplio soporte entre todas las implementaciones SQL.
+
+Una join de condición puede ser separada en dos tipos de uniones: **inner joins** y **outer joins**.
+La diferencia entre estas dos uniones es la cantidad de datos arrojados por la consulta.
+
+- Una **inner join** arroja solamente aquellas filas que coinciden con la condición **equi-join** definida en la instrucción
+**SELECT**. En otras palabras, la inner join arroja solamente filas coincidentes. Ésta era la join
+original disponible en SQL, y por lo tanto algunos programadores la llaman “join estándar”, a pesar
+de que esto es un error debido a que todas las joins presentadas en este capítulo están descritas
+en el estándar SQL.
+- Una **outer join**, por otro lado, arroja las filas coincidentes y alguna o todas las
+filas no coincidentes, dependiendo del tipo de outer join.
+
+Una INNER JOIN
+
+```sql
+SELECT t.TITULO, ta.ID_ARTISTA
+FROM TITULO_CDS t INNER JOIN ARTISTAS_TITULOS ta
+ON t.ID_TITULO = ta.ID_TITULO
+WHERE t.TITULO LIKE ('%Blue%');
+```
+
+Una OUTER JOIN
+
+- **LEFT** Arroja todas las filas coincidentes y todas las filas no coincidentes de la tabla de la izquierda
+(la tabla a la izquierda de la palabra clave JOIN).
+- **Right** Arroja todas las filas coincidentes y todas las filas no coincidentes de la tabla de la
+derecha (la tabla a la derecha de la palabra clave JOIN).
+- **Full** Arroja todas las filas coincidentes y todas las filas no coincidentes de ambas tablas
+
+### UNION
+
+El operador **UNION** es un método que puede utilizarse para combinar los resultados de múltiples
+instrucciones **SELECT** en un solo conjunto de resultados, esencialmente uniendo filas de una
+consulta con filas de otra. A diferencia de las operaciones join, que agregan columnas desde múltiples
+tablas y las colocan lado a lado, las operaciones de unión `agregan filas al final del conjunto
+de resultados`.
+
+Para poder utilizar un operador UNION
+
+- Cada instrucción SELECT debe producir columnas compatibles lo que significa que cada una debe producir
+  - el mismo número de columnas, y
+  - las columnas correspondientes deben tener tipos de datos compatibles
+
+## USO DE SUBCONSULTAS PARA ACCEDER Y MODIFICAR DATOS (CAPITULO 12)
+
+- Crear subconsultas que arrojen múltiples filas
+- Crear subconsultas que arrojen un solo valor
+- Trabajar con subconsultas correlacionadas
+- Utilizar subconsultas anidadas
+- Utilizar subconsultas para modificar datos
+
+Una subconsulta puede agregarse a una instrucción SELECT,
+INSERT, UPDATE o DELETE

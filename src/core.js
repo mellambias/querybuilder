@@ -2,10 +2,15 @@
 @description Implementa el SQL 2006
 */
 import QueryBuilder from "./querybuilder.js";
+import Column from "./column.js";
 import { privilegios, objectTypes, splitCommand } from "./utils/utils.js";
 class Core {
 	constructor() {
 		this.dataType = "sql2006";
+		this.predicados();
+		this.functionOneParam();
+		this.functionDate();
+		this.joins();
 	}
 
 	createDatabase(name, options) {
@@ -413,12 +418,15 @@ class Core {
 		if (options?.all === true) {
 			sql += " ALL";
 		}
-		if (typeof columns === "string") {
+		if (typeof columns === "string" || columns instanceof Column) {
 			sql += ` ${columns}`;
 			return sql;
 		}
 		for (const column of columns) {
 			if (typeof column === "string") {
+				colStack.push(`${column}`);
+			}
+			if (column instanceof Column) {
 				colStack.push(`${column}`);
 			}
 			if (column?.col !== undefined) {
@@ -431,11 +439,47 @@ class Core {
 		}
 		return `${sql} ${colStack.join(", ")}`;
 	}
-	from(tables) {
+	from(tables, alias) {
 		if (typeof tables === "string") {
 			return `FROM ${tables}`;
 		}
+		if (Array.isArray(tables) && Array.isArray(alias)) {
+			return `FROM ${tables
+				.map((table, index) => `${table} AS ${alias[index]}`)
+				.join(", ")}`;
+		}
 		return `FROM ${tables.join(", ")}`;
+	}
+	joins() {
+		const joinTypes = {
+			crossJoin: "CROSS JOIN",
+			naturalJoin: "NATURAL JOIN",
+			colJoin: "JOIN",
+			innerJoin: "INNER JOIN",
+			join: "JOIN",
+			leftJoin: "LEFT OUTER JOIN",
+			rightJoin: "RIGTH OUTER JOIN",
+			fullJoin: "FULL OUTER JOIN",
+		};
+		for (const join in joinTypes) {
+			this[join] = (tables, alias, using) => {
+				if (typeof tables === "string" && typeof alias === "string") {
+					return `${joinTypes[join]} ${tables} ${alias}`;
+				}
+				if (Array.isArray(tables) && Array.isArray(alias)) {
+					return `FROM ${tables
+						.map((table, index) => `${table} ${alias[index]}`)
+						.join(
+							` ${joinTypes[join]} `,
+						)}${Array.isArray(using) ? `\nUSING (${using.join(", ")})` : ""}`;
+				}
+				return `FROM ${tables.join(` ${joinTypes[join]} `)}`;
+			};
+		}
+	}
+
+	union(prev, next, option) {
+		next.selectCommand = `${prev.toString().replace(";", "")}\nUNION${typeof option === "string" && /^(ALL)$/i.test(option) ? ` ${option.toUpperCase()}` : ""}\n`;
 	}
 	where(predicados) {
 		const sql = "WHERE";
@@ -446,8 +490,17 @@ class Core {
 		return `${sql} ${predicados.join("\n")}`;
 	}
 
+	on(predicados) {
+		const sql = "ON";
+		if (typeof predicados === "string") {
+			return `${sql} ${predicados}`;
+		}
+
+		return `${sql} ${predicados.join("\n")}`;
+	}
+
 	// Predicados
-	operador(oper, a, b) {
+	predicados() {
 		const operadores = {
 			eq: "=",
 			ne: "<>",
@@ -458,44 +511,77 @@ class Core {
 			isNull: "IS NULL",
 			isNotNull: "IS NOT NULL",
 		};
-		if (operadores[oper] !== undefined) {
-			if (b !== undefined) {
-				return `${a} ${operadores[oper]} ${typeof b === "string" ? (/^(ANY|SOME|ALL)$/.test(b.match(/^\w+/)[0]) ? b : `'${b}'`) : b}`;
-			}
-			if (Array.isArray(a)) {
-				return `${a.join(` ${operadores[oper]}\nAND `)} ${operadores[oper]}`;
-			}
-			return `${a} ${operadores[oper]}`;
+		for (const oper in operadores) {
+			this[oper] = (a, b) => {
+				if (b !== undefined) {
+					return `${a} ${operadores[oper]} ${typeof b === "string" ? (/^(ANY|SOME|ALL)$/.test(b.match(/^\w+/)[0]) ? b : `'${b}'`) : b}`;
+				}
+				if (Array.isArray(a)) {
+					return `${a.join(` ${operadores[oper]}\nAND `)} ${operadores[oper]}`;
+				}
+				return `${a} ${operadores[oper]}`;
+			};
 		}
-		throw new Error(
-			`El operador '${oper}' no esta definido para este lenguaje`,
-		);
+		const logicos = {
+			and: "AND",
+			or: "OR",
+			not: "NOT",
+			between: "BETWEEN",
+			like: "LIKE",
+			notLike: "NOT LIKE",
+		};
+		for (const oper in logicos) {
+			if (/^(AND|OR)$/i.test(logicos[oper])) {
+				this[oper] = (...predicados) => {
+					if (predicados.length > 1) {
+						return `(${predicados.join(`\n${logicos[oper].toUpperCase()} `)})`;
+					}
+					return `\n${logicos[oper].toUpperCase()} ${predicados}`;
+				};
+			}
+			if (/^(NOT)$/i.test(logicos[oper])) {
+				this[oper] = (...predicados) => {
+					if (predicados.length > 1) {
+						return `(${predicados.join(`\n${logicos[oper].toUpperCase()} `)})`;
+					}
+					return `${logicos[oper].toUpperCase()} (${predicados})`;
+				};
+			}
+			if (/^(BETWEEN)$/i.test(logicos[oper])) {
+				this[oper] = (...predicados) =>
+					`${logicos[oper].toUpperCase()} ${predicados[0]} AND ${predicados[1]}`;
+			}
+			if (/^(LIKE|NOT LIKE)$/i.test(logicos[oper])) {
+				this[oper] = (...predicados) =>
+					`${predicados[0]} ${logicos[oper].toUpperCase()} ('${predicados[1]}')`;
+			}
+		}
 	}
-	logicos(oper, ...predicados) {
-		if (/^(AND|OR)$/i.test(oper)) {
-			if (predicados.length > 1) {
-				return `(${predicados.join(`\n${oper.toUpperCase()} `)})`;
-			}
-			return `\n${oper.toUpperCase()} ${predicados}`;
-		}
-		if (/^(NOT)$/i.test(oper)) {
-			if (predicados.length > 1) {
-				return `(${predicados.join(`\n${oper.toUpperCase()} `)})`;
-			}
-			return `${oper.toUpperCase()} (${predicados})`;
-		}
 
-		if (/^(BETWEEN)$/i.test(oper)) {
-			return `${oper.toUpperCase()} ${predicados[0]} AND ${predicados[1]}`;
-		}
-		if (/^(LIKE)$/i.test(oper)) {
-			return `${predicados[0]} ${oper.toUpperCase()} ('${predicados[1]}')`;
-		}
-		if (/^(NOT LIKE)$/i.test(oper)) {
-			return `${predicados[0]} ${oper.toUpperCase()} ('${predicados[1]}')`;
-		}
-		throw new Error(`El operador '${oper}' no esta soportado`);
-	}
+	// logicos() {
+	// 	const logicos = {
+	// 		and: "and",
+	// 	};
+	// 	for (const oper in logicos) {
+	// 		if (/^(AND|OR|NOT)$/i.test(oper)) {
+	// 			this[oper] = (...predicados) => {
+	// 				if (predicados.length > 1) {
+	// 					return `(${predicados.join(`\n${oper.toUpperCase()} `)})`;
+	// 				}
+	// 				return `\n${oper.toUpperCase()} ${predicados}`;
+	// 			};
+	// 		}
+	// 		if (/^(BETWEEN)$/i.test(oper)) {
+	// 			this[oper] = (...predicados) =>
+	// 				`${oper.toUpperCase()} ${predicados[0]} AND ${predicados[1]}`;
+	// 		}
+	// 		if (/^(LIKE|NOT LIKE)$/i.test(oper)) {
+	// 			this[oper] = (...predicados) =>
+	// 				`${predicados[0]} ${oper.toUpperCase()} ('${predicados[1]}')`;
+	// 		}
+	// 		throw new Error(`El operador '${oper}' no esta soportado`);
+	// 	}
+	// }
 
 	getListValues(...values) {
 		let arrayValues = [];
@@ -541,7 +627,6 @@ class Core {
 		return `ALL ( ${this.getListValues(subSelect).join(", ")} )`;
 	}
 
-	// Agrupacion
 	groupBy(columns, options) {
 		const sql = "GROUP BY";
 		if (typeof columns === "string") {
@@ -619,12 +704,13 @@ class Core {
 					return value;
 				})
 				.join(", ")} )`;
-		} else if (values instanceof QueryBuilder) {
+		}
+		if (values instanceof QueryBuilder) {
 			sql = `${sql}\n${values.toString().replace(";", "")}`;
-		} else if (typeof values === "string") {
+		}
+		if (typeof values === "string") {
 			sql = `${sql}\n${values}`;
 		}
-
 		return sql;
 	}
 	update(table, sets) {
@@ -643,6 +729,35 @@ class Core {
 	}
 	delete(from) {
 		return `DELETE FROM ${from}`;
+	}
+
+	// Funciones SET
+
+	functionOneParam() {
+		const names = ["count", "max", "min", "sum", "avg", "upper", "lower"];
+		for (const name of names) {
+			this[name] = (column, alias) =>
+				`${name.toUpperCase()}(${column})${typeof alias !== "undefined" ? ` AS ${alias}` : ""}`;
+		}
+	}
+	// funciones VALOR de cadena
+	substr(column, inicio, ...options) {
+		if (typeof options[0] === "string") {
+			return `SUBSTRING(${column} FROM ${inicio})${typeof options[0] !== "undefined" ? ` AS ${options[0]}` : ""}`;
+		}
+		return `SUBSTRING(${column} FROM ${inicio}${typeof options[0] !== "undefined" ? ` FOR ${options[0]}` : ""})${typeof options[1] !== "undefined" ? ` AS ${options[1]}` : ""}`;
+	}
+	functionDate() {
+		const names = {
+			currentDate: "CURRENT_DATE",
+			currentTime: "CURRENT_TIME",
+			currentTimestamp: "CURRENT_TIMESTAMP",
+			localTime: "LOCALTIME",
+			localTimestamp: "LOCALTIMESTAMP",
+		};
+		for (const name in names) {
+			this[name] = () => names[name];
+		}
 	}
 }
 export default Core;

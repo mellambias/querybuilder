@@ -653,9 +653,10 @@ VALUES ( 'Fundamental', 'Capitol Records', 34 );`,
 		});
 		test("Insertar datos en una tabla usando SELECT", () => {
 			const sqlSelect = sql
-				.subSelect(["NOMBRE_CD", "EN_EXISTENCIA"])
+				.select(["NOMBRE_CD", "EN_EXISTENCIA"])
 				.from("INVENTARIO_CD");
 			const result = sql.insert("INVENTARIO_CD_2", [], sqlSelect);
+			console.log(result);
 			assert.equal(
 				result.toString(),
 				`INSERT INTO INVENTARIO_CD_2
@@ -716,9 +717,7 @@ WHERE NOMBRE_CD = 'Out of Africa';`,
 			);
 		});
 		test("Actualizar el valor de una columna usando como valor el select", () => {
-			const sqlSelect = sql
-				.subSelect("AVG(EN_EXISTENCIA)")
-				.from("INVENTARIO_CD");
+			const sqlSelect = sql.select("AVG(EN_EXISTENCIA)").from("INVENTARIO_CD");
 
 			const result = sql
 				.update("INVENTARIO_CD_2", { EN_EXISTENCIA_2: sqlSelect })
@@ -820,7 +819,7 @@ AND AÑO_NACIMIENTO > 1940)`,
 						sql.in(
 							"TITULO",
 							sql
-								.subSelect("NOMBRE_CD")
+								.select("NOMBRE_CD")
 								.from("INVENTARIO_DISCO_COMPACTO")
 								.where(sql.gt("EN_EXISTENCIA", 10)),
 						),
@@ -841,7 +840,7 @@ WHERE EN_EXISTENCIA > 10 );`,
 					.where(
 						sql.exists(
 							sql
-								.subSelect("NOMBRE_CD")
+								.select("NOMBRE_CD")
 								.from("INVENTARIO_DISCO_COMPACTO")
 								.where(sql.gt("EN_EXISTENCIA", 10)),
 						),
@@ -864,7 +863,7 @@ WHERE EN_EXISTENCIA > 10 );`,
 							"REBAJA",
 							sql.any(
 								sql
-									.subSelect("MENUDEO")
+									.select("MENUDEO")
 									.from("MENUDEO_CD")
 									.where(sql.gt("EN_EXISTENCIA", 9)),
 							),
@@ -888,7 +887,7 @@ WHERE EN_EXISTENCIA > 9 );`,
 							"REBAJA",
 							sql.some(
 								sql
-									.subSelect("MENUDEO")
+									.select("MENUDEO")
 									.from("MENUDEO_CD")
 									.where(sql.gt("EN_EXISTENCIA", 9)),
 							),
@@ -912,7 +911,7 @@ WHERE EN_EXISTENCIA > 9 );`,
 							"REBAJA",
 							sql.all(
 								sql
-									.subSelect("MENUDEO")
+									.select("MENUDEO")
 									.from("MENUDEO_CD")
 									.where(sql.gt("EN_EXISTENCIA", 9)),
 							),
@@ -924,6 +923,321 @@ FROM REBAJA_CD
 WHERE REBAJA < ALL ( SELECT MENUDEO
 FROM MENUDEO_CD
 WHERE EN_EXISTENCIA > 9 );`,
+			);
+		});
+	});
+	describe("Funciones", () => {
+		describe("SET", () => {
+			test("COUNT", () => {
+				assert.equal(sql.count("*"), "COUNT(*)");
+				assert.equal(sql.count("PRECIO"), "COUNT(PRECIO)");
+				assert.equal(sql.count("PRECIO", "DINERO"), "COUNT(PRECIO) AS DINERO");
+			});
+			test("SELECT con COUNT", () => {
+				const result = sql
+					.select(sql.count("PRECIO", "DINERO"))
+					.from("LISTA_CD");
+				assert.equal(
+					result.toString(),
+					"SELECT COUNT(PRECIO) AS DINERO\nFROM LISTA_CD;",
+				);
+			});
+			test("MAX y MIN", () => {
+				assert.equal(sql.max("PRECIO"), "MAX(PRECIO)");
+				assert.equal(sql.max("PRECIO", "DINERO"), "MAX(PRECIO) AS DINERO");
+				assert.equal(sql.min("PRECIO"), "MIN(PRECIO)");
+				assert.equal(sql.min("PRECIO", "DINERO"), "MIN(PRECIO) AS DINERO");
+			});
+			test("SUM", () => {
+				assert.equal(sql.sum("PRECIO"), "SUM(PRECIO)");
+				assert.equal(sql.sum("PRECIO", "DINERO"), "SUM(PRECIO) AS DINERO");
+			});
+			test("AVG", () => {
+				assert.equal(sql.avg("PRECIO"), "AVG(PRECIO)");
+				assert.equal(sql.avg("PRECIO", "DINERO"), "AVG(PRECIO) AS DINERO");
+			});
+		});
+		describe("VALUE", () => {
+			describe("funciones de valor de cadena", () => {
+				test("substring", () => {
+					assert.equal(
+						sql.substr("DESCRIPCION", 3),
+						"SUBSTRING(DESCRIPCION FROM 3)",
+					);
+					assert.equal(
+						sql.substr("DESCRIPCION", 3, 10),
+						"SUBSTRING(DESCRIPCION FROM 3 FOR 10)",
+					);
+					assert.equal(
+						sql.substr("DESCRIPCION", 3, "ABREVIADO"),
+						"SUBSTRING(DESCRIPCION FROM 3) AS ABREVIADO",
+					);
+				});
+				test("UPPER y LOWER", () => {
+					assert.equal(sql.upper("DISCO"), "UPPER(DISCO)");
+					assert.equal(
+						sql.upper("DISCO", "DISCO_EN_MAYUSCULA"),
+						"UPPER(DISCO) AS DISCO_EN_MAYUSCULA",
+					);
+					assert.equal(sql.lower("DISCO"), "LOWER(DISCO)");
+					assert.equal(
+						sql.lower("DISCO", "DISCO_EN_MAYUSCULA"),
+						"LOWER(DISCO) AS DISCO_EN_MAYUSCULA",
+					);
+				});
+			});
+			describe("funciones de tiempo", () => {
+				test("Current", () => {
+					assert.equal(sql.currentDate(), "CURRENT_DATE");
+					assert.equal(sql.currentTime(), "CURRENT_TIME");
+					assert.equal(sql.currentTimestamp(), "CURRENT_TIMESTAMP");
+				});
+				test("local time", () => {
+					assert.equal(sql.localTime(), "LOCALTIME");
+					assert.equal(sql.localTimestamp(), "LOCALTIMESTAMP");
+				});
+			});
+		});
+	});
+	describe("Operaciones con dos tablas", () => {
+		test("tabla de producto cartesiano", () => {
+			const result = sql.select("*").from(["INVENTARIO_CD", "INTERPRETES"]);
+			assert.equal(
+				result.toString(),
+				`SELECT *
+FROM INVENTARIO_CD, INTERPRETES;`,
+			);
+		});
+		test("Una tabla EQUI-JOIN", () => {
+			const result = sql
+				.select("*")
+				.from(["INVENTARIO_CD", "INTERPRETES"])
+				.where(
+					sql.eq(
+						sql.col("ID_INTER", "INVENTARIO_CD"),
+						sql.col("ID_INTER", "INTERPRETES"),
+					),
+				);
+			assert.equal(
+				result.toString(),
+				`SELECT *
+FROM INVENTARIO_CD, INTERPRETES
+WHERE INVENTARIO_CD.ID_INTER = INTERPRETES.ID_INTER;`,
+			);
+		});
+		test("limitar las columnas arrojadas y agregar otro predicado a la cláusula WHERE y así limitar las filas arrojadas", () => {
+			const result = sql
+				.select([
+					sql.col("NOMBRE_CD", "INVENTARIO_CD"),
+					sql.col("NOMBRE_INTER", "INTERPRETES"),
+					sql.col("EN_EXISTENCIA", "INVENTARIO_CD"),
+				])
+				.from(["INVENTARIO_CD", "INTERPRETES"])
+				.where(
+					sql.and(
+						sql.eq(
+							sql.col("ID_INTER", "INVENTARIO_CD"),
+							sql.col("ID_INTER", "INTERPRETES"),
+						),
+						sql.lt(sql.col("EN_EXISTENCIA", "INVENTARIO_CD"), 15),
+					),
+				);
+
+			assert.equal(
+				result.toString(),
+				`SELECT INVENTARIO_CD.NOMBRE_CD, INTERPRETES.NOMBRE_INTER, INVENTARIO_CD.EN_EXISTENCIA
+FROM INVENTARIO_CD, INTERPRETES
+WHERE (INVENTARIO_CD.ID_INTER = INTERPRETES.ID_INTER
+AND INVENTARIO_CD.EN_EXISTENCIA < 15);`,
+			);
+		});
+		test("Uso de alias para tablas", () => {
+			const result = sql
+				.select([
+					sql.col("NOMBRE_CD", "c"),
+					sql.col("NOMBRE_INTER", "p"),
+					sql.col("EN_EXISTENCIA", "c"),
+				])
+				.from(["INVENTARIO_CD", "INTERPRETES"], ["c", "p"])
+				.where(
+					sql.and(
+						sql.eq(sql.col("ID_INTER", "c"), sql.col("ID_INTER", "p")),
+						sql.lt(sql.col("EN_EXISTENCIA", "c"), 15),
+					),
+				);
+
+			assert.equal(
+				result.toString(),
+				`SELECT c.NOMBRE_CD, p.NOMBRE_INTER, c.EN_EXISTENCIA
+FROM INVENTARIO_CD AS c, INTERPRETES AS p
+WHERE (c.ID_INTER = p.ID_INTER
+AND c.EN_EXISTENCIA < 15);`,
+			);
+		});
+		test("CROSS JOIN", () => {
+			const result = sql
+				.select([
+					sql.col("NOMBRE_CD", "c"),
+					sql.col("NOMBRE_INTER", "p"),
+					sql.col("EN_EXISTENCIA", "c"),
+				])
+				.crossJoin(["INVENTARIO_CD", "INTERPRETES"], ["c", "p"])
+				.where(
+					sql.and(
+						sql.eq(sql.col("ID_INTER", "c"), sql.col("ID_INTER", "p")),
+						sql.lt(sql.col("EN_EXISTENCIA", "c"), 15),
+					),
+				);
+
+			assert.equal(
+				result.toString(),
+				`SELECT c.NOMBRE_CD, p.NOMBRE_INTER, c.EN_EXISTENCIA
+FROM INVENTARIO_CD c CROSS JOIN INTERPRETES p
+WHERE (c.ID_INTER = p.ID_INTER
+AND c.EN_EXISTENCIA < 15);`,
+			);
+		});
+		test("NATURAL JOIN", () => {
+			const result = sql
+				.select(["TITULO_CD", "TIPO_CD", sql.col("MENUDEO", "c")])
+				.naturalJoin(["TITULOS_EN_EXISTENCIA", "COSTOS_TITULO"], ["s", "c"])
+				.where(sql.gt(sql.col("INVENTARIO", "s"), 15));
+
+			assert.equal(
+				result.toString(),
+				`SELECT TITULO_CD, TIPO_CD, c.MENUDEO
+FROM TITULOS_EN_EXISTENCIA s NATURAL JOIN COSTOS_TITULO c
+WHERE s.INVENTARIO > 15;`,
+			);
+		});
+		test("Join de columna nombrada", () => {
+			const result = sql
+				.select(["TITULO_CD", sql.col("TIPO_CD", "s"), sql.col("MENUDEO", "c")])
+				.colJoin(
+					["TITULOS_EN_EXISTENCIA", "COSTOS_TITULO"],
+					["s", "c"],
+					["TITULO_CD"],
+				)
+				.where(sql.gt(sql.col("INVENTARIO", "s"), 15));
+
+			assert.equal(
+				result.toString(),
+				`SELECT TITULO_CD, s.TIPO_CD, c.MENUDEO
+FROM TITULOS_EN_EXISTENCIA s JOIN COSTOS_TITULO c
+USING (TITULO_CD)
+WHERE s.INVENTARIO > 15;`,
+			);
+		});
+		test("INNER JOIN y la clausula ON", () => {
+			const result = sql
+				.select([sql.col("TITULO", "t"), sql.col("ARTISTA", "a")])
+				.innerJoin(["TITULO_CDS", "ARTISTAS_TITULOS"], ["t", "ta"])
+				.on(sql.eq(sql.col("ID_TITULO", "t"), sql.col("ID_TITULO", "ta")))
+				.innerJoin("ARTISTAS_CD", "a")
+				.on(sql.eq(sql.col("ID_ARTISTA", "ta"), sql.col("ID_ARTISTA", "a")))
+				.where(sql.like(sql.col("TITULO", "t"), "%Blue%"));
+
+			assert.equal(
+				result.toString(),
+				`SELECT t.TITULO, a.ARTISTA
+FROM TITULO_CDS t INNER JOIN ARTISTAS_TITULOS ta
+ON t.ID_TITULO = ta.ID_TITULO
+INNER JOIN ARTISTAS_CD a
+ON ta.ID_ARTISTA = a.ID_ARTISTA
+WHERE t.TITULO LIKE ('%Blue%');`,
+			);
+		});
+		test("LEFT OUTER JOIN", () => {
+			const result = sql
+				.select([
+					sql.col("TITULO", "i"),
+					sql.col("NOMBRE_TIPO", "t"),
+					sql.col("EXISTENCIA", "i"),
+				])
+				.leftJoin(["INFO_CD", "TIPO_CD"], ["i", "t"])
+				.on(sql.eq(sql.col("ID_TIPO", "i"), sql.col("ID_TIPO", "t")));
+
+			assert.equal(
+				result.toString(),
+				`SELECT i.TITULO, t.NOMBRE_TIPO, i.EXISTENCIA
+FROM INFO_CD i LEFT OUTER JOIN TIPO_CD t
+ON i.ID_TIPO = t.ID_TIPO;`,
+			);
+		});
+		test("RIGTH OUTER JOIN", () => {
+			const result = sql
+				.select([
+					sql.col("TITULO", "i"),
+					sql.col("NOMBRE_TIPO", "t"),
+					sql.col("EXISTENCIA", "i"),
+				])
+				.rightJoin(["INFO_CD", "TIPO_CD"], ["i", "t"])
+				.on(sql.eq(sql.col("ID_TIPO", "i"), sql.col("ID_TIPO", "t")));
+
+			assert.equal(
+				result.toString(),
+				`SELECT i.TITULO, t.NOMBRE_TIPO, i.EXISTENCIA
+FROM INFO_CD i RIGTH OUTER JOIN TIPO_CD t
+ON i.ID_TIPO = t.ID_TIPO;`,
+			);
+		});
+		test("FULL OUTER JOIN", () => {
+			const result = sql
+				.select([
+					sql.col("TITULO", "i"),
+					sql.col("NOMBRE_TIPO", "t"),
+					sql.col("EXISTENCIA", "i"),
+				])
+				.fullJoin(["INFO_CD", "TIPO_CD"], ["i", "t"])
+				.on(sql.eq(sql.col("ID_TIPO", "i"), sql.col("ID_TIPO", "t")));
+
+			assert.equal(
+				result.toString(),
+				`SELECT i.TITULO, t.NOMBRE_TIPO, i.EXISTENCIA
+FROM INFO_CD i FULL OUTER JOIN TIPO_CD t
+ON i.ID_TIPO = t.ID_TIPO;`,
+			);
+		});
+		test("UNION", () => {
+			const result = sql
+				.select("TIPO_CD")
+				.from("CDS_CONTINUADOS")
+				.union("All")
+				.select("TIPO_CD")
+				.from("CDS_DESCONTINUADOS");
+
+			assert.equal(
+				result.toString(),
+				`SELECT TIPO_CD
+FROM CDS_CONTINUADOS
+UNION ALL
+SELECT TIPO_CD
+FROM CDS_DESCONTINUADOS;`,
+			);
+		});
+	});
+	describe("USO DE SUBCONSULTAS PARA ACCEDER Y MODIFICAR DATOS", () => {
+		test("subconsultas con varios resultados", () => {
+			const result = sql
+				.select("*")
+				.from("EXISTENCIA_CD")
+				.where(
+					sql.in(
+						"TITULO_CD",
+						sql
+							.select("TITULO")
+							.from("ARTISTAS_CD")
+							.where(sql.eq("NOMBRE_ARTISTA", "Joni Mitchell")),
+					),
+				);
+
+			assert.equal(
+				result.toString(),
+				`SELECT *
+FROM EXISTENCIA_CD
+WHERE TITULO_CD IN ( SELECT TITULO
+FROM ARTISTAS_CD
+WHERE NOMBRE_ARTISTA = 'Joni Mitchell' );`,
 			);
 		});
 	});

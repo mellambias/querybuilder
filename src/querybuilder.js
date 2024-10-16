@@ -1,4 +1,5 @@
 import { Types } from "./utils/utils.js";
+import Column from "./column.js";
 class QueryBuilder {
 	constructor(language, options = {}) {
 		this.languageClass = language;
@@ -10,12 +11,17 @@ class QueryBuilder {
 		} else {
 			Types.identificador.set("regular");
 		}
+		this.commandStack = [];
 		this.queryResult = undefined;
 		this.queryResultError = undefined;
 		this.alterTableCommand = undefined;
 		this.alterTableStack = [];
 		this.selectCommand = undefined;
 		this.selectStack = [];
+		this.predicados();
+		this.functionOneParam();
+		this.functionDate();
+		this.joins();
 	}
 
 	driver(driverClass, params) {
@@ -32,6 +38,7 @@ class QueryBuilder {
 		} else {
 			this.query.push(command);
 		}
+		this.commandStack.push("use");
 		return this;
 	}
 	async execute() {
@@ -42,6 +49,7 @@ class QueryBuilder {
 			await this.driverDB.execute(this.toString());
 			this.queryResult = this.driverDB.response();
 			this.queryResultError = "";
+			this.commandStack.push("execute");
 			return this;
 		} catch (error) {
 			this.queryResultError = error;
@@ -58,10 +66,12 @@ class QueryBuilder {
 		} catch (error) {
 			throw new Error(error.message);
 		}
+		this.commandStack.push("createDatabase");
 		return this;
 	}
 	dropDatabase(name, options) {
 		this.query.push(`${this.language.dropDatabase(name, options)}`);
+		this.commandStack.push("dropDatabase");
 		return this;
 	}
 	createSchema(name, options) {
@@ -72,11 +82,13 @@ class QueryBuilder {
 		} catch (error) {
 			throw new Error(error.message);
 		}
+		this.commandStack.push("createSchema");
 		return this;
 	}
 
 	dropSchema(name, options) {
 		this.query.push(`${this.language.dropSchema(name, options)}`);
+		this.commandStack.push("dropSchema");
 		return this;
 	}
 	createTable(name, options) {
@@ -87,6 +99,7 @@ class QueryBuilder {
 		} catch (error) {
 			throw new Error(error.message);
 		}
+		this.commandStack.push("createTable");
 		return this;
 	}
 	alterTable(name) {
@@ -96,6 +109,7 @@ class QueryBuilder {
 		}
 		this.alterTableCommand = this.language.alterTable(name);
 		this.alterTableStack = [];
+		this.commandStack.push("alterTable");
 		return this;
 	}
 	addColumn(name, options) {
@@ -104,6 +118,7 @@ class QueryBuilder {
 		} else {
 			throw new Error("No es posible aplicar, falta el comando 'alterTable'");
 		}
+		this.commandStack.push("addColumn");
 		return this;
 	}
 	alterColumn(name) {
@@ -112,6 +127,7 @@ class QueryBuilder {
 		} else {
 			throw new Error("No es posible aplicar, falta el comando 'alterTable'");
 		}
+		this.commandStack.push("alterColumn");
 		return this;
 	}
 
@@ -121,6 +137,7 @@ class QueryBuilder {
 		} else {
 			throw new Error("No es posible aplicar, falta el comando 'alterTable'");
 		}
+		this.commandStack.push("dropColumn");
 		return this;
 	}
 
@@ -131,6 +148,7 @@ class QueryBuilder {
 		} else {
 			throw new Error("No es posible aplicar, falta el comando 'alterTable'");
 		}
+		this.commandStack.push("setDefault");
 		return this;
 	}
 	dropDefault() {
@@ -140,6 +158,7 @@ class QueryBuilder {
 		} else {
 			throw new Error("No es posible aplicar, falta el comando 'alterTable'");
 		}
+		this.commandStack.push("dropDefault");
 		return this;
 	}
 
@@ -154,6 +173,7 @@ class QueryBuilder {
 
 	dropTable(name, option) {
 		this.query.push(`${this.language.dropTable(name, option)}`);
+		this.commandStack.push("dropTable");
 		return this;
 	}
 	createType(name, options) {
@@ -164,6 +184,7 @@ class QueryBuilder {
 		} catch (error) {
 			throw new Error(error.message);
 		}
+		this.commandStack.push("createType");
 		return this;
 	}
 
@@ -175,6 +196,7 @@ class QueryBuilder {
 		} catch (error) {
 			throw new Error(error.message);
 		}
+		this.commandStack.push("createAssertion");
 		return this;
 	}
 
@@ -186,6 +208,7 @@ class QueryBuilder {
 		} catch (error) {
 			throw new Error(error.message);
 		}
+		this.commandStack.push("createDomain");
 		return this;
 	}
 
@@ -197,6 +220,7 @@ class QueryBuilder {
 		} catch (error) {
 			throw new Error(error.message);
 		}
+		this.commandStack.push("createView");
 		return this;
 	}
 	dropView(name) {
@@ -205,6 +229,7 @@ class QueryBuilder {
 		} catch (error) {
 			throw new Error(error.message);
 		}
+		this.commandStack.push("dropView");
 		return this;
 	}
 
@@ -224,6 +249,7 @@ class QueryBuilder {
 		} catch (error) {
 			throw new Error(error.message);
 		}
+		this.commandStack.push("dropRoles");
 		return this;
 	}
 
@@ -233,6 +259,7 @@ class QueryBuilder {
 		} catch (error) {
 			throw new Error(error.message);
 		}
+		this.commandStack.push("grant");
 		return this;
 	}
 
@@ -244,6 +271,7 @@ class QueryBuilder {
 		} catch (error) {
 			throw new Error(error.message);
 		}
+		this.commandStack.push("revoke");
 		return this;
 	}
 
@@ -253,6 +281,7 @@ class QueryBuilder {
 		} catch (error) {
 			throw new Error(error.message);
 		}
+		this.commandStack.push("grantRoles");
 		return this;
 	}
 	revokeRoles(roles, from, options) {
@@ -261,36 +290,70 @@ class QueryBuilder {
 		} catch (error) {
 			throw new Error(error.message);
 		}
+		this.commandStack.push("revokeRoles");
 		return this;
 	}
 	//Consulta de datos SQL
 	// SELECT [ DISTINCT | ALL ] { * | < selección de lista > }
 	select(columns, options) {
 		try {
-			if (this.selectCommand?.length > 0) {
-				if (this.selectStack.length) {
-					this.selectCommand += `\n${this.selectStack.join("\n")}`;
-					this.selectStack = [];
-				}
-				this.query.push(this.selectCommand);
+			if (this.commandStack[0] === "union") {
+				this.selectCommand += this.language.select(columns, options);
+				this.commandStack = ["select"];
+				return this;
 			}
-			this.selectCommand = this.language.select(columns, options);
+			const nuevoSelect = new QueryBuilder(this.languageClass, this.options);
+			nuevoSelect.selectCommand = nuevoSelect.language.select(columns, options);
+			return nuevoSelect;
 		} catch (error) {
 			throw new Error(error.message);
 		}
-		return this;
 	}
+
 	subSelect(columns, options) {
 		const sub = new QueryBuilder(this.languageClass, this.options);
+		this.commandStack.push("subSelect");
 		return sub.select(columns, options);
 	}
-	from(tables) {
+	from(tables, alias) {
 		if (this.selectCommand?.length > 0) {
-			this.selectStack.push(this.language.from(tables));
+			this.selectStack.push(this.language.from(tables, alias));
 		} else {
 			throw new Error("No es posible aplicar, falta el comando 'select'");
 		}
+		this.commandStack.push("from");
 		return this;
+	}
+
+	joins() {
+		const joinTypes = [
+			"crossJoin",
+			"naturalJoin",
+			"colJoin",
+			"innerJoin",
+			"join",
+			"leftJoin",
+			"rightJoin",
+			"fullJoin",
+		];
+		for (const join of joinTypes) {
+			this[join] = (tables, alias, using) => {
+				if (this.selectCommand?.length > 0) {
+					this.selectStack.push(this.language[join](tables, alias, using));
+				} else {
+					throw new Error("No es posible aplicar, falta el comando 'select'");
+				}
+				this.commandStack.push(join);
+				return this;
+			};
+		}
+	}
+
+	union(option) {
+		const next = new QueryBuilder(this.languageClass, this.options);
+		this.language.union(this, next, option);
+		next.commandStack.push("union");
+		return next;
 	}
 	where(predicados) {
 		if (this.selectCommand?.length > 0) {
@@ -300,82 +363,74 @@ class QueryBuilder {
 				"No es posible aplicar, falta el comando 'select|delete'",
 			);
 		}
+		this.commandStack.push("where");
+		return this;
+	}
+	on(predicados) {
+		if (this.selectCommand?.length > 0) {
+			this.selectStack.push(this.language.on(predicados));
+		} else {
+			throw new Error("No es posible aplicar, falta el comando 'FROM'");
+		}
+		this.commandStack.push("on");
 		return this;
 	}
 
 	// Predicados
-	eq(a, b) {
-		return this.language.operador("eq", a, b);
-	}
-	ne(a, b) {
-		return this.language.operador("ne", a, b);
-	}
-	gt(a, b) {
-		return this.language.operador("gt", a, b);
-	}
-	gte(a, b) {
-		return this.language.operador("gte", a, b);
-	}
-	lt(a, b) {
-		return this.language.operador("lt", a, b);
-	}
-	lte(a, b) {
-		return this.language.operador("lte", a, b);
-	}
-	isNull(columnas) {
-		return this.language.operador("isNull", columnas);
-	}
-	isNotNull(columnas) {
-		return this.language.operador("isNotNull", columnas);
+
+	predicados() {
+		const operTwoCols = [
+			"eq",
+			"ne",
+			"gt",
+			"gte",
+			"lt",
+			"lte",
+			"between",
+			"like",
+			"notLike",
+		];
+		const operOneCol = [
+			"isNull",
+			"isNotNull",
+			"exists",
+			"notExists",
+			"any",
+			"some",
+			"all",
+		];
+		const logicos = ["and", "or", "not"];
+		for (const operTwo of operTwoCols) {
+			this[operTwo] = (a, b) => this.language[operTwo](a, b);
+		}
+		for (const operOne of operOneCol) {
+			this[operOne] = (a) => this.language[operOne](a);
+		}
+
+		for (const oper of logicos) {
+			this[oper] = (...predicados) => this.language[oper](...predicados);
+		}
 	}
 
 	in(columna, ...values) {
+		this.commandStack.push("in");
 		return this.language.in(columna, ...values);
 	}
 	notIn(columna, ...values) {
+		this.commandStack.push("notIn");
 		return this.language.notIn(columna, ...values);
 	}
-	exists(subSelect) {
-		return this.language.exists(subSelect);
-	}
-	notExists(subSelect) {
-		return this.language.notExists(subSelect);
-	}
-	any(subSelect) {
-		return this.language.any(subSelect);
-	}
-	some(subSelect) {
-		return this.language.some(subSelect);
-	}
-	all(subSelect) {
-		return this.language.all(subSelect);
-	}
 
-	and(...predicados) {
-		return this.language.logicos("AND", ...predicados);
+	col(name, table) {
+		return new Column(name, table);
 	}
-	or(...predicados) {
-		return this.language.logicos("OR", ...predicados);
-	}
-	not(...predicados) {
-		return this.language.logicos("NOT", ...predicados);
-	}
-	between(a, b) {
-		return this.language.logicos("between", a, b);
-	}
-	like(a, b) {
-		return this.language.logicos("like", a, b);
-	}
-	notLike(a, b) {
-		return this.language.logicos("NOT LIKE", a, b);
-	}
-
 	groupBy(columns, options) {
 		if (this.selectCommand?.length > 0) {
 			this.selectStack.push(this.language.groupBy(columns, options));
 		} else {
 			throw new Error("No es posible aplicar, falta el comando 'select'");
 		}
+		this.commandStack.push("groupBy");
 		return this;
 	}
 	having(predicado, options) {
@@ -384,6 +439,7 @@ class QueryBuilder {
 		} else {
 			throw new Error("No es posible aplicar, falta el comando 'select'");
 		}
+		this.commandStack.push("having");
 		return this;
 	}
 	orderBy(columns) {
@@ -392,15 +448,17 @@ class QueryBuilder {
 		} else {
 			throw new Error("No es posible aplicar, falta el comando 'select'");
 		}
+		this.commandStack.push("orderBy");
 		return this;
 	}
 	// Mofificacion de Datos
 	insert(table, cols, values) {
 		try {
-			this.query.push(`${this.language.insert(table, cols, values)}`);
+			this.query.push(this.language.insert(table, cols, values));
 		} catch (error) {
 			throw new Error(error.message);
 		}
+		this.commandStack.push("insert");
 		return this;
 	}
 	update(table, sets) {
@@ -416,6 +474,7 @@ class QueryBuilder {
 		} catch (error) {
 			throw new Error(error.message);
 		}
+		this.commandStack.push("update");
 		return this;
 	}
 	delete(from) {
@@ -431,8 +490,35 @@ class QueryBuilder {
 		} catch (error) {
 			throw new Error(error.message);
 		}
+		this.commandStack.push("delete");
 		return this;
 	}
+	// funciones SET
+	functionOneParam() {
+		const names = ["count", "max", "min", "sum", "avg", "upper", "lower"];
+		for (const name of names) {
+			this[name] = (column, alias) => this.language[name](column, alias);
+		}
+	}
+
+	// funciones VALOR de cadena
+	substr(column, inicio, ...options) {
+		return this.language.substr(column, inicio, ...options);
+	}
+
+	functionDate() {
+		const names = [
+			"currentDate",
+			"currentTime",
+			"currentTimestamp",
+			"localTime",
+			"localTimestamp",
+		];
+		for (const name of names) {
+			this[name] = () => this.language[name]();
+		}
+	}
+
 	toString() {
 		if (this.alterTableCommand?.length > 0) {
 			this.alterTableCommand += this.alterTableStack.join(",\n");

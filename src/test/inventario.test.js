@@ -415,7 +415,7 @@ PRECIO_MENUDEO < 15;`,
 		);
 	});
 	test("Modificar datos SQL", () => {
-		const result = sql
+		const sqlInsert = sql
 			.insert("DISQUERAS_CD", [], [837, "DRG Records"])
 			.insert("DISCOS_COMPACTOS", [], [116, "Ann Hampton Callaway", 836, 14])
 			.insert(
@@ -425,11 +425,13 @@ PRECIO_MENUDEO < 15;`,
 			)
 			.update("DISCOS_COMPACTOS", {
 				ID_DISQUERA: sql
-					.subSelect("ID_DISQUERA")
+					.select("ID_DISQUERA")
 					.from("DISQUERAS_CD")
 					.where(sql.eq("NOMBRE_COMPAÑIA", "DRG Records")),
 			})
-			.where("ID_DISCO_COMPACTO = 116")
+			.where("ID_DISCO_COMPACTO = 116");
+
+		const sqlSelect = sql
 			.select("*")
 			.from("DISCOS_COMPACTOS")
 			.where(
@@ -449,7 +451,7 @@ PRECIO_MENUDEO < 15;`,
 			.where(sql.eq("ID_DISQUERA", 837));
 
 		assert.equal(
-			result.toString(),
+			sqlInsert.toString(),
 			`INSERT INTO DISQUERAS_CD
 VALUES ( 837, 'DRG Records' );
 INSERT INTO DISCOS_COMPACTOS
@@ -462,8 +464,11 @@ SET ID_DISQUERA =
 ( SELECT ID_DISQUERA
 FROM DISQUERAS_CD
 WHERE NOMBRE_COMPAÑIA = 'DRG Records' )
-WHERE ID_DISCO_COMPACTO = 116;
-SELECT *
+WHERE ID_DISCO_COMPACTO = 116;`,
+		);
+		assert.equal(
+			sqlSelect.toString(),
+			`SELECT *
 FROM DISCOS_COMPACTOS
 WHERE (ID_DISCO_COMPACTO = 116
 OR ID_DISCO_COMPACTO = 117);
