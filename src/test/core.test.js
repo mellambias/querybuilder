@@ -2,6 +2,7 @@ import { test, after, describe, beforeEach } from "node:test";
 import assert from "node:assert";
 import QueryBuilder from "../querybuilder.js";
 import Core from "../core.js";
+import { access } from "node:fs";
 
 describe("El Core del lenguaje SQL2006", () => {
 	let sql;
@@ -717,11 +718,14 @@ WHERE NOMBRE_CD = 'Out of Africa';`,
 			);
 		});
 		test("Actualizar el valor de una columna usando como valor el select", () => {
-			const sqlSelect = sql.select("AVG(EN_EXISTENCIA)").from("INVENTARIO_CD");
+			const sqlSelect = sql
+				.select(sql.avg("EN_EXISTENCIA"))
+				.from("INVENTARIO_CD");
 
 			const result = sql
 				.update("INVENTARIO_CD_2", { EN_EXISTENCIA_2: sqlSelect })
 				.where([sql.eq("NOMBRE_CD_2", "Orlando")]);
+
 			assert.equal(
 				result.toString(),
 				`UPDATE INVENTARIO_CD_2
@@ -743,6 +747,27 @@ WHERE NOMBRE_CD_2 = 'Orlando';`,
 				result.toString(),
 				`DELETE FROM INVENTARIO_CD
 WHERE TIPO_MUSICA = 'Country';`,
+			);
+		});
+		test("eliminar datos usando una sub consulta", () => {
+			const result = sql
+				.delete("TIPOS_TITULO")
+				.where(
+					sql.in(
+						"TITULO_CD",
+						sql
+							.select("TITLE")
+							.from("INVENTARIO_TITULOS")
+							.where(sql.eq("TITLE_ID", 108)),
+					),
+				);
+
+			assert.equal(
+				result.toString(),
+				`DELETE FROM TIPOS_TITULO
+WHERE TITULO_CD IN ( SELECT TITLE
+FROM INVENTARIO_TITULOS
+WHERE TITLE_ID = 108 );`,
 			);
 		});
 	});
@@ -1238,6 +1263,307 @@ FROM EXISTENCIA_CD
 WHERE TITULO_CD IN ( SELECT TITULO
 FROM ARTISTAS_CD
 WHERE NOMBRE_ARTISTA = 'Joni Mitchell' );`,
+			);
+		});
+		test("sub consultas anidadas", () => {
+			const result = sql
+				.select(["NOMBRE_DISCO", "CANTIDAD_EXISTENCIA"])
+				.from("INVENTARIO_DISCO")
+				.where(
+					sql.in(
+						"ID_ARTISTA",
+						sql
+							.select("ID_ARTISTA")
+							.from("ARTISTAS_DISCO")
+							.where(
+								sql.in(
+									"ID_TIPO_DISCO",
+									sql
+										.select("ID_TIPO_DISCO")
+										.from("TIPOS_DISCO")
+										.where(sql.eq("NOMBRE_TIPO_DISCO", "Blues")),
+								),
+							),
+					),
+				);
+
+			assert.equal(
+				result.toString(),
+				`SELECT NOMBRE_DISCO, CANTIDAD_EXISTENCIA
+FROM INVENTARIO_DISCO
+WHERE ID_ARTISTA IN ( SELECT ID_ARTISTA
+FROM ARTISTAS_DISCO
+WHERE ID_TIPO_DISCO IN ( SELECT ID_TIPO_DISCO
+FROM TIPOS_DISCO
+WHERE NOMBRE_TIPO_DISCO = 'Blues' ) );`,
+			);
+		});
+	});
+	describe("trabajo con cursores", () => {
+		test("declarar un cursor", () => {
+			const options = {
+				changes: "ASENSITIVE",
+				cursor: "SCROLL",
+				hold: true,
+				return: false,
+				orderBy: "COLUMN",
+				readOnly: false,
+				update: ["COL1", "COL2"],
+			};
+			const result = sql.createCursor(
+				"name",
+				sql.select("*").from("TABLA"),
+				options,
+			);
+
+			assert.equal(
+				result.toString(),
+				`DECLARE name ASENSITIVE SCROLL WITH HOLD WITHOUT RETURN CURSOR
+FOR
+SELECT *
+FROM TABLA
+ORDER BY COLUMN
+FOR UPDATE OF COL1, COL2;`,
+			);
+		});
+		test("instrucción de cursor básica con deplazamiento", () => {
+			const result = sql.createCursor(
+				"CD_1",
+				sql.select("*").from("INVENTARIO_CD"),
+				{ orderBy: "DISCO_COMPACTO", cursor: "scroll", readOnly: true },
+			);
+
+			assert.equal(
+				result.toString(),
+				`DECLARE CD_1 SCROLL CURSOR
+FOR
+SELECT *
+FROM INVENTARIO_CD
+ORDER BY DISCO_COMPACTO
+FOR READ ONLY;`,
+			);
+		});
+		test("un cursor actualizable", () => {
+			const result = sql.createCursor(
+				"CD_4",
+				sql.select("*").from("INVENTARIO_CD"),
+				{
+					update: "DISCO_COMPACTO",
+				},
+			);
+
+			assert.equal(
+				result.toString(),
+				`DECLARE CD_4 CURSOR
+FOR
+SELECT *
+FROM INVENTARIO_CD
+FOR UPDATE OF DISCO_COMPACTO;`,
+			);
+		});
+		test("Recuperar datos de un cursor", () => {
+			const cursor = sql.createCursor(
+				"CD_2",
+				sql.select("*").from("INVENTARIO_CD"),
+				{ cursor: "scroll", orderBy: "DISCO_COMPACTO", readOnly: true },
+			);
+
+			assert.equal(
+				cursor.toString(),
+				`DECLARE CD_2 SCROLL CURSOR
+FOR
+SELECT *
+FROM INVENTARIO_CD
+ORDER BY DISCO_COMPACTO
+FOR READ ONLY;`,
+			);
+
+			assert.equal(cursor.status, "declared");
+			// Se abre el cursor utilizando el queryBuilder
+			const openCursor = sql.openCursor("CD_2");
+			assert.equal(
+				sql.toString(),
+				`DECLARE CD_2 SCROLL CURSOR
+FOR
+SELECT *
+FROM INVENTARIO_CD
+ORDER BY DISCO_COMPACTO
+FOR READ ONLY;
+OPEN CD_2;`,
+			);
+			assert.ok(openCursor.name);
+			assert.ok(cursor.name);
+			assert.equal(openCursor.name, cursor.name);
+			assert.equal(cursor.status, "opened");
+
+			// Lanzamos una peticion
+			let query = cursor.fetchNext(["una", "dos"]);
+			assert.equal(query, "FETCH NEXT FROM CD_2\nINTO :una, :dos");
+			assert.ok(cursor.options.cursor);
+			query = cursor.fetchAbsolute(5, ["una", "dos"]);
+			assert.equal(query, "FETCH ABSOLUTE 5 FROM CD_2\nINTO :una, :dos");
+
+			// Se cierra el cursor utilizando el queryBuilder
+			sql.closeCursor("CD_2");
+			assert.equal(cursor.status, "closed");
+			assert.equal(
+				sql.toString(),
+				`FETCH NEXT FROM CD_2\nINTO :una, :dos;
+FETCH ABSOLUTE 5 FROM CD_2\nINTO :una, :dos;
+CLOSE CD_2;`,
+			);
+		});
+		test("Actualizar datos usando el cursor", () => {
+			//declara el cursor para actualizar
+			const cursor = sql.createCursor(
+				"CD_4",
+				sql.select("*").from("INVENTARIO_CD"),
+				{ update: true },
+			);
+
+			assert.equal(
+				cursor.toString(),
+				`DECLARE CD_4 CURSOR
+FOR
+SELECT *
+FROM INVENTARIO_CD
+FOR UPDATE;`,
+			);
+
+			// abre el cursor creado
+			cursor.open();
+			assert.equal(cursor.name, "CD_4");
+			assert.equal(cursor.status, "opened");
+
+			// recupera datos del cursor y los pasa a variables host
+			const fetch = cursor.fetch(["CD", "Categoria", "Precio", "A_la_mano"]);
+			assert.equal(
+				fetch,
+				`FETCH CD_4
+INTO :CD, :Categoria, :Precio, :A_la_mano`,
+			);
+
+			// Actualiza los datos de la tabla usando variables de host obtenidas del cursor
+			const result = sql
+				.update("INVENTARIO_CD", { A_LA_MANO: ":A_la_mano * 2" })
+				.whereCursor("CD_4")
+				.closeCursor("CD_4");
+
+			assert.equal(
+				result.toString(),
+				`DECLARE CD_4 CURSOR
+FOR
+SELECT *
+FROM INVENTARIO_CD
+FOR UPDATE;
+OPEN CD_4;
+FETCH CD_4
+INTO :CD, :Categoria, :Precio, :A_la_mano;
+UPDATE INVENTARIO_CD
+SET A_LA_MANO = :A_la_mano * 2
+WHERE CURRENT OF CD_4;
+CLOSE CD_4;`,
+			);
+		});
+		test("DELETE POSICIONADO usando cursores", () => {
+			const cursor = sql
+				.createCursor("CD_4", sql.select("*").from("INVENTARIO_CD"), {
+					update: true,
+				})
+				.open();
+
+			const fila = cursor.fetch(["CD"]);
+			const result = sql.delete("INVENTARIO_CD").whereCursor("CD_4");
+			cursor.close();
+
+			assert.ok(fila);
+
+			assert.equal(
+				result.toString(),
+				`DECLARE CD_4 CURSOR
+FOR
+SELECT *
+FROM INVENTARIO_CD
+FOR UPDATE;
+OPEN CD_4;
+FETCH CD_4
+INTO :CD;
+DELETE FROM INVENTARIO_CD
+WHERE CURRENT OF CD_4;
+CLOSE CD_4;`,
+			);
+		});
+	});
+	describe("trabajo con transacciones", () => {
+		test("set transaction", () => {
+			const result = sql.setTransaction({
+				access: "read only",
+				isolation: "READ UNCOMMITTED",
+				diagnostic: 5,
+			});
+
+			assert.equal(
+				result.toString(),
+				`SET TRANSACTION
+READ ONLY,
+ISOLATION LEVEL READ UNCOMMITTED,
+DIAGNOSTICS SIZE 5;`,
+			);
+		});
+		test("set transaction READ WRITE", () => {
+			const result = sql.setTransaction({
+				access: "read WRITE",
+				isolation: "serializable",
+				diagnostic: 8,
+			});
+
+			assert.equal(
+				result.toString(),
+				`SET TRANSACTION
+READ WRITE,
+ISOLATION LEVEL SERIALIZABLE,
+DIAGNOSTICS SIZE 8;`,
+			);
+		});
+		test("Iniciar la transaccion", () => {
+			const result = sql.startTransaction({
+				access: "read only",
+				isolation: "READ UNCOMMITTED",
+				diagnostic: 5,
+			});
+
+			assert.equal(
+				result.toString(),
+				`START TRANSACTION
+READ ONLY,
+ISOLATION LEVEL READ UNCOMMITTED,
+DIAGNOSTICS SIZE 5;`,
+			);
+		});
+		test("aplicar restricciones diferidas", () => {
+			const result = sql.setConstraints(
+				["RESTRICCION_1", "RESTRICCION_2"],
+				"deferred",
+			);
+
+			assert.equal(
+				result.toString(),
+				"SET CONSTRAINTS RESTRICCION_1, RESTRICCION_2 DEFERRED;",
+			);
+		});
+		test("aplicar puntos de recuperación", () => {
+			const result = sql.setSavePoint("SECCION_1").clearSavePoint("SECCION_1");
+
+			assert.equal(
+				result.toString(),
+				"SAVEPOINT SECCION_1;\nRELEASE SAVEPOINT SECCION_1;",
+			);
+		});
+		test("commit and rollback", () => {
+			const result = sql.commit().rollback("SECCTION_1");
+			assert.equal(
+				result.toString(),
+				"COMMIT;\nROLLBACK TO SAVEPOINT SECCTION_1;",
 			);
 		});
 	});

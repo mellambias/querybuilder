@@ -48,4 +48,8 @@ String.prototype.isReserved = function () {
 	);
 };
 
+String.prototype.toCapital = function () {
+	return `${this.toString().charAt(0).toUpperCase()}${this.toString().slice(1).toLowerCase()}`;
+};
+
 export { dataTypes, Types, privilegios, objectTypes, splitCommand };

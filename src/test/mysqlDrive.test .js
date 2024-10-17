@@ -6,27 +6,21 @@ import Types from "../types/Type.js";
 import { config } from "../../config.js";
 
 describe("Driver MySqlDriver", () => {
-	test("crea una base de datos", async () => {
-		const MySql8 = config.databases.MySql8;
-		const sql = new QueryBuilder(MySQL, {
+	const MySql8 = config.databases.MySql8;
+	let sql;
+	beforeEach(() => {
+		const queryBuilder = new QueryBuilder(MySQL, {
 			typeIdentificator: Types.identificador.regular,
 		});
-		await sql
-			.createDatabase("testing")
-			.driver(MySql8.driver, MySql8.params)
-			.execute();
+		sql = queryBuilder.driver(MySql8.driver, MySql8.params);
+	});
+	test("crea una base de datos", async () => {
+		await sql.createDatabase("testing").execute();
 		console.log(sql.result);
 		// assert.equal(result, "CREATE DATABASE prueba;");
 	});
 	test("Elimina una base de datos", async () => {
-		const MySql8 = config.databases.MySql8;
-		const sql = new QueryBuilder(MySQL, {
-			typeIdentificator: Types.identificador.regular,
-		});
-		const result = await sql
-			.dropDatabase("testing")
-			.driver(MySql8.driver, MySql8.params)
-			.execute();
+		const result = await sql.dropDatabase("testing").execute();
 		console.log(result);
 	});
 });

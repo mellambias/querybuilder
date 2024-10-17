@@ -576,3 +576,236 @@ Para poder utilizar un operador UNION
 
 Una subconsulta puede agregarse a una instrucción SELECT,
 INSERT, UPDATE o DELETE
+
+## UTILIZAR CURSORES SQL (TEMA 15) p351
+
+- Entender los cursores SQL
+- Declarar un cursor
+- Abrir y cerrar un cursor
+- Recuperar datos desde un cursor
+- Utilizar instrucciones UPDATE y DELETE posicionadas
+
+Una de las características que definen a SQL es el hecho de que los datos en una base de datos SQL
+pueden ser manejados en conjuntosCada uno de estos
+conjuntos de resultados está conformado por una o más filas extraídas desde una o más tablas
+
+Si el tamaño de
+los resultados es demasiado extenso para desplazarse fácilmente, es posible hacer más preciso el
+enfoque de la expresión de búsqueda para arrojar un conjunto de resultados más manejable
+
+Uno de los métodos más comunes, el SQL incrustado, accede a los datos a través de instrucciones
+SQL incrustadas en un programa de aplicación. Los elementos de datos arrojados por las
+instrucciones SQL son utilizados por un lenguaje de programación externo (el lenguaje host) para
+soportar procesos de aplicación específicos.
+
+Un cursor funciona como un señalador que permite al lenguaje de programación de aplicación
+tratar a los resultados de la consulta una fila a la vez, de manera muy parecida a la que estos
+lenguajes de programación manejan los registros desde archivos de datos tradicionales (planos).
+A pesar de que el cursor puede recorrer todas las filas de los resultados de la consulta, se enfoca
+solamente en una fila a la vez
+
+### DECLARAR UN CURSOS
+
+```sql
+DECLARE <nombre del cursor>
+[ SENSITIVE | INSENSITIVE | ASENSITIVE ]
+[ SCROLL | NO SCROLL ] CURSOR
+[ WITH HOLD | WITHOUT HOLD ]
+[ WITH RETURN | WITHOUT RETURN ]
+FOR <expresión de consulta>
+[ ORDER BY <especificación del tipo> ]
+[ FOR { READ ONLY | UPDATE [ OF <lista de la columna> ] } ]
+```
+
+```js
+options = {
+    changes: "SENSITIVE | INSENSITIVE | ASENSITIVE",
+    cursor: "SCROLL | NO SCROLL",
+    hold: "true | false",
+    return: "true | false",
+    orderBy: "<especificación del tipo>",
+    readOnly: "true | false",
+    update: ["<lista de la columna>"],
+   };
+```
+
+Como se puede ver en la sintaxis, SQL soporta tres opciones de sensibilidad del cursor:
+
+- **SENSITIVE** Cambios significativos hechos por las instrucciones fuera del cursor afectan
+inmediatamente a los resultados de la consulta dentro del cursor.
+- **INSENSITIVE** Cambios significativos hechos por las instrucciones fuera del cursor no
+afectan a los resultados de la consulta dentro del cursor.
+- **ASENSITIVE** La sensibilidad del cursor es definida por la implementación. Los cambios
+significativos pueden o no ser captados dentro del cursor
+
+### OBTENER DATOS
+
+Una o más instrucciones **FETCH** pueden ser ejecutadas mientras un cursor está abierto. Cada
+instrucción apunta a una fila específica en los resultados de la consulta, y los valores son entonces
+extraídos de esas filas. La siguiente sintaxis muestra los elementos básicos que conforman la instrucción
+FETCH:
+
+```sql
+FETCH [ [ <orientación para búsqueda> ] FROM ]
+<nombre del cursor> INTO <variables host>
+```
+
+NEXT|PRIOR|FIRST|LAST|ABSOLUTE valor|RELATIVE valor
+
+### UPDATE POSICIONADO
+
+```sql
+DECLARE CD_5 CURSOR
+FOR
+SELECT *
+FROM INVENTARIO_CD
+FOR UPDATE OF DISCO_COMPACTO;
+
+OPEN CD_5;
+
+FETCH CD_5
+INTO :CD, :Categoria, :Precio, :A_la_mano;
+
+UPDATE INVENTARIO_CD
+SET A_LA_MANO = :A_la_mano * 2
+WHERE CURRENT OF CD_5;
+
+CLOSE CD_5;
+```
+
+### DELETE POSICIONADO p370
+
+La instrucción DELETE posicionada, al igual que la instrucción UPDATE posicionada, requiere
+una cláusula WHERE que debe incluir la opción CURRENT OF. (Una instrucción DELETE regular,
+como puede recordarse, no requiere de una cláusula WHERE.) Una instrucción DELETE
+posicionada utiliza la siguiente sintaxis:
+
+```sql
+DELETE <nombre de la tabla>
+WHERE CURRENT OF <nombre del cursor>
+```
+
+## TRANSACCIONES SQL p377
+
+- Entender las transacciones SQL
+- Configurar las propiedades de la transacción
+- Iniciar una transacción
+- Determinar el aplazamiento de una restricción
+- Crear puntos de recuperación en una transacción
+- Finalizar una transacción
+
+Una transacción es una unidad de trabajo que
+se compone de una o más instrucciones SQL que realizan un conjunto de acciones relacionadas.
+
+Para que un conjunto de acciones califique como una transacción, debe pasar la prueba ACID.
+ACID es el acrónimo comúnmente utilizado para referirse a los nombres en inglés de las cuatro
+características de una transacción
+
+- **Atómica** Esta característica se refiere a la naturaleza todo-o-nada de una transacción. Se realizan
+ya sea todas las operaciones en una transacción, o ninguna de ellas. Aunque algunas instrucciones
+sean ejecutadas, los resultados de éstas regresan a su punto inicial si la transacción
+falla en cualquier punto antes de ser completada. Solamente cuando todas las instrucciones se
+ejecutan apropiadamente y todas las acciones se realizan, se considera completa una transacción
+y sus resultados se aplican a la base de datos.
+
+- **Consistente** La base de datos debe ser consistente al inicio y al final de la transacción. De
+hecho, se puede considerar una transacción como un conjunto de acciones que lleva a la base
+de datos de un estado consistente a otro. Todas las reglas que definen y limitan los datos deben
+ser aplicadas a esos datos como resultado de cualquier cambio que ocurra durante la transacción.
+Además, todas las estructuras dentro de la base de datos deben estar correctas al final de
+la transacción.
+
+- **Aislada (Isolated)** Los datos que pudieran encontrarse en un estado inconsistente temporalmente
+durante una transacción no deberán estar disponibles a otras transacciones hasta que los
+datos sean consistentes una vez más. En otras palabras, ningún usuario deberá ser capaz de acceder
+a los datos inconsistentes durante una transacción implementada por otro usuario cuando
+los datos impactados por esa transacción están en un estado inconsistente. Además, cuando
+una transacción se encuentra aislada, ninguna otra transacción puede afectarla.
+
+- **Durable** Una vez que los cambios hechos en una transacción sean completados, esos cambios
+deberán ser preservados, y los datos deberán estar en un estado confiable y consistente,
+incluso si ocurren errores de aplicación o de hardware.
+
+### El estándar SQL:2006 define siete instrucciones relacionadas al proceso de transacción (p380)
+
+- **SET TRANSACTION** Configura las propiedades de la siguiente transacción que deberá ser
+ejecutada.
+
+- **START TRANSACTION** Configura las propiedades de una transacción e inicia esa transacción.
+
+- **SET CONSTRAINTS** Determina el modo de restricción dentro de una transacción actual.
+El modo de restricción se refiere a si una restricción es aplicada inmediatamente a los datos
+cuando éstos son modificados o si la aplicación de la restricción es aplazada hasta un punto
+posterior en la transacción.
+
+- **SAVEPOINT** Crea un punto de recuperación dentro de una transacción. Un punto de recuperación
+marca una zona dentro de la transacción que actúa como un punto para detenerse
+cuando una transacción tiene que regresar a su punto inicial.
+
+- **RELEASE SAVEPOINT** Libera un punto de recuperación.
+
+- **ROLLBACK** Finaliza una transacción y reinvierte todos los cambios al comienzo de la
+transacción o a un punto de recuperación.
+- **COMMIT** Finaliza una transacción y permite completar todos los cambios a la base de datos.
+
+- SET TRANSACTION
+
+```sql
+SET [ LOCAL ] TRANSACTION <modo> [ { , <modo> } ... ]
+```
+
+modos de transacción que se pueden especificar:
+
+- Nivel de acceso: READ ONLY|READ WRITE
+- Nivel de aislamiento: READ UNCOMMITTED|READ COMMITTED|REPEATABLE READ|SERIALIZABLE
+- Tamaño de diagnóstico
+
+|Nivel de aislamiento| Lectura sucia |Lectura no repetible |Lectura fantasma|
+|--|--|--|--|
+|READ UNCOMMITTED| Sí| Sí| Sí|
+|READ COMMITTED| No| Sí| Sí|
+|REPEATABLE READ| No| No| Sí|
+|SERIALIZABLE| No| No| No|
+
+- Iniciar una transaccion
+
+```sql
+START TRANSACTION <modo> [ { , <modo> } ... ]
+```
+
+### Aplazar restricciones en una transaccion
+
+```sql
+SET CONSTRAINTS { ALL | <nombres de las restricciones> }
+{ DEFERRED | IMMEDIATE }
+```
+
+puede usarse la palabra clave **ALL**; o se deberán listar los nombres de las restricciones, separados
+por una columna
+aplazar: DEFERRED|IMMEDIATE
+
+Normalmente, se utilizará la instrucción **SET CONSTRAINTS** en conjuntos por pares: una
+instrucción para aplazar las restricciones y otra para aplicarlas.
+
+Sin embargo, realmente no se necesita
+utilizar la instrucción **SET CONSTRAINTS** para aplicarlas debido a que todas las restricciones
+se aplican antes de que se complete la transacción, hayan sido las restricciones aplicadas explícitamente
+o no.
+
+### Crear puntos de restauración
+
+``sql
+SAVEPOINT <nombre del punto de recuperación>
+RELEASE SAVEPOINT <nombre del punto de recuperación>
+´´´
+
+### Finalizar una transaccion
+
+```sql
+COMMIT [ WORK ] [ AND [ NO ] CHAIN ]
+```
+
+```sql
+ROLLBACK [ WORK ] [ AND [ NO ] CHAIN ]
+[ TO SAVEPOINT <nombre del punto de recuperación> ]
+```

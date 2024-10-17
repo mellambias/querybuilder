@@ -11,6 +11,7 @@ class Core {
 		this.functionOneParam();
 		this.functionDate();
 		this.joins();
+		this.fetches();
 	}
 
 	createDatabase(name, options) {
@@ -490,6 +491,10 @@ class Core {
 		return `${sql} ${predicados.join("\n")}`;
 	}
 
+	whereCursor(cursorName) {
+		return `WHERE CURRENT OF ${cursorName};`;
+	}
+
 	on(predicados) {
 		const sql = "ON";
 		if (typeof predicados === "string") {
@@ -557,31 +562,6 @@ class Core {
 			}
 		}
 	}
-
-	// logicos() {
-	// 	const logicos = {
-	// 		and: "and",
-	// 	};
-	// 	for (const oper in logicos) {
-	// 		if (/^(AND|OR|NOT)$/i.test(oper)) {
-	// 			this[oper] = (...predicados) => {
-	// 				if (predicados.length > 1) {
-	// 					return `(${predicados.join(`\n${oper.toUpperCase()} `)})`;
-	// 				}
-	// 				return `\n${oper.toUpperCase()} ${predicados}`;
-	// 			};
-	// 		}
-	// 		if (/^(BETWEEN)$/i.test(oper)) {
-	// 			this[oper] = (...predicados) =>
-	// 				`${oper.toUpperCase()} ${predicados[0]} AND ${predicados[1]}`;
-	// 		}
-	// 		if (/^(LIKE|NOT LIKE)$/i.test(oper)) {
-	// 			this[oper] = (...predicados) =>
-	// 				`${predicados[0]} ${oper.toUpperCase()} ('${predicados[1]}')`;
-	// 		}
-	// 		throw new Error(`El operador '${oper}' no esta soportado`);
-	// 	}
-	// }
 
 	getListValues(...values) {
 		let arrayValues = [];
@@ -717,7 +697,7 @@ class Core {
 		const sql = `UPDATE ${table}`;
 		const setStack = [];
 		for (const col in sets) {
-			if (typeof sets[col] === "string") {
+			if (typeof sets[col] === "string" && /(:)/.test(sets[col]) === false) {
 				setStack.push(`${col} = '${sets[col]}'`);
 			} else if (sets[col] instanceof QueryBuilder) {
 				setStack.push(`${col} =\n( ${sets[col].toString().replace(";", "")} )`);
@@ -758,6 +738,123 @@ class Core {
 		for (const name in names) {
 			this[name] = () => names[name];
 		}
+	}
+
+	// cursores
+	createCursor(name, expresion, options) {
+		if (typeof name !== "string" || typeof name === "undefined") {
+			throw new Error("Es necesario un nombre valido para el cursor");
+		}
+		let sql = `DECLARE ${name}`;
+		// opciones
+		if (/^(SENSITIVE|INSENSITIVE|ASENSITIVE)$/i.test(options?.changes)) {
+			sql += ` ${options.changes.toUpperCase()}`;
+		}
+		if (/^(SCROLL|NO SCROLL)$/i.test(options?.cursor)) {
+			sql += ` ${options.cursor.toUpperCase()}`;
+		}
+		if (options?.hold !== undefined) {
+			sql += ` ${options.hold === true ? "WITH" : "WITHOUT"} HOLD`;
+		}
+		if (options?.return !== undefined) {
+			sql += ` ${options.return === true ? "WITH" : "WITHOUT"} RETURN`;
+		}
+		sql += " CURSOR\n";
+		if (typeof expresion === "string") {
+			sql += `FOR\n${expresion}`;
+		} else if (expresion instanceof QueryBuilder) {
+			sql += `FOR\n${expresion.toString().replace(";", "")}`;
+		} else {
+			throw new Error("la expresion no es valida");
+		}
+		if (options?.orderBy !== undefined) {
+			sql += `\nORDER BY ${options.orderBy}`;
+		}
+		if (options?.readOnly === true) {
+			sql += "\nFOR READ ONLY";
+		} else if (options?.update !== undefined && options?.update !== false) {
+			sql += "\nFOR UPDATE";
+			if (Array.isArray(options.update)) {
+				sql += ` OF ${options.update.join(", ")}`;
+			} else if (typeof options.update === "string") {
+				sql += ` OF ${options.update}`;
+			}
+		}
+		return `${sql}`;
+	}
+	openCursor(name) {
+		return `OPEN ${name}`;
+	}
+	closeCursor(name) {
+		return `CLOSE ${name}`;
+	}
+	fetch(cursorName, hostVars) {
+		return `FETCH ${cursorName}\nINTO ${Array.isArray(hostVars) ? hostVars.map((col) => `:${col}`).join(", ") : hostVars}`;
+	}
+	fetches() {
+		const directions = ["NEXT", "PRIOR", "FIRST", "LAST"];
+		const directionsWithValue = ["ABSOLUTE", "RELATIVE"];
+		for (const comand of directions) {
+			const comandName = `fetch${comand.toCapital()}`;
+			this[comandName] = (cursorName, direction, hostVars) => {
+				return `FETCH ${direction.toUpperCase()} FROM ${cursorName}\nINTO ${Array.isArray(hostVars) ? hostVars.map((col) => `:${col}`).join(", ") : hostVars}`;
+			};
+		}
+		for (const comand of directionsWithValue) {
+			const comandName = `fetch${comand.toCapital()}`;
+			this[comandName] = (cursorName, direction, filas, hostVars) => {
+				return `FETCH ${direction.toUpperCase()} ${filas} FROM ${cursorName}\nINTO ${Array.isArray(hostVars) ? hostVars.map((col) => `:${col}`).join(", ") : hostVars}`;
+			};
+		}
+	}
+	// Transacciones
+	setTransaction(config) {
+		const sql = "SET TRANSACTION\n";
+		const stack = [];
+		if (Array.isArray(config)) {
+			for (const oneConfig of config) {
+				stack.push(this.setTransaction(oneConfig).replace(sql, ""));
+			}
+			return `${sql}${stack.join(",\n")}`;
+		}
+		if (/^(READ ONLY|READ WRITE)$/i.test(config?.access)) {
+			stack.push(`${config.access.toUpperCase()}`);
+		}
+		if (
+			/^(READ UNCOMMITTED|READ COMMITTED|REPEATABLE READ|SERIALIZABLE)$/i.test(
+				config?.isolation,
+			)
+		) {
+			stack.push(`ISOLATION LEVEL ${config.isolation.toUpperCase()}`);
+		}
+		if (typeof config?.diagnostic === "number") {
+			stack.push(`DIAGNOSTICS SIZE ${config.diagnostic}`);
+		}
+		return `${sql}${stack.join(",\n")}`;
+	}
+	startTransaction(config) {
+		return this.setTransaction(config).replace("SET", "START");
+	}
+	setConstraints(restrictions, type) {
+		if (Array.isArray(restrictions)) {
+			return `SET CONSTRAINTS ${restrictions.join(", ")} ${/^(DEFERRED|IMMEDIATE)$/i.test(type) ? type.toUpperCase() : ""}`;
+		}
+		return `SET CONSTRAINTS ${restrictions} ${/^(DEFERRED|IMMEDIATE)$/i.test(type) ? type.toUpperCase() : ""}`;
+	}
+	setSavePoint(name) {
+		return `SAVEPOINT ${name}`;
+	}
+	clearSavePoint(name) {
+		return `RELEASE SAVEPOINT ${name}`;
+	}
+	commit(name) {
+		return "COMMIT";
+	}
+	rollback(savepoint) {
+		if (typeof savepoint === "string") {
+			return `ROLLBACK TO SAVEPOINT ${savepoint}`;
+		}
+		return "ROLLBACK";
 	}
 }
 export default Core;

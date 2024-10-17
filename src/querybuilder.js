@@ -1,5 +1,6 @@
 import { Types } from "./utils/utils.js";
 import Column from "./column.js";
+import Cursor from "./cursor.js";
 class QueryBuilder {
 	constructor(language, options = {}) {
 		this.languageClass = language;
@@ -18,6 +19,7 @@ class QueryBuilder {
 		this.alterTableStack = [];
 		this.selectCommand = undefined;
 		this.selectStack = [];
+		this.cursores = {};
 		this.predicados();
 		this.functionOneParam();
 		this.functionDate();
@@ -366,6 +368,20 @@ class QueryBuilder {
 		this.commandStack.push("where");
 		return this;
 	}
+	whereCursor(cursorName) {
+		if (this.cursores?.[cursorName] === undefined) {
+			throw new Error(`El cursor '${cursorName}' no ha sido definido`);
+		}
+		if (this.selectCommand?.length > 0) {
+			this.selectStack.push(this.language.whereCursor(cursorName));
+		} else {
+			throw new Error(
+				"No es posible aplicar, falta el comando 'select|delete'",
+			);
+		}
+		this.commandStack.push("whereCursor");
+		return this;
+	}
 	on(predicados) {
 		if (this.selectCommand?.length > 0) {
 			this.selectStack.push(this.language.on(predicados));
@@ -463,6 +479,9 @@ class QueryBuilder {
 	}
 	update(table, sets) {
 		try {
+			if (Array.isArray(sets)) {
+				throw new Error("El argumento debe ser un objeto JSON");
+			}
 			if (this.selectCommand?.length > 0) {
 				if (this.selectStack.length) {
 					this.selectCommand += `\n${this.selectStack.join("\n")}`;
@@ -519,6 +538,101 @@ class QueryBuilder {
 		}
 	}
 
+	//cursores
+
+	createCursor(name, expresion, options) {
+		try {
+			this.cursores[name] = new Cursor(name, expresion, options, this);
+			this.query.push(this.cursores[name].toString().replace(";", ""));
+		} catch (error) {
+			throw new Error(error.message);
+		}
+		this.commandStack.push("createCursor");
+		return this.cursores[name];
+	}
+	openCursor(name) {
+		try {
+			this.commandStack.push("openCursor");
+			this.cursores[name].open();
+			return this.cursores[name];
+		} catch (error) {
+			throw new Error(error.message);
+		}
+	}
+	closeCursor(name) {
+		try {
+			this.commandStack.push("closeCursor");
+			this.cursores[name].close();
+			return this;
+		} catch (error) {
+			throw new Error(error.message);
+		}
+	}
+
+	// transacciones
+	setTransaction(config) {
+		try {
+			this.query.push(`${this.language.setTransaction(config)}`);
+		} catch (error) {
+			throw new Error(error.message);
+		}
+		this.commandStack.push("setTransaction");
+		return this;
+	}
+	startTransaction(config) {
+		try {
+			this.query.push(`${this.language.startTransaction(config)}`);
+		} catch (error) {
+			throw new Error(error.message);
+		}
+		this.commandStack.push("startTransaction");
+		return this;
+	}
+	setConstraints(restrictions, type) {
+		try {
+			this.query.push(`${this.language.setConstraints(restrictions, type)}`);
+		} catch (error) {
+			throw new Error(error.message);
+		}
+		this.commandStack.push("setConstraints");
+		return this;
+	}
+	setSavePoint(name) {
+		try {
+			this.query.push(`${this.language.setSavePoint(name)}`);
+		} catch (error) {
+			throw new Error(error.message);
+		}
+		this.commandStack.push("setSavePoint");
+		return this;
+	}
+	clearSavePoint(name) {
+		try {
+			this.query.push(`${this.language.clearSavePoint(name)}`);
+		} catch (error) {
+			throw new Error(error.message);
+		}
+		this.commandStack.push("clearSavePoint");
+		return this;
+	}
+	commit() {
+		try {
+			this.query.push(`${this.language.commit()}`);
+		} catch (error) {
+			throw new Error(error.message);
+		}
+		this.commandStack.push("commit");
+		return this;
+	}
+	rollback(savepoint) {
+		try {
+			this.query.push(`${this.language.rollback(savepoint)}`);
+		} catch (error) {
+			throw new Error(error.message);
+		}
+		this.commandStack.push("rollback");
+		return this;
+	}
 	toString() {
 		if (this.alterTableCommand?.length > 0) {
 			this.alterTableCommand += this.alterTableStack.join(",\n");
@@ -536,7 +650,7 @@ class QueryBuilder {
 		}
 		const send = this.query.join(";\n");
 		this.query = [];
-		return `${send};`;
+		return `${send}${/(;)$/.test(send) ? "" : ";"}`;
 	}
 
 	// get and set
