@@ -1,4 +1,4 @@
-import isReserved from "./reservedWords.js";
+//import isReserved from "./reservedWords.js";
 const Types = {
 	identificador: {
 		set: function (type) {

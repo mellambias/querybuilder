@@ -3,6 +3,9 @@ import mysql from "mysql2/promise";
 class MySqlDriver extends Driver {
 	constructor(params) {
 		super(mysql, params);
+		this.connection = null;
+		this.queyResult = null;
+		this.queryFields = null;
 	}
 	async connect() {
 		this.connection = await this.library.createConnection({
@@ -11,25 +14,44 @@ class MySqlDriver extends Driver {
 			user: this.username,
 			password: this.password,
 			database: this.database || "",
+			multipleStatements: true,
 		});
 		return this;
 	}
 
 	async execute(query) {
-		if (!this.connection.isConnected()) {
-			await this.connect();
+		try {
+			if (this.connection === null) {
+				console.log("Creando conexion...");
+				await this.connect();
+			}
+			console.log("Petición", query);
+			[this.queyResult, this.queryFields] = await this.connection.query(query);
+			console.log("respuesta", this.queyResult);
+			await this.close();
+			return this;
+		} catch (error) {
+			await this.close();
+			throw new Error(error.message);
 		}
-		this.queyResult = await this.connection.query(query);
-		return this;
 	}
 
 	response() {
 		return this.queyResult;
 	}
+	fields() {
+		return this.queryFields;
+	}
 
 	async close() {
-		if (this.connection.isConnected()) {
-			await this.connection.close();
+		try {
+			if (this.connection !== null) {
+				await this.connection.close();
+				this.connection = null;
+				return this;
+			}
+		} catch (error) {
+			throw new Error(error.message);
 		}
 	}
 }

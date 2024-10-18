@@ -10,7 +10,7 @@ describe("Driver PostgresDriver", () => {
 	let sql;
 	beforeEach(() => {
 		const queryBuilder = new QueryBuilder(PostgreSQL, {
-			typeIdentificator: Types.identificador.regular,
+			typeIdentificator: "regular",
 		});
 		sql = queryBuilder.driver(PostgresSQL.driver, PostgresSQL.params);
 	});

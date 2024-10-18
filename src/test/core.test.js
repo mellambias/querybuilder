@@ -2,7 +2,6 @@ import { test, after, describe, beforeEach } from "node:test";
 import assert from "node:assert";
 import QueryBuilder from "../querybuilder.js";
 import Core from "../core.js";
-import { access } from "node:fs";
 
 describe("El Core del lenguaje SQL2006", () => {
 	let sql;
@@ -23,29 +22,43 @@ describe("El Core del lenguaje SQL2006", () => {
 			assert.equal(error, "Error: DAY no es un identificador valido");
 		}
 	});
-
+	test("Comando para eliminar una base de datos", () => {
+		const result = sql.dropDatabase("testing").toString();
+		assert.equal(result, "DROP DATABASE testing;");
+	});
 	test("Crear una tabla", () => {
-		const result = sql.use("testing").createTable("table_test").toString();
-		assert.equal(result, "USE testing;\nCREATE TABLE table_test;");
+		const result = sql
+			.use("testing")
+			.createTable("table_test", { cols: { ID: "INT" } })
+			.toString();
+		assert.equal(result, "USE testing;\nCREATE TABLE table_test\n ( ID INT );");
 	});
 	test("Crear una tabla temporal global", () => {
 		const result = sql
 			.use("testing")
-			.createTable("table_test", { temporary: "global", onCommit: "delete" })
+			.createTable("table_test", {
+				temporary: "global",
+				onCommit: "delete",
+				cols: { ID: "INT" },
+			})
 			.toString();
 		assert.equal(
 			result,
-			"USE testing;\nCREATE GLOBAL TEMPORARY TABLE table_test\n ON COMMIT DELETE ROWS;",
+			"USE testing;\nCREATE GLOBAL TEMPORARY TABLE table_test\n ( ID INT )\n ON COMMIT DELETE ROWS;",
 		);
 	});
 	test("Crear una tabla temporal local", () => {
 		const result = sql
 			.use("testing")
-			.createTable("table_test", { temporary: "local", onCommit: "PRESERVE" })
+			.createTable("table_test", {
+				temporary: "local",
+				onCommit: "PRESERVE",
+				cols: { ID: "INT" },
+			})
 			.toString();
 		assert.equal(
 			result,
-			"USE testing;\nCREATE LOCAL TEMPORARY TABLE table_test\n ON COMMIT PRESERVE ROWS;",
+			"USE testing;\nCREATE LOCAL TEMPORARY TABLE table_test\n ( ID INT )\n ON COMMIT PRESERVE ROWS;",
 		);
 	});
 	test("Crear una tabla con varias columnas", () => {
@@ -138,7 +151,8 @@ describe("El Core del lenguaje SQL2006", () => {
 				result,
 				`USE INVENTARIO;
 ALTER TABLE DISCOS_COMPACTOS
-ALTER COLUMN CANTIDAD SET DEFAULT 'DESCONOCIDO',
+ALTER COLUMN CANTIDAD SET DEFAULT 'DESCONOCIDO';
+ALTER TABLE DISCOS_COMPACTOS
 ALTER COLUMN CIUDAD DROP DEFAULT;`,
 			);
 		});

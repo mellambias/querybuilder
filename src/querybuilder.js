@@ -48,13 +48,13 @@ class QueryBuilder {
 			throw new Error("No ha establecido un driver.");
 		}
 		try {
-			await this.driverDB.execute(this.toString());
+			await this.driverDB.execute(this.queryJoin());
 			this.queryResult = this.driverDB.response();
-			this.queryResultError = "";
+			this.queryResultError = null;
 			this.commandStack.push("execute");
 			return this;
 		} catch (error) {
-			this.queryResultError = error;
+			this.queryResultError = error.message;
 			this.queryResult = "";
 			throw new Error(this.error);
 		}
@@ -95,6 +95,9 @@ class QueryBuilder {
 	}
 	createTable(name, options) {
 		try {
+			if (options?.cols === undefined) {
+				throw new Error("Tiene que especificar como mínimo una columna");
+			}
 			this.query.push(
 				`${this.language.createTable(name.validSqlId(), options)}`,
 			);
@@ -111,66 +114,41 @@ class QueryBuilder {
 		}
 		this.alterTableCommand = this.language.alterTable(name);
 		this.alterTableStack = [];
-		this.commandStack.push("alterTable");
-		return this;
-	}
-	addColumn(name, options) {
-		if (this.alterTableCommand?.length > 0) {
-			this.alterTableCommand += this.language.addColumn(name, options);
-		} else {
-			throw new Error("No es posible aplicar, falta el comando 'alterTable'");
-		}
-		this.commandStack.push("addColumn");
-		return this;
-	}
-	alterColumn(name) {
-		if (this.alterTableCommand?.length > 0) {
-			this.alterTableStack.push(this.language.alterColumn(name));
-		} else {
-			throw new Error("No es posible aplicar, falta el comando 'alterTable'");
-		}
-		this.commandStack.push("alterColumn");
+		this.commandStack = ["alterTable"];
+		this.alterTableComands();
 		return this;
 	}
 
-	dropColumn(name, option) {
-		if (this.alterTableCommand?.length > 0) {
-			this.alterTableStack.push(this.language.dropColumn(name, option));
-		} else {
-			throw new Error("No es posible aplicar, falta el comando 'alterTable'");
+	alterTableComands() {
+		const comands = ["addColumn", "alterColumn", "dropColumn", "addConstraint"];
+		for (const comand of comands) {
+			this[comand] = (name, options) => {
+				const alterTablePos = this.commandStack.indexOf("alterTable");
+				if (alterTablePos !== -1) {
+					this.alterTableStack.push(
+						`${this.alterTableCommand}${this.language[comand](name, options)}`,
+					);
+					this.commandStack.push(comand);
+					return this;
+				}
+				throw new Error(`No se pueden añadir columnas sin un 'ALTER TABLE'`);
+			};
 		}
-		this.commandStack.push("dropColumn");
-		return this;
-	}
-
-	setDefault(value) {
-		if (this.alterTableCommand?.length > 0) {
-			this.alterTableStack[this.alterTableStack.length - 1] +=
-				this.language.setDefault(value);
-		} else {
-			throw new Error("No es posible aplicar, falta el comando 'alterTable'");
+		const alterColums = ["setDefault", "dropDefault"];
+		for (const comand of alterColums) {
+			this[comand] = (value) => {
+				const alterColumnPos = this.commandStack.lastIndexOf("alterColumn");
+				if (alterColumnPos !== -1) {
+					this.alterTableStack[alterColumnPos - 1] +=
+						this.language[comand](value);
+				} else {
+					throw new Error(
+						"No es posible aplicar, falta el comando 'alterColumn'",
+					);
+				}
+				return this;
+			};
 		}
-		this.commandStack.push("setDefault");
-		return this;
-	}
-	dropDefault() {
-		if (this.alterTableCommand?.length > 0) {
-			this.alterTableStack[this.alterTableStack.length - 1] +=
-				this.language.dropDefault();
-		} else {
-			throw new Error("No es posible aplicar, falta el comando 'alterTable'");
-		}
-		this.commandStack.push("dropDefault");
-		return this;
-	}
-
-	addConstraint(name, option) {
-		if (this.alterTableCommand?.length > 0) {
-			this.alterTableCommand += this.language.addConstraint(name, option);
-		} else {
-			throw new Error("No es posible aplicar, falta el comando 'alterTable'");
-		}
-		return this;
 	}
 
 	dropTable(name, option) {
@@ -633,9 +611,10 @@ class QueryBuilder {
 		this.commandStack.push("rollback");
 		return this;
 	}
-	toString() {
+
+	queryJoin() {
 		if (this.alterTableCommand?.length > 0) {
-			this.alterTableCommand += this.alterTableStack.join(",\n");
+			this.alterTableCommand = this.alterTableStack.join(";\n");
 			this.query.push(this.alterTableCommand);
 			this.alterTableCommand = undefined;
 			this.alterTableStack = [];
@@ -649,8 +628,12 @@ class QueryBuilder {
 			this.selectStack = [];
 		}
 		const send = this.query.join(";\n");
-		this.query = [];
 		return `${send}${/(;)$/.test(send) ? "" : ";"}`;
+	}
+	toString() {
+		const joinQuery = this.queryJoin();
+		this.query = [];
+		return joinQuery;
 	}
 
 	// get and set
