@@ -111,10 +111,10 @@ class Core {
 			command += ` DEFAULT ${typeof options.default === "string" ? `'${options.default}'` : options.default}`;
 		}
 		if (options?.foreingKey) {
-			const { table, column, match } = options.foreingKey;
+			const { table, cols, match } = options.foreingKey;
 			command += `\nREFERENCES ${table}`;
-			if (column) {
-				command += ` (${column})`;
+			if (cols) {
+				command += ` (${Array.isArray(cols) ? cols.join(", ") : cols})`;
 			}
 			if (/^(FULL|PARTIAL|SIMPLE)$/i.test(match)) {
 				command += `\nMATCH ${match.toUpperCase()}`;
@@ -237,7 +237,11 @@ class Core {
 		if (options?.cols) {
 			sql += `\n( ${options.cols.join(", ")} )`;
 		}
-		sql += ` AS\n${options.as}`;
+		if (options.as instanceof QueryBuilder) {
+			sql += ` AS\n${options.as.toString().replace(";", "")}`;
+		} else {
+			sql += ` AS\n${options.as}`;
+		}
 		if (options?.check === true) {
 			sql += " WITH CHECK OPTION";
 		}
@@ -248,8 +252,13 @@ class Core {
 	}
 	// Seguridad
 
-	createRole(name, options) {
-		let sql = `CREATE ROLE ${name}`;
+	createRole(names, options) {
+		let sql = "CREATE ROLE ";
+		if (Array.isArray(names)) {
+			sql += names.join(", ");
+		} else {
+			sql += names;
+		}
 		if (/^(CURRENT_USER|CURRENT_ROLE)$/i.test(options?.admin)) {
 			sql += ` WITH ADMIN ${options.admin}`;
 		}

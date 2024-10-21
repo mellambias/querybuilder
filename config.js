@@ -8,7 +8,7 @@ import PostgresDriver from "./src/drivers/PostgresDriver.js";
 const config = {
 	databases: {
 		MySql8: {
-			version: "8.0.21",
+			version: "8.4.3",
 			driver: MySqlDriver,
 			params: {
 				host: "localhost",

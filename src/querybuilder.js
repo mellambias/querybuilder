@@ -43,22 +43,6 @@ class QueryBuilder {
 		this.commandStack.push("use");
 		return this;
 	}
-	async execute() {
-		if (!this.driverDB) {
-			throw new Error("No ha establecido un driver.");
-		}
-		try {
-			await this.driverDB.execute(this.queryJoin());
-			this.queryResult = this.driverDB.response();
-			this.queryResultError = null;
-			this.commandStack.push("execute");
-			return this;
-		} catch (error) {
-			this.queryResultError = error.message;
-			this.queryResult = "";
-			throw new Error(this.error);
-		}
-	}
 
 	createDatabase(name, options) {
 		try {
@@ -215,17 +199,17 @@ class QueryBuilder {
 
 	// Seguridad
 
-	createRole(name, options) {
+	createRole(names, options) {
 		try {
-			this.query.push(`${this.language.createRole(name, options)}`);
+			this.query.push(`${this.language.createRole(names, options)}`);
 		} catch (error) {
 			throw new Error(error.message);
 		}
 		return this;
 	}
-	dropRoles(names) {
+	dropRoles(names, options) {
 		try {
-			this.query.push(`${this.language.dropRoles(names)}`);
+			this.query.push(`${this.language.dropRoles(names, options)}`);
 		} catch (error) {
 			throw new Error(error.message);
 		}
@@ -632,8 +616,32 @@ class QueryBuilder {
 	}
 	toString() {
 		const joinQuery = this.queryJoin();
-		this.query = [];
+		this.dropQuery();
 		return joinQuery;
+	}
+	dropQuery() {
+		this.query = [];
+		this.selectCommand = undefined;
+		this.selectStack = [];
+		this.alterTableCommand = undefined;
+		this.alterTableStack = [];
+		return this;
+	}
+	async execute() {
+		if (!this.driverDB) {
+			throw new Error("No ha establecido un driver.");
+		}
+		try {
+			await this.driverDB.execute(this.queryJoin());
+			this.queryResult = this.driverDB.response();
+			this.queryResultError = null;
+			this.commandStack.push("execute");
+			return this;
+		} catch (error) {
+			this.queryResultError = error.message;
+			this.queryResult = "";
+			throw new Error(this.error);
+		}
 	}
 
 	// get and set

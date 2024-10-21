@@ -217,7 +217,7 @@ ALTER COLUMN CIUDAD DROP DEFAULT;`,
 					values: ["not null"],
 					foreingKey: {
 						table: "CD_ARTISTA",
-						column: "CD_ARTISTA_ID",
+						cols: "CD_ARTISTA_ID",
 						match: "full",
 					},
 				},
