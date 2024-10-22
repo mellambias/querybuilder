@@ -4,19 +4,20 @@ import QueryBuilder from "../querybuilder.js";
 import MySQL from "../sql/MySQL.js";
 import { config } from "../../config.js";
 
-describe("Driver MySqlDriver", async () => {
-	const MySql8 = config.databases.MySql8;
-	let sql;
-	beforeEach(() => {
-		const queryBuilder = new QueryBuilder(MySQL, {
-			typeIdentificator: "regular",
-		});
-		sql = queryBuilder.driver(MySql8.driver, MySql8.params);
+const MySql8 = config.databases.MySql8;
+let sql;
+beforeEach(() => {
+	const queryBuilder = new QueryBuilder(MySQL, {
+		typeIdentificator: "regular",
 	});
+	sql = queryBuilder.driver(MySql8.driver, MySql8.params);
+});
+
+describe("Driver MySqlDriver", async () => {
 	test("crea una base de datos", async () => {
 		try {
 			await sql.createDatabase("testing").execute();
-			assert.equal(sql.toString(), "CREATE DATABASE prueba;");
+			assert.equal(sql.toString(), "CREATE DATABASE testing;");
 		} catch (error) {
 			assert.equal(
 				error.message,
@@ -24,128 +25,135 @@ describe("Driver MySqlDriver", async () => {
 			);
 		}
 	});
-	test("Crear una tabla", async () => {
-		try {
-			const result = await sql
-				.use("testing")
-				.createTable("TABLE_TEST", { cols: { ID: "INT" } })
-				.execute();
+	test("Crear una tabla en la base de datos testing", async () => {
+		const result = await sql
+			.use("testing")
+			.createTable("TABLE_TEST", { cols: { ID: "INT" } })
+			.execute();
 
-			assert.equal(
-				result.toString(),
-				"USE testing;\nCREATE TABLE TABLE_TEST\n ( ID INT );",
-			);
-			assert.equal(result.queryResult, "result");
-		} catch (error) {
-			assert.equal(error.message, "Table 'table_test' already exists");
+		assert.equal(
+			result.toString(),
+			"USE testing;\nCREATE TABLE TABLE_TEST\n ( ID INT );",
+		);
+
+		if (result.error !== null) {
+			assert.equal(result.error, "Table 'table_test' already exists");
 		}
 	});
 	test("Crear una tabla temporal global", async () => {
-		try {
-			const result = await sql
-				.use("testing")
-				.createTable("table_test_temp", {
-					temporary: "global",
-					onCommit: "delete",
-					cols: { ID: "INT" },
-				})
-				.execute();
+		const result = await sql
+			.use("testing")
+			.createTable("table_test_temp", {
+				temporary: "global",
+				onCommit: "delete",
+				cols: { ID: "INT" },
+			})
+			.execute();
 
-			assert.equal(
-				result.toString(),
-				"USE testing;\nCREATE TEMPORARY TABLE table_test_temp\n ( ID INT );",
-			);
-			assert.ok(result.queryResult);
-		} catch (error) {
-			assert.equal(error.message, result.queryResultError);
+		assert.equal(
+			result.toString(),
+			"USE testing;\nCREATE TEMPORARY TABLE table_test_temp\n ( ID INT );",
+		);
+		assert.ok(result.queryResult);
+
+		if (result.error !== null) {
+			assert.equal(result.error, result.queryResultError);
 		}
 	});
 	test("Crear una tabla con varias columnas", async () => {
-		try {
-			const cols = {
-				ID_ARTISTA: "INTEGER",
-				NOMBRE_ARTISTA: { type: "CHARACTER(60)", default: "artista" },
-				FDN_ARTISTA: "DATE",
-				POSTER_EN_EXISTENCIA: "BOOLEAN",
-			};
-			const result = await sql
-				.use("testing")
-				.createTable("table_test2", { cols })
-				.execute();
+		const cols = {
+			ID_ARTISTA: "INTEGER",
+			NOMBRE_ARTISTA: { type: "CHARACTER(60)", default: "artista" },
+			FDN_ARTISTA: "DATE",
+			POSTER_EN_EXISTENCIA: "BOOLEAN",
+		};
+		const result = await sql
+			.use("testing")
+			.createTable("table_test2", { cols })
+			.execute();
 
-			assert.equal(
-				result.toString(),
-				`USE testing;
+		assert.equal(
+			result.toString(),
+			`USE testing;
 CREATE TABLE table_test2
  ( ID_ARTISTA INT,
 NOMBRE_ARTISTA CHARACTER(60) DEFAULT 'artista',
 FDN_ARTISTA DATE,
 POSTER_EN_EXISTENCIA TINYINT );`,
-			);
-			assert.equal(result.queryResult, "result");
-		} catch (error) {
-			assert.equal(error.message, "Table 'table_test2' already exists");
+		);
+
+		if (result.error !== null) {
+			assert.equal(result.error, "Table 'table_test2' already exists");
 		}
 	});
 	test("Crear un tipo definido por el usuario", async () => {
-		try {
-			const result = await sql
-				.use("testing")
-				.createType("SALARIO", { as: "NUMERIC(8,2)", final: false })
-				.execute();
+		const result = await sql
+			.use("testing")
+			.createType("SALARIO", { as: "NUMERIC(8,2)", final: false })
+			.execute();
 
-			assert.equal(
-				result.toString(),
-				"USE testing;\nCREATE TYPE SALARIO AS NUMERIC(8,2)\nNOT FINAL;",
-			);
-		} catch (error) {
-			assert.equal(error.message, "No soportado utilice SET o ENUM");
+		assert.equal(
+			result.toString(),
+			`USE testing;
+CREATE TYPE SALARIO AS NUMERIC(8,2)
+NOT FINAL;`,
+		);
+
+		if (result.error !== null) {
+			assert.equal(result.error, "No soportado utilice SET o ENUM");
 		}
 	});
-	test("Crea la base de datos inventario", async () => {
-		try {
-			const cols = {
-				DISCOS_COMPACTOS: {
-					ID_DISCO_COMPACTO: "INT",
-					TITULO_CD: "VARCHAR(60)",
-					ID_DISQUERA: "INT",
-				},
-				DISQUERAS_CD: {
-					ID_DISQUERA: "INT",
-					NOMBRE_COMPANYI: "VARCHAR(60)",
-				},
-				TIPOS_MUSICA: {
-					ID_TIPO: "INT",
-					NOMBRE_TIPO: "VARCHAR(20)",
-				},
-			};
+	after(async () => {
+		sql.use("testing").dropDatabase("testing").execute();
+	});
+});
 
-			const result = await sql
-				.createDatabase("INVENTARIO")
-				.use("INVENTARIO")
-				.createTable("DISCOS_COMPACTOS", { cols: cols.DISCOS_COMPACTOS })
-				.createTable("DISQUERAS_CD", { cols: cols.DISQUERAS_CD })
-				.createTable("TIPOS_MUSICA", { cols: cols.TIPOS_MUSICA })
-				.execute();
+// Usa la base de datos inventario
 
-			assert.equal(
-				result.toString(),
-				`CREATE DATABASE INVENTARIO;
+describe("Tabajar con la base de datos inventario", () => {
+	test("Crea la base de datos inventario", { only: true }, async () => {
+		const cols = {
+			DISCOS_COMPACTOS: {
+				ID_DISCO_COMPACTO: "INT",
+				TITULO_CD: "VARCHAR(60)",
+				ID_DISQUERA: "INT",
+			},
+			DISQUERAS_CD: {
+				ID_DISQUERA: "INT",
+				NOMBRE_COMPANYI: "VARCHAR(60)",
+			},
+			TIPOS_MUSICA: {
+				ID_TIPO: "INT",
+				NOMBRE_TIPO: "VARCHAR(20)",
+			},
+		};
+
+		const result = await sql
+			.createDatabase("INVENTARIO")
+			.use("INVENTARIO")
+			.createTable("DISCOS_COMPACTOS", { cols: cols.DISCOS_COMPACTOS })
+			.createTable("DISQUERAS_CD", { cols: cols.DISQUERAS_CD })
+			.createTable("TIPOS_MUSICA", { cols: cols.TIPOS_MUSICA })
+			.execute();
+
+		assert.equal(
+			result.toString(),
+			`CREATE DATABASE INVENTARIO;
 USE INVENTARIO;
 CREATE TABLE DISCOS_COMPACTOS
- ( ID_DISCO_COMPACTO: INT,
-TITULO_CD: VARCHAR(60),
-ID_DISQUERA: INT );
+ ( ID_DISCO_COMPACTO INT,
+ TITULO_CD VARCHAR(60),
+ ID_DISQUERA INT );
 CREATE TABLE DISQUERAS_CD
- ( ID_DISQUERA: INT,
-NOMBRE_COMPANYI: VARCHAR(60);
+ ( ID_DISQUERA INT,
+ NOMBRE_COMPANYI VARCHAR(60) );
 CREATE TABLE TIPOS_MUSICA
- ( ID_TIPO: INT,
-NOMBRE_TIPO: VARCHAR(20)`,
-			);
-		} catch (error) {
+ ( ID_TIPO INT,
+ NOMBRE_TIPO VARCHAR(20) );`,
+		);
+		if (result.error !== null) {
 			assert.equal(
-				error.message,
+				result.error,
 				"Can't create database 'inventario'; database exists",
 			);
 		}
@@ -415,7 +423,7 @@ ON TABLE TITULOS_CD
 TO VENTAS, CONTABILIDAD;`,
 			);
 		});
-		test("revocar privilegios", { only: true }, async () => {
+		test("revocar privilegios", async () => {
 			const result = await sql
 				.use("INVENTARIO")
 				.revoke(

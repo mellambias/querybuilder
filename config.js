@@ -13,6 +13,7 @@ const config = {
 			params: {
 				host: "localhost",
 				port: "3308",
+				xport:"33060",
 				username: "root",
 				password: "d4t55qpl",
 			},

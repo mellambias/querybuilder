@@ -50,7 +50,7 @@ class QueryBuilder {
 				`${this.language.createDatabase(name.validSqlId(), options)}`,
 			);
 		} catch (error) {
-			throw new Error(error.message);
+			this.error = error.message;
 		}
 		this.commandStack.push("createDatabase");
 		return this;
@@ -66,7 +66,7 @@ class QueryBuilder {
 				`${this.language.createSchema(name.validSqlId(), options)}`,
 			);
 		} catch (error) {
-			throw new Error(error.message);
+			this.error = error.message;
 		}
 		this.commandStack.push("createSchema");
 		return this;
@@ -80,13 +80,13 @@ class QueryBuilder {
 	createTable(name, options) {
 		try {
 			if (options?.cols === undefined) {
-				throw new Error("Tiene que especificar como mínimo una columna");
+				this.error = "Tiene que especificar como mínimo una columna";
 			}
 			this.query.push(
 				`${this.language.createTable(name.validSqlId(), options)}`,
 			);
 		} catch (error) {
-			throw new Error(error.message);
+			this.error = error.message;
 		}
 		this.commandStack.push("createTable");
 		return this;
@@ -115,7 +115,7 @@ class QueryBuilder {
 					this.commandStack.push(comand);
 					return this;
 				}
-				throw new Error(`No se pueden añadir columnas sin un 'ALTER TABLE'`);
+				this.error = `No se pueden añadir columnas sin un 'ALTER TABLE'`;
 			};
 		}
 		const alterColums = ["setDefault", "dropDefault"];
@@ -126,9 +126,7 @@ class QueryBuilder {
 					this.alterTableStack[alterColumnPos - 1] +=
 						this.language[comand](value);
 				} else {
-					throw new Error(
-						"No es posible aplicar, falta el comando 'alterColumn'",
-					);
+					this.error = "No es posible aplicar, falta el comando 'alterColumn'";
 				}
 				return this;
 			};
@@ -146,7 +144,7 @@ class QueryBuilder {
 				`${this.language.createType(name.validSqlId(), options)}`,
 			);
 		} catch (error) {
-			throw new Error(error.message);
+			this.error = error.message;
 		}
 		this.commandStack.push("createType");
 		return this;
@@ -158,7 +156,7 @@ class QueryBuilder {
 				`${this.language.createAssertion(name.validSqlId(), assertion)}`,
 			);
 		} catch (error) {
-			throw new Error(error.message);
+			this.error = error.message;
 		}
 		this.commandStack.push("createAssertion");
 		return this;
@@ -170,7 +168,7 @@ class QueryBuilder {
 				`${this.language.createDomain(name.validSqlId(), options)}`,
 			);
 		} catch (error) {
-			throw new Error(error.message);
+			this.error = error.message;
 		}
 		this.commandStack.push("createDomain");
 		return this;
@@ -182,7 +180,7 @@ class QueryBuilder {
 				`${this.language.createView(name.validSqlId(), options)}`,
 			);
 		} catch (error) {
-			throw new Error(error.message);
+			this.error = error.message;
 		}
 		this.commandStack.push("createView");
 		return this;
@@ -191,7 +189,7 @@ class QueryBuilder {
 		try {
 			this.query.push(`${this.language.dropView(name)}`);
 		} catch (error) {
-			throw new Error(error.message);
+			this.error = error.message;
 		}
 		this.commandStack.push("dropView");
 		return this;
@@ -203,7 +201,7 @@ class QueryBuilder {
 		try {
 			this.query.push(`${this.language.createRole(names, options)}`);
 		} catch (error) {
-			throw new Error(error.message);
+			this.error = error.message;
 		}
 		return this;
 	}
@@ -211,7 +209,7 @@ class QueryBuilder {
 		try {
 			this.query.push(`${this.language.dropRoles(names, options)}`);
 		} catch (error) {
-			throw new Error(error.message);
+			this.error = error.message;
 		}
 		this.commandStack.push("dropRoles");
 		return this;
@@ -221,7 +219,7 @@ class QueryBuilder {
 		try {
 			this.query.push(`${this.language.grant(privilegios, on, to, options)}`);
 		} catch (error) {
-			throw new Error(error.message);
+			this.error = error.message;
 		}
 		this.commandStack.push("grant");
 		return this;
@@ -233,7 +231,7 @@ class QueryBuilder {
 				`${this.language.revoke(privilegios, on, from, options)}`,
 			);
 		} catch (error) {
-			throw new Error(error.message);
+			this.error = error.message;
 		}
 		this.commandStack.push("revoke");
 		return this;
@@ -243,7 +241,7 @@ class QueryBuilder {
 		try {
 			this.query.push(`${this.language.grantRoles(roles, users, options)}`);
 		} catch (error) {
-			throw new Error(error.message);
+			this.error = error.message;
 		}
 		this.commandStack.push("grantRoles");
 		return this;
@@ -252,7 +250,7 @@ class QueryBuilder {
 		try {
 			this.query.push(`${this.language.revokeRoles(roles, from, options)}`);
 		} catch (error) {
-			throw new Error(error.message);
+			this.error = error.message;
 		}
 		this.commandStack.push("revokeRoles");
 		return this;
@@ -270,7 +268,7 @@ class QueryBuilder {
 			nuevoSelect.selectCommand = nuevoSelect.language.select(columns, options);
 			return nuevoSelect;
 		} catch (error) {
-			throw new Error(error.message);
+			this.error = error.message;
 		}
 	}
 
@@ -283,7 +281,7 @@ class QueryBuilder {
 		if (this.selectCommand?.length > 0) {
 			this.selectStack.push(this.language.from(tables, alias));
 		} else {
-			throw new Error("No es posible aplicar, falta el comando 'select'");
+			this.error = "No es posible aplicar, falta el comando 'select'";
 		}
 		this.commandStack.push("from");
 		return this;
@@ -305,7 +303,7 @@ class QueryBuilder {
 				if (this.selectCommand?.length > 0) {
 					this.selectStack.push(this.language[join](tables, alias, using));
 				} else {
-					throw new Error("No es posible aplicar, falta el comando 'select'");
+					this.error = "No es posible aplicar, falta el comando 'select'";
 				}
 				this.commandStack.push(join);
 				return this;
@@ -323,23 +321,19 @@ class QueryBuilder {
 		if (this.selectCommand?.length > 0) {
 			this.selectStack.push(this.language.where(predicados));
 		} else {
-			throw new Error(
-				"No es posible aplicar, falta el comando 'select|delete'",
-			);
+			this.error = "No es posible aplicar, falta el comando 'select|delete'";
 		}
 		this.commandStack.push("where");
 		return this;
 	}
 	whereCursor(cursorName) {
 		if (this.cursores?.[cursorName] === undefined) {
-			throw new Error(`El cursor '${cursorName}' no ha sido definido`);
+			this.error = `El cursor '${cursorName}' no ha sido definido`;
 		}
 		if (this.selectCommand?.length > 0) {
 			this.selectStack.push(this.language.whereCursor(cursorName));
 		} else {
-			throw new Error(
-				"No es posible aplicar, falta el comando 'select|delete'",
-			);
+			this.error = "No es posible aplicar, falta el comando 'select|delete'";
 		}
 		this.commandStack.push("whereCursor");
 		return this;
@@ -348,7 +342,7 @@ class QueryBuilder {
 		if (this.selectCommand?.length > 0) {
 			this.selectStack.push(this.language.on(predicados));
 		} else {
-			throw new Error("No es posible aplicar, falta el comando 'FROM'");
+			this.error = "No es posible aplicar, falta el comando 'FROM'";
 		}
 		this.commandStack.push("on");
 		return this;
@@ -406,7 +400,7 @@ class QueryBuilder {
 		if (this.selectCommand?.length > 0) {
 			this.selectStack.push(this.language.groupBy(columns, options));
 		} else {
-			throw new Error("No es posible aplicar, falta el comando 'select'");
+			this.error = "No es posible aplicar, falta el comando 'select'";
 		}
 		this.commandStack.push("groupBy");
 		return this;
@@ -415,7 +409,7 @@ class QueryBuilder {
 		if (this.selectCommand?.length > 0) {
 			this.selectStack.push(this.language.having(predicado, options));
 		} else {
-			throw new Error("No es posible aplicar, falta el comando 'select'");
+			this.error = "No es posible aplicar, falta el comando 'select'";
 		}
 		this.commandStack.push("having");
 		return this;
@@ -424,7 +418,7 @@ class QueryBuilder {
 		if (this.selectCommand?.length > 0) {
 			this.selectStack.push(this.language.orderBy(columns));
 		} else {
-			throw new Error("No es posible aplicar, falta el comando 'select'");
+			this.error = "No es posible aplicar, falta el comando 'select'";
 		}
 		this.commandStack.push("orderBy");
 		return this;
@@ -434,7 +428,7 @@ class QueryBuilder {
 		try {
 			this.query.push(this.language.insert(table, cols, values));
 		} catch (error) {
-			throw new Error(error.message);
+			this.error = error.message;
 		}
 		this.commandStack.push("insert");
 		return this;
@@ -442,7 +436,7 @@ class QueryBuilder {
 	update(table, sets) {
 		try {
 			if (Array.isArray(sets)) {
-				throw new Error("El argumento debe ser un objeto JSON");
+				this.error = "El argumento debe ser un objeto JSON";
 			}
 			if (this.selectCommand?.length > 0) {
 				if (this.selectStack.length) {
@@ -453,7 +447,7 @@ class QueryBuilder {
 			}
 			this.selectCommand = this.language.update(table, sets);
 		} catch (error) {
-			throw new Error(error.message);
+			this.error = error.message;
 		}
 		this.commandStack.push("update");
 		return this;
@@ -469,7 +463,7 @@ class QueryBuilder {
 			}
 			this.selectCommand = this.language.delete(from);
 		} catch (error) {
-			throw new Error(error.message);
+			this.error = error.message;
 		}
 		this.commandStack.push("delete");
 		return this;
@@ -507,7 +501,7 @@ class QueryBuilder {
 			this.cursores[name] = new Cursor(name, expresion, options, this);
 			this.query.push(this.cursores[name].toString().replace(";", ""));
 		} catch (error) {
-			throw new Error(error.message);
+			this.error = error.message;
 		}
 		this.commandStack.push("createCursor");
 		return this.cursores[name];
@@ -518,7 +512,7 @@ class QueryBuilder {
 			this.cursores[name].open();
 			return this.cursores[name];
 		} catch (error) {
-			throw new Error(error.message);
+			this.error = error.message;
 		}
 	}
 	closeCursor(name) {
@@ -527,7 +521,7 @@ class QueryBuilder {
 			this.cursores[name].close();
 			return this;
 		} catch (error) {
-			throw new Error(error.message);
+			this.error = error.message;
 		}
 	}
 
@@ -536,7 +530,7 @@ class QueryBuilder {
 		try {
 			this.query.push(`${this.language.setTransaction(config)}`);
 		} catch (error) {
-			throw new Error(error.message);
+			this.error = error.message;
 		}
 		this.commandStack.push("setTransaction");
 		return this;
@@ -545,7 +539,7 @@ class QueryBuilder {
 		try {
 			this.query.push(`${this.language.startTransaction(config)}`);
 		} catch (error) {
-			throw new Error(error.message);
+			this.error = error.message;
 		}
 		this.commandStack.push("startTransaction");
 		return this;
@@ -554,7 +548,7 @@ class QueryBuilder {
 		try {
 			this.query.push(`${this.language.setConstraints(restrictions, type)}`);
 		} catch (error) {
-			throw new Error(error.message);
+			this.error = error.message;
 		}
 		this.commandStack.push("setConstraints");
 		return this;
@@ -563,7 +557,7 @@ class QueryBuilder {
 		try {
 			this.query.push(`${this.language.setSavePoint(name)}`);
 		} catch (error) {
-			throw new Error(error.message);
+			this.error = error.message;
 		}
 		this.commandStack.push("setSavePoint");
 		return this;
@@ -572,7 +566,7 @@ class QueryBuilder {
 		try {
 			this.query.push(`${this.language.clearSavePoint(name)}`);
 		} catch (error) {
-			throw new Error(error.message);
+			this.error = error.message;
 		}
 		this.commandStack.push("clearSavePoint");
 		return this;
@@ -581,7 +575,7 @@ class QueryBuilder {
 		try {
 			this.query.push(`${this.language.commit()}`);
 		} catch (error) {
-			throw new Error(error.message);
+			this.error = error.message;
 		}
 		this.commandStack.push("commit");
 		return this;
@@ -590,7 +584,7 @@ class QueryBuilder {
 		try {
 			this.query.push(`${this.language.rollback(savepoint)}`);
 		} catch (error) {
-			throw new Error(error.message);
+			this.error = error.message;
 		}
 		this.commandStack.push("rollback");
 		return this;
@@ -629,18 +623,18 @@ class QueryBuilder {
 	}
 	async execute() {
 		if (!this.driverDB) {
-			throw new Error("No ha establecido un driver.");
+			this.error = "No ha establecido un driver.";
 		}
 		try {
 			await this.driverDB.execute(this.queryJoin());
-			this.queryResult = this.driverDB.response();
-			this.queryResultError = null;
+			this.result = this.driverDB.response();
+			this.error = null;
 			this.commandStack.push("execute");
 			return this;
 		} catch (error) {
-			this.queryResultError = error.message;
-			this.queryResult = "";
-			throw new Error(this.error);
+			this.error = error.message;
+			this.result = null;
+			return this;
 		}
 	}
 
@@ -654,6 +648,9 @@ class QueryBuilder {
 
 	get error() {
 		return this.queryResultError;
+	}
+	set error(error) {
+		this.queryResultError = error;
 	}
 }
 export default QueryBuilder;
