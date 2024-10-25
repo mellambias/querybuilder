@@ -1,3 +1,4 @@
+import QueryBuilder from "../../querybuilder.js";
 export const createSchema = {
 	name: (name) => name,
 	authorization: (authorization) => `AUTHORIZATION ${authorization}`,
@@ -29,4 +30,32 @@ export const createTable = {
 		}
 	},
 	orden: ["temporary", "name", "cols", "onCommit"],
+};
+
+export const createType = {
+	name: (name) => `TYPE ${name}`,
+	as: (as) => `AS ${as}`,
+	final: (final) => (final ? "FINAL" : "NOT FINAL"),
+	orden: ["name", "as", "final"],
+};
+
+export const createDomain = {
+	name: (name) => name,
+	as: function (sqlType) {
+		return `AS ${sqlType.toDataType(this.dataType)}`;
+	},
+	default: (value) => `DEFAULT ${value}`,
+	constraint: ({ name, check }) => `CONSTRAINT ${name} CHECK ( ${check} )`,
+	orden: ["name", "as", "default", "constraint"],
+};
+
+export const createView = {
+	name: (name) => `VIEW ${name}`,
+	cols: (cols) => `( ${cols.join(", ")} )`,
+	as: (vista) =>
+		vista instanceof QueryBuilder
+			? `AS ${vista.toString().replace(";", "")}`
+			: `AS ${vista}`,
+	check: (check) => (check === true ? "WITH CHECK OPTION" : undefined),
+	orden: ["name", "cols", "as", "check"],
 };

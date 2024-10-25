@@ -3,13 +3,25 @@
 */
 import QueryBuilder from "./querybuilder.js";
 import Column from "./column.js";
-import { grant, grantRoles, revoke, revokeRoles } from "./comandos/dcl.js";
+import {
+	grant,
+	grantRoles,
+	revoke,
+	revokeRoles,
+	createRole,
+	dropRoles,
+} from "./comandos/dcl.js";
 import {
 	createSchema,
-	dropSchema,
 	createTable,
+	createType,
+	createDomain,
+	createView,
+	dropSchema,
 	column,
 	constraint,
+	dropColumn,
+	dropTable,
 } from "./comandos/ddl.js";
 
 class Core {
@@ -20,6 +32,34 @@ class Core {
 		this.functionDate();
 		this.joins();
 		this.fetches();
+	}
+
+	getStatement(command, scheme, params, charJoin = "\n") {
+		const values = params?.options ? { ...params, ...params.options } : params;
+		scheme._options = params.options || {};
+		scheme._values = values || {};
+		const defaultOptions = Object.keys(scheme?.defaults || {});
+
+		return `${command ? `${command} ` : ""}${scheme?.orden
+			.filter(
+				(key) =>
+					values[key] !== undefined || defaultOptions.indexOf(key) !== -1,
+			)
+			.map((key) => {
+				if (typeof scheme[key] !== "function") {
+					throw new Error(
+						`${key} tiene que ser una funcion ${typeof scheme[key]}`,
+					);
+				}
+				const callFunction = scheme[key].bind(this);
+				if (values[key] !== undefined) {
+					return callFunction(values[key]);
+				}
+				return callFunction(scheme.defaults[key]);
+			})
+			.filter((result) => result !== undefined)
+			.join(charJoin)
+			.trim()}`;
 	}
 
 	// DDL
@@ -83,15 +123,7 @@ class Core {
 	}
 
 	dropColumn(name, option) {
-		const commandFormat = {
-			name: (name) => `COLUMN ${name}`,
-			option: (option) =>
-				/^(CASCADE|RESTRICT)$/i.test(option)
-					? `${option.toUpperCase()}`
-					: undefined,
-			orden: ["name", "option"],
-		};
-		return this.getStatement("DROP", commandFormat, { name, option }, " ");
+		return this.getStatement("DROP", dropColumn, { name, option }, " ");
 	}
 	setDefault(value) {
 		return ` SET DEFAULT ${typeof value === "string" ? `'${value}'` : value}`;
@@ -112,121 +144,35 @@ class Core {
 	}
 
 	dropTable(name, option) {
-		const commandFormat = {
-			name: (name) => `TABLE ${name}`,
-			option: (option) =>
-				/^(CASCADE|RESTRICT)$/i.test(option)
-					? `${option.toUpperCase()}`
-					: undefined,
-			orden: ["name", "option"],
-		};
-		return this.getStatement("DROP", commandFormat, { name, option }, " ");
+		return this.getStatement("DROP", dropTable, { name, option }, " ");
 	}
 
 	createType(name, options) {
-		const commandFormat = {
-			name: (name) => `TYPE ${name}`,
-			as: (as) => `AS ${as}`,
-			final: (final) => (final ? "FINAL" : "NOT FINAL"),
-			orden: ["name", "as", "final"],
-		};
-		return this.getStatement("CREATE", commandFormat, { name, options }, " ");
+		return this.getStatement("CREATE", createType, { name, options }, " ");
 	}
 	createAssertion(name, assertion) {
 		return `CREATE ASSERTION ${name} CHECK ( ${assertion} )`;
 	}
 	createDomain(name, options) {
-		const commandFormat = {
-			name: (name) => name,
-			as: (sqlType) => `AS ${sqlType.toDataType(this.dataType)}`,
-			default: (value) => `DEFAULT ${value}`,
-			constraint: ({ name, check }) => `CONSTRAINT ${name} CHECK ( ${check} )`,
-			orden: ["name", "as", "default", "constraint"],
-		};
-
-		return this.getStatement("CREATE DOMAIN", commandFormat, {
+		return this.getStatement("CREATE DOMAIN", createDomain, {
 			name,
 			options,
 		});
 	}
 	createView(name, options) {
-		const commandFormat = {
-			name: (name) => `VIEW ${name}`,
-			cols: (cols) => `( ${cols.join(", ")} )`,
-			as: (vista) =>
-				vista instanceof QueryBuilder
-					? `AS ${vista.toString().replace(";", "")}`
-					: `AS ${vista}`,
-			check: (check) => (check === true ? "WITH CHECK OPTION" : undefined),
-			orden: ["name", "cols", "as", "check"],
-		};
-
-		return this.getStatement("CREATE", commandFormat, { name, options });
+		return this.getStatement("CREATE", createView, { name, options });
 	}
-	getStatement(command, scheme, params, charJoin = "\n") {
-		const values = params?.options ? { ...params, ...params.options } : params;
-		scheme._options = params.options || {};
-		scheme._values = values || {};
-		const defaultOptions = Object.keys(scheme?.defaults || {});
 
-		return `${command ? `${command} ` : ""}${scheme?.orden
-			.filter(
-				(key) =>
-					values[key] !== undefined || defaultOptions.indexOf(key) !== -1,
-			)
-			.map((key) => {
-				if (typeof scheme[key] !== "function") {
-					throw new Error(
-						`${key} tiene que ser una funcion ${typeof scheme[key]}`,
-					);
-				}
-				const callFunction = scheme[key].bind(this);
-				if (values[key] !== undefined) {
-					return callFunction(values[key]);
-				}
-				return callFunction(scheme.defaults[key]);
-			})
-			.filter((result) => result !== undefined)
-			.join(charJoin)
-			.trim()}`;
-	}
 	dropView(name) {
 		return `DROP VIEW ${name}`;
 	}
 	// Seguridad
 
 	createRole(names, options) {
-		const commandFormat = {
-			names: (names) =>
-				`ROLE ${Array.isArray(names) ? names.join(", ") : names}`,
-			admin: (admin) =>
-				/^(CURRENT_USER|CURRENT_ROLE)$/i.test(admin)
-					? `WITH ADMIN ${admin}`
-					: undefined,
-			orden: ["names", "admin"],
-		};
-		return this.getStatement("CREATE", commandFormat, { names, options }, " ");
+		return this.getStatement("CREATE", createRole, { names, options }, " ");
 	}
 	dropRoles(names, options) {
-		const stack = [];
-		const commandFormat = {
-			names: function (names) {
-				if (typeof names === "string") {
-					return `DROP ROLE ${names}`;
-				}
-				if (Array.isArray(names)) {
-					for (const name of names) {
-						stack.push(this.dropRoles(name));
-					}
-					return stack.join(";\n");
-				}
-				throw new Error(
-					"Error en la firma 'dropRoles(names:string | [strings], options?:{})'",
-				);
-			},
-			orden: ["names"],
-		};
-		return this.getStatement("", commandFormat, { names, options });
+		return this.getStatement("", dropRoles, { names, options });
 	}
 
 	grant(commands, on, to, options) {

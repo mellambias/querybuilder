@@ -465,8 +465,8 @@ WITH CHECK OPTION;`,
 			assert.equal(result, "CREATE ROLE CLIENTES WITH ADMIN CURRENT_USER;");
 		});
 		test("elimina un ROL de usuario", () => {
-			const result = sql.dropRoles("CLIENTES").toString();
-			assert.equal(result, "DROP ROLE CLIENTES;");
+			const result = sql.dropRoles(["CLIENTES", "ADMIN"]).toString();
+			assert.equal(result, "DROP ROLE CLIENTES;\nDROP ROLE ADMIN;");
 		});
 		test("autorizar privilegios", () => {
 			const result = sql

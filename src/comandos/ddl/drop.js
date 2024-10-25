@@ -6,3 +6,21 @@ export const dropSchema = {
 			: undefined,
 	orden: ["name", "drop"],
 };
+
+export const dropColumn = {
+	name: (name) => `COLUMN ${name}`,
+	option: (option) =>
+		/^(CASCADE|RESTRICT)$/i.test(option)
+			? `${option.toUpperCase()}`
+			: undefined,
+	orden: ["name", "option"],
+};
+
+export const dropTable = {
+	name: (name) => `TABLE ${name}`,
+	option: (option) =>
+		/^(CASCADE|RESTRICT)$/i.test(option)
+			? `${option.toUpperCase()}`
+			: undefined,
+	orden: ["name", "option"],
+};
