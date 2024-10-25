@@ -14,7 +14,7 @@ function splitCommand(value) {
 	return [commandToFind, length];
 }
 String.prototype.toDataType = function (target) {
-	const [command, length] = splitCommand(this.toString());
+	const [command] = splitCommand(this.toString());
 	const sqlKey = command.toUpperCase();
 	if (/^(sql|sql2006)$/i.test(target)) {
 		const keys = Object.keys(dataTypes);

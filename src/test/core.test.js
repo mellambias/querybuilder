@@ -31,7 +31,7 @@ describe("El Core del lenguaje SQL2006", () => {
 			.use("testing")
 			.createTable("table_test", { cols: { ID: "INT" } })
 			.toString();
-		assert.equal(result, "USE testing;\nCREATE TABLE table_test\n ( ID INT );");
+		assert.equal(result, "USE testing;\nCREATE TABLE table_test\n( ID INT );");
 	});
 	test("Crear una tabla temporal global", () => {
 		const result = sql
@@ -44,7 +44,7 @@ describe("El Core del lenguaje SQL2006", () => {
 			.toString();
 		assert.equal(
 			result,
-			"USE testing;\nCREATE GLOBAL TEMPORARY TABLE table_test\n ( ID INT )\n ON COMMIT DELETE ROWS;",
+			"USE testing;\nCREATE GLOBAL TEMPORARY\nTABLE table_test\n( ID INT )\nON COMMIT DELETE ROWS;",
 		);
 	});
 	test("Crear una tabla temporal local", () => {
@@ -58,10 +58,10 @@ describe("El Core del lenguaje SQL2006", () => {
 			.toString();
 		assert.equal(
 			result,
-			"USE testing;\nCREATE LOCAL TEMPORARY TABLE table_test\n ( ID INT )\n ON COMMIT PRESERVE ROWS;",
+			"USE testing;\nCREATE LOCAL TEMPORARY\nTABLE table_test\n( ID INT )\nON COMMIT PRESERVE ROWS;",
 		);
 	});
-	test("Crear una tabla con varias columnas", () => {
+	test("Crear una tabla con varias columnas", { only: true }, () => {
 		const cols = {
 			ID_ARTISTA: "INTEGER",
 			NOMBRE_ARTISTA: { type: "CHARACTER(60)", default: "artista" },
@@ -74,7 +74,7 @@ describe("El Core del lenguaje SQL2006", () => {
 			.toString();
 		assert.equal(
 			result,
-			"USE testing;\nCREATE TABLE table_test\n ( ID_ARTISTA INTEGER,\n NOMBRE_ARTISTA CHARACTER(60) DEFAULT 'artista',\n FDN_ARTISTA DATE,\n POSTER_EN_EXISTENCIA BOOLEAN );",
+			"USE testing;\nCREATE TABLE table_test\n( ID_ARTISTA INTEGER,\n NOMBRE_ARTISTA CHARACTER(60) DEFAULT 'artista',\n FDN_ARTISTA DATE,\n POSTER_EN_EXISTENCIA BOOLEAN );",
 		);
 	});
 	test("No puede Crear una tabla si una columna no es valida", () => {
@@ -96,7 +96,7 @@ describe("El Core del lenguaje SQL2006", () => {
 			.toString();
 		assert.equal(
 			result,
-			"USE testing;\nCREATE TYPE SALARIO AS NUMERIC(8,2)\nNOT FINAL;",
+			"USE testing;\nCREATE TYPE SALARIO AS NUMERIC(8,2) NOT FINAL;",
 		);
 	});
 	test("Crea la base de datos inventario", () => {
@@ -187,7 +187,7 @@ ALTER COLUMN CIUDAD DROP DEFAULT;`,
 			const result = sql.createTable("ARTISTAS", { cols: tabla }).toString();
 			assert.equal(
 				result,
-				"CREATE TABLE ARTISTAS\n ( ID_ARTISTA INT NOT NULL );",
+				"CREATE TABLE ARTISTAS\n( ID_ARTISTA INT NOT NULL );",
 			);
 		});
 		test("Aplicación de UNIQUE", () => {
@@ -197,20 +197,20 @@ ALTER COLUMN CIUDAD DROP DEFAULT;`,
 			const result = sql.createTable("ARTISTAS", { cols: tabla }).toString();
 			assert.equal(
 				result,
-				"CREATE TABLE ARTISTAS\n ( ID_ARTISTA INT NOT NULL UNIQUE );",
+				"CREATE TABLE ARTISTAS\n( ID_ARTISTA INT NOT NULL UNIQUE );",
 			);
 		});
-		test("Aplicacion de PRIMARY KEY", () => {
+		test("Aplicacion de PRIMARY KEY", { only: true }, () => {
 			const tabla = {
 				ID_ARTISTA: { type: "INT", values: ["primary key"] },
 			};
 			const result = sql.createTable("ARTISTAS", { cols: tabla }).toString();
 			assert.equal(
 				result,
-				"CREATE TABLE ARTISTAS\n ( ID_ARTISTA INT PRIMARY KEY );",
+				"CREATE TABLE ARTISTAS\n( ID_ARTISTA INT PRIMARY KEY );",
 			);
 		});
-		test("Aplicacion de FOREIGN KEY", () => {
+		test("Aplicacion de FOREIGN KEY", { only: true }, () => {
 			const tabla = {
 				ID_ARTISTA: {
 					type: "INT",
@@ -225,7 +225,7 @@ ALTER COLUMN CIUDAD DROP DEFAULT;`,
 			const result = sql.createTable("ARTISTAS", { cols: tabla }).toString();
 			assert.equal(
 				result,
-				"CREATE TABLE ARTISTAS\n ( ID_ARTISTA INT NOT NULL\nREFERENCES CD_ARTISTA (CD_ARTISTA_ID)\nMATCH FULL );",
+				"CREATE TABLE ARTISTAS\n( ID_ARTISTA INT NOT NULL REFERENCES CD_ARTISTA (CD_ARTISTA_ID) MATCH FULL );",
 			);
 		});
 		test("Restriccion de CHECK", () => {
@@ -246,7 +246,7 @@ ALTER COLUMN CIUDAD DROP DEFAULT;`,
 			assert.equal(
 				result,
 				`CREATE TABLE TITULOS_CD
- ( ID_DISCO_COMPACTO INT,
+( ID_DISCO_COMPACTO INT,
  TITULO_CD VARCHAR(60) NOT NULL,
  EN_EXISTENCIA INT NOT NULL CHECK ( EN_EXISTENCIA > 0 AND EN_EXISTENCIA < 30 ) );`,
 			);
@@ -277,7 +277,7 @@ ALTER COLUMN CIUDAD DROP DEFAULT;`,
 				.toString();
 			assert.equal(
 				result,
-				"CREATE TABLE ARTISTAS\n ( ID_ARTISTA INT NOT NULL UNIQUE,\n NOMBRE_ARTISTA VARCHAR(60) NOT NULL UNIQUE,\n CONSTRAINT unicos UNIQUE (ID_ARTISTA, NOMBRE_ARTISTA),\n CONSTRAINT not_null NOT NULL (ID_ARTISTA) );",
+				"CREATE TABLE ARTISTAS\n( ID_ARTISTA INT NOT NULL UNIQUE,\n NOMBRE_ARTISTA VARCHAR(60) NOT NULL UNIQUE,\n CONSTRAINT unicos UNIQUE (ID_ARTISTA, NOMBRE_ARTISTA),\n CONSTRAINT not_null NOT NULL (ID_ARTISTA) );",
 			);
 		});
 		test("Aplicacion de PRIMARY KEY", () => {
@@ -302,10 +302,10 @@ ALTER COLUMN CIUDAD DROP DEFAULT;`,
 				.toString();
 			assert.equal(
 				result,
-				"CREATE TABLE ARTISTAS\n ( ID_ARTISTA INT,\n NOMBRE_ARTISTA VARCHAR(60) NOT NULL,\n CONSTRAINT PK_ID PRIMARY KEY (ID_ARTISTA, NOMBRE_ARTISTA) );",
+				"CREATE TABLE ARTISTAS\n( ID_ARTISTA INT,\n NOMBRE_ARTISTA VARCHAR(60) NOT NULL,\n CONSTRAINT PK_ID PRIMARY KEY (ID_ARTISTA, NOMBRE_ARTISTA) );",
 			);
 		});
-		test("Aplicacion de FOREIGN KEY", () => {
+		test("Aplicacion de constraing FOREIGN KEY", () => {
 			const tabla = {
 				ID_ARTISTA: {
 					type: "INT",
@@ -332,7 +332,7 @@ ALTER COLUMN CIUDAD DROP DEFAULT;`,
 			assert.equal(
 				result,
 				`CREATE TABLE ARTISTAS
- ( ID_ARTISTA INT NOT NULL,
+( ID_ARTISTA INT NOT NULL,
  CONSTRAINT FK_CD_ARTISTA FOREIGN KEY (ID_ARTISTA) REFERENCES CD_ARTISTA (CD_ARTISTA_ID) MATCH PARTIAL );`,
 			);
 		});
@@ -366,11 +366,11 @@ ALTER COLUMN CIUDAD DROP DEFAULT;`,
 			assert.equal(
 				result,
 				`CREATE TABLE ARTISTAS
- ( ID_ARTISTA INT NOT NULL,
+( ID_ARTISTA INT NOT NULL,
  CONSTRAINT FK_CD_ARTISTA FOREIGN KEY (ID_ARTISTA) REFERENCES CD_ARTISTA (CD_ARTISTA_ID) ON UPDATE CASCADE ON DELETE SET NULL );`,
 			);
 		});
-		test("Restriccion de CHECK", () => {
+		test("Restriccion de CHECK con constraing", () => {
 			const TITULOS_CD = {
 				ID_DISCO_COMPACTO: "INT",
 				TITULO_CD: { type: "VARCHAR(60)", values: ["NOT NULL"] },
@@ -390,7 +390,7 @@ ALTER COLUMN CIUDAD DROP DEFAULT;`,
 			assert.equal(
 				result,
 				`CREATE TABLE TITULOS_CD
- ( ID_DISCO_COMPACTO INT,
+( ID_DISCO_COMPACTO INT,
  TITULO_CD VARCHAR(60) NOT NULL,
  EN_EXISTENCIA INT NOT NULL,
  CONSTRAINT CK_EN_EXISTENCIA CHECK ( EN_EXISTENCIA > 0 AND EN_EXISTENCIA < 30 ) );`,
@@ -409,8 +409,10 @@ ALTER COLUMN CIUDAD DROP DEFAULT;`,
 				.toString();
 			assert.equal(
 				result,
-				`CREATE DOMAIN CANTIDAD_EN_EXISTENCIA AS INT DEFAULT 0
- CONSTRAINT CK_CANTIDAD_EN_EXISTENCIA CHECK ( VALUE BETWEEN 0 AND 30 );`,
+				`CREATE DOMAIN CANTIDAD_EN_EXISTENCIA
+AS INT
+DEFAULT 0
+CONSTRAINT CK_CANTIDAD_EN_EXISTENCIA CHECK ( VALUE BETWEEN 0 AND 30 );`,
 			);
 		});
 	});
@@ -442,9 +444,10 @@ FROM INVENTARIO_DISCO_COMPACTO`;
 			assert.equal(
 				result,
 				`CREATE VIEW DISCOS_COMPACTOS_EN_EXISTENCIA
-( DISCO_COMPACTO, DERECHOSDEAUTOR, EN_EXISTENCIA ) AS
-SELECT TITULO_CD, DERECHOSDEAUTOR, EN_EXISTENCIA
-FROM INVENTARIO_DISCO_COMPACTO WITH CHECK OPTION;`,
+( DISCO_COMPACTO, DERECHOSDEAUTOR, EN_EXISTENCIA )
+AS SELECT TITULO_CD, DERECHOSDEAUTOR, EN_EXISTENCIA
+FROM INVENTARIO_DISCO_COMPACTO
+WITH CHECK OPTION;`,
 			);
 		});
 		test("eliminar una vista", () => {
@@ -481,22 +484,26 @@ FROM INVENTARIO_DISCO_COMPACTO WITH CHECK OPTION;`,
 				result,
 				`GRANT SELECT, UPDATE(TITULO_CD), INSERT
 ON TABLE INVENTARIO_CD
-TO VENTAS, CONTABILIDAD WITH GRANT OPTION
+TO VENTAS, CONTABILIDAD
+WITH GRANT OPTION
 GRANTED BY CURRENT_USER;`,
 			);
 		});
 		test("revocar privilegios", () => {
 			const result = sql
-				.revoke(["SELECT", "UPDATE", "INSERT"], "INVENTARIO_CD", [
-					"VENTAS",
-					"CONTABILIDAD",
-				])
+				.revoke(
+					["SELECT", "UPDATE", "INSERT"],
+					"INVENTARIO_CD",
+					["VENTAS", "CONTABILIDAD"],
+					{ cascade: true },
+				)
 				.toString();
 			assert.equal(
 				result,
 				`REVOKE SELECT, UPDATE, INSERT
 ON TABLE INVENTARIO_CD
-FROM VENTAS, CONTABILIDAD CASCADE;`,
+FROM VENTAS, CONTABILIDAD
+CASCADE;`,
 			);
 		});
 		test("asignar rol a un identificador de usuario", () => {

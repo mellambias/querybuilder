@@ -1,5 +1,5 @@
 /*
- * Utiliza los ejercicios del libro SQL2003 pag 92-95
+ * Utiliza los ejercicios del libro SQL2006 pag 92-95
  */
 import { test, after, describe, beforeEach } from "node:test";
 import assert from "node:assert";
@@ -119,9 +119,12 @@ describe("Modelo de datos para la base de datos INVENTARIO", () => {
 					},
 					{
 						name: "FK_ID_DISQUERA",
+						type: "foreign key",
 						cols: ["ID_DISQUERA"],
 						foreignKey: {
 							table: "DISQUERAS_CD",
+							cols: ["ID_DISQUERA"],
+							match: "full",
 						},
 					},
 				],
@@ -134,9 +137,10 @@ describe("Modelo de datos para la base de datos INVENTARIO", () => {
  TITULO_CD VARCHAR(60) NOT NULL,
  ID_DISQUERA INT NOT NULL,
  CONSTRAINT PK_DISCOS_COMPACTOS PRIMARY KEY (ID_DISCO_COMPACTO),
- CONSTRAINT FK_ID_DISQUERA FOREIGN KEY (ID_DISQUERA) REFERENCES DISQUERAS_CD );`,
+ CONSTRAINT FK_ID_DISQUERA FOREIGN KEY (ID_DISQUERA) REFERENCES DISQUERAS_CD (ID_DISQUERA) MATCH FULL );`,
 		);
 	});
+
 	test("crear tabla TIPOS_DISCO_COMPACTO", () => {
 		const result = sql
 			.createTable("TIPOS_DISCO_COMPACTO", {
@@ -233,6 +237,7 @@ describe("Modelo de datos para la base de datos INVENTARIO", () => {
  CONSTRAINT FK_ID_DISCO_COMPACTO_02 FOREIGN KEY (ID_DISCO_COMPACTO) REFERENCES DISCOS_COMPACTOS );`,
 		);
 	});
+
 	test("Añadir una restriccion CHECK", () => {
 		const result = sql
 			.alterTable("DISCOS_COMPACTOS")

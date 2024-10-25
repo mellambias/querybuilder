@@ -4,6 +4,8 @@
 import QueryBuilder from "./querybuilder.js";
 import Column from "./column.js";
 import { privilegios, objectTypes, splitCommand } from "./utils/utils.js";
+import { Grant, Revoke } from "./comandos/sql2006.js";
+
 class Core {
 	constructor() {
 		this.dataType = "sql2006";
@@ -14,6 +16,7 @@ class Core {
 		this.fetches();
 	}
 
+	// DDL
 	createDatabase(name, options) {
 		let query = `CREATE DATABASE ${name}`;
 		for (const option in options) {
@@ -30,21 +33,32 @@ class Core {
 		return `USE ${database}`;
 	}
 	createSchema(name, options) {
-		let query = `CREATE SCHEMA ${name}`;
-		if (options?.authorization) {
-			query += ` AUTHORIZATION ${options.authorization}`;
-		}
-		if (options?.charset) {
-			query += `\n DEFAULT CHARACTER SET ${options?.charset}`;
-		}
-		return query;
+		const commandFormat = {
+			name: (name) => name,
+			authorization: (authorization) => `AUTHORIZATION ${authorization}`,
+			charset: (charset) => `DEFAULT CHARACTER SET ${charset}`,
+			orden: ["name", "authorization", "charset"],
+		};
+
+		return this.getStatement("CREATE SCHEMA", commandFormat, {
+			name,
+			options,
+		});
 	}
 	dropSchema(name, options) {
-		const query = `DROP SCHEMA ${name}`;
-		if (/^(CASCADE|RESTRICT)$/i.test(options?.drop)) {
-			return `${query} ${options.drop.toUpperCase()}`;
-		}
-		return query;
+		const commandFormat = {
+			name: (name) => name,
+			drop: (drop) =>
+				/^(CASCADE|RESTRICT)$/i.test(drop)
+					? `${query} ${options.drop.toUpperCase()}`
+					: undefined,
+			orden: ["name", "drop"],
+		};
+
+		return this.getStatement("DROP SCHEMA", commandFormat, {
+			name,
+			options,
+		});
 	}
 
 	/*
@@ -53,77 +67,65 @@ class Core {
 [ ON COMMIT { PRESERVE | DELETE } ROWS ]
  */
 	createTable(name, options) {
-		try {
-			let sql = "CREATE";
-			if (/^(GLOBAL|LOCAL)$/i.test(options?.temporary)) {
-				sql += ` ${options.temporary.toUpperCase()} TEMPORARY`;
-			}
-			sql += ` TABLE ${name}`;
-			if (options?.cols) {
-				const columns = Object.keys(options.cols).map((key) => {
-					return this.column(key, options.cols[key]);
+		const commandFormat = {
+			name: (name) => `TABLE ${name}`,
+			temporary: (temporary) =>
+				/^(GLOBAL|LOCAL)$/i.test(temporary)
+					? `${temporary.toUpperCase()} TEMPORARY`
+					: undefined,
+			cols: (cols) => {
+				const columns = Object.keys(cols).map((key) => {
+					return this.column(key, cols[key]);
 				});
-
 				if (options?.constraints) {
 					columns.push(this.tableConstraints(options.constraints));
 				}
+				return `( ${columns.join(",\n ")} )`;
+			},
+			onCommit: (onCommit) => {
+				if (options?.temporary && /^(PRESERVE|DELETE)$/i.test(onCommit)) {
+					return `ON COMMIT ${onCommit.toUpperCase()} ROWS`;
+				}
+			},
+			orden: ["temporary", "name", "cols", "onCommit"],
+		};
 
-				sql += `\n ( ${columns.join(",\n ")} )`;
-			}
-			if (
-				options?.temporary &&
-				/^(PRESERVE|DELETE)$/i.test(options?.onCommit)
-			) {
-				sql += `\n ON COMMIT ${options?.onCommit.toUpperCase()} ROWS`;
-			}
-			return sql;
-		} catch (error) {
-			throw new Error(error.message);
-		}
+		return this.getStatement("CREATE", commandFormat, { name, options });
 	}
 	column(name, options) {
-		let command = "";
-		if (typeof options === "string") {
-			const dataType = options.toDataType(this.dataType);
-			command = `${name.validSqlId()} ${dataType}`;
-		}
-		if (options?.type) {
-			command = `${name.validSqlId()} ${options.type.toDataType(this.dataType)}`;
-		}
-		// Restricciones de tabla
-		if (options?.values) {
-			for (const value of options.values) {
-				switch (value.toUpperCase()) {
-					case "NOT NULL":
-						command += " NOT NULL";
-						break;
-					case "UNIQUE":
-						command += " UNIQUE";
-						break;
-					case "PRIMARY KEY":
-						command += " PRIMARY KEY";
-						break;
+		const commandFormat = {
+			name: (name) => {
+				if (typeof options === "string") {
+					const dataType = options.toDataType(this.dataType);
+					return `${name.validSqlId()} ${dataType}`;
 				}
-			}
-		}
-		// valor por defecto
-		if (options?.default !== undefined) {
-			command += ` DEFAULT ${typeof options.default === "string" ? `'${options.default}'` : options.default}`;
-		}
-		if (options?.foreingKey) {
-			const { table, cols, match } = options.foreingKey;
-			command += `\nREFERENCES ${table}`;
-			if (cols) {
-				command += ` (${Array.isArray(cols) ? cols.join(", ") : cols})`;
-			}
-			if (/^(FULL|PARTIAL|SIMPLE)$/i.test(match)) {
-				command += `\nMATCH ${match.toUpperCase()}`;
-			}
-		}
-		if (options?.check) {
-			command += ` CHECK ( ${options.check} )`;
-		}
-		return command;
+			},
+			type: (type) => `${name.validSqlId()} ${type.toDataType(this.dataType)}`,
+			values: (values) => {
+				return values
+					.filter((value) => /^(NOT NULL|UNIQUE|PRIMARY KEY)$/i.test(value))
+					.map((value) => value.toUpperCase())
+					.join(" ");
+			},
+			default: (valor) =>
+				`DEFAULT ${typeof valor === "string" ? `'${valor}'` : valor}`,
+			foreingKey: (data) => {
+				const commandForm = {
+					table: (name) => name,
+					cols: (cols) => `(${Array.isArray(cols) ? cols.join(", ") : cols})`,
+					match: (match) =>
+						/^(FULL|PARTIAL|SIMPLE)$/i.test(match)
+							? `MATCH ${match.toUpperCase()}`
+							: undefined,
+					check: (check) => `CHECK ( ${check} )`,
+					orden: ["table", "cols", "match"],
+				};
+				return this.getStatement("REFERENCES", commandForm, { ...data }, " ");
+			},
+			check: (check) => `CHECK ( ${check} )`,
+			orden: ["name", "type", "values", "default", "foreingKey", "check"],
+		};
+		return this.getStatement("", commandFormat, { name, options }, " ").trim();
 	}
 
 	tableConstraints(constraints) {
@@ -177,11 +179,15 @@ class Core {
 	}
 
 	dropColumn(name, option) {
-		let sql = `DROP COLUMN ${name}`;
-		if (/^(CASCADE|RESTRICT)$/i.test(option)) {
-			sql += ` ${option.toUpperCase()}`;
-		}
-		return sql;
+		const commandFormat = {
+			name: (name) => `COLUMN ${name}`,
+			option: (option) =>
+				/^(CASCADE|RESTRICT)$/i.test(option)
+					? `${option.toUpperCase()}`
+					: undefined,
+			orden: ["name", "option"],
+		};
+		return this.getStatement("DROP", commandFormat, { name, option }, " ");
 	}
 	setDefault(value) {
 		return ` SET DEFAULT ${typeof value === "string" ? `'${value}'` : value}`;
@@ -202,50 +208,67 @@ class Core {
 	}
 
 	dropTable(name, option) {
-		let sql = `DROP TABLE ${name}`;
-		if (/^(CASCADE|RESTRICT)$/i.test(option)) {
-			sql += ` ${option.toUpperCase()}`;
-		}
-		return sql;
+		const commandFormat = {
+			name: (name) => `TABLE ${name}`,
+			option: (option) =>
+				/^(CASCADE|RESTRICT)$/i.test(option)
+					? `${option.toUpperCase()}`
+					: undefined,
+			orden: ["name", "option"],
+		};
+		return this.getStatement("DROP", commandFormat, { name, option }, " ");
 	}
 
 	createType(name, options) {
-		let sql = `CREATE TYPE ${name}`;
-		if (options?.as) {
-			sql += ` AS ${options.as}`;
-		}
-		if (options?.final !== undefined) {
-			sql += options.final ? "\nFINAL" : "\nNOT FINAL";
-		}
-		return sql;
+		const commandFormat = {
+			name: (name) => `TYPE ${name}`,
+			as: (as) => `AS ${as}`,
+			final: (final) => (final ? "FINAL" : "NOT FINAL"),
+			orden: ["name", "as", "final"],
+		};
+		return this.getStatement("CREATE", commandFormat, { name, options }, " ");
 	}
 	createAssertion(name, assertion) {
 		return `CREATE ASSERTION ${name} CHECK ( ${assertion} )`;
 	}
 	createDomain(name, options) {
-		let sql = `CREATE DOMAIN ${name} AS ${options.as}`;
-		if (options?.default !== undefined) {
-			sql += ` DEFAULT ${options.default}`;
-		}
-		if (options?.constraint) {
-			sql += `\n CONSTRAINT ${options.constraint.name} CHECK ( ${options.constraint.check} )`;
-		}
-		return sql;
+		const commandFormat = {
+			name: (name) => name,
+			as: (sqlType) => `AS ${sqlType.toDataType(this.dataType)}`,
+			default: (value) => `DEFAULT ${value}`,
+			constraint: ({ name, check }) => `CONSTRAINT ${name} CHECK ( ${check} )`,
+			orden: ["name", "as", "default", "constraint"],
+		};
+
+		return this.getStatement("CREATE DOMAIN", commandFormat, {
+			name,
+			options,
+		});
 	}
 	createView(name, options) {
-		let sql = `CREATE VIEW ${name}`;
-		if (options?.cols) {
-			sql += `\n( ${options.cols.join(", ")} )`;
+		const commandFormat = {
+			name: (name) => `VIEW ${name}`,
+			cols: (cols) => `( ${cols.join(", ")} )`,
+			as: (vista) =>
+				vista instanceof QueryBuilder
+					? `AS ${vista.toString().replace(";", "")}`
+					: `AS ${vista}`,
+			check: (check) => (check === true ? "WITH CHECK OPTION" : undefined),
+			orden: ["name", "cols", "as", "check"],
+		};
+
+		return this.getStatement("CREATE", commandFormat, { name, options });
+	}
+	getStatement(command, commandFormat, params, charJoin = "\n") {
+		const values = params?.options ? { ...params, ...params.options } : params;
+		if (params?.options) {
+			commandFormat.options = params?.options;
 		}
-		if (options.as instanceof QueryBuilder) {
-			sql += ` AS\n${options.as.toString().replace(";", "")}`;
-		} else {
-			sql += ` AS\n${options.as}`;
-		}
-		if (options?.check === true) {
-			sql += " WITH CHECK OPTION";
-		}
-		return sql;
+		return `${command ? `${command} ` : ""}${commandFormat?.orden
+			.filter((key) => values[key] !== undefined)
+			.map((key) => commandFormat[key](values[key]))
+			.join(charJoin)
+			.trim()}`;
 	}
 	dropView(name) {
 		return `DROP VIEW ${name}`;
@@ -253,112 +276,54 @@ class Core {
 	// Seguridad
 
 	createRole(names, options) {
-		let sql = "CREATE ROLE ";
-		if (Array.isArray(names)) {
-			sql += names.join(", ");
-		} else {
-			sql += names;
-		}
-		if (/^(CURRENT_USER|CURRENT_ROLE)$/i.test(options?.admin)) {
-			sql += ` WITH ADMIN ${options.admin}`;
-		}
-		return sql;
+		const commandFormat = {
+			names: (names) =>
+				`ROLE ${Array.isArray(names) ? names.join(", ") : names}`,
+			admin: (admin) =>
+				/^(CURRENT_USER|CURRENT_ROLE)$/i.test(admin)
+					? `WITH ADMIN ${admin}`
+					: undefined,
+			orden: ["names", "admin"],
+		};
+		return this.getStatement("CREATE", commandFormat, { names, options }, " ");
 	}
-	dropRoles(names) {
+	dropRoles(names, options) {
 		const stack = [];
-		if (typeof names === "string") {
-			return `DROP ROLE ${names}`;
-		}
-		for (const name of names) {
-			stack.push(this.dropRoles(name));
-		}
-		return stack.join(";\n");
-	}
-	checkPrivilegio(name) {
-		const nameUppercase = name.toUpperCase();
-		const [command, length] = splitCommand(nameUppercase);
-		return privilegios.find((item) => item === command);
-	}
-	checkObjectType(name) {
-		const nameUppercase = name.toUpperCase();
-		return objectTypes.find((item) => item === nameUppercase);
+		const commandFormat = {
+			names: function (names) {
+				if (typeof names === "string") {
+					return `DROP ROLE ${names}`;
+				}
+				if (Array.isArray(names)) {
+					for (const name of names) {
+						stack.push(this.dropRoles(name));
+					}
+					return stack.join(";\n");
+				}
+				throw new Error(
+					"Error en la firma 'dropRoles(names:string | [strings], options?:{})'",
+				);
+			},
+			orden: ["names"],
+		};
+		return this.getStatement("", commandFormat, { names, options });
 	}
 
-	privilegios(names) {
-		let sql = "";
-		if (typeof names === "string") {
-			if (/^(ALL PRIVILEGES|ALL)$/i.test(names)) {
-				sql += "ALL PRIVILEGES\n";
-			}
-		} else {
-			sql += `${names.filter((name) => this.checkPrivilegio(name)).join(", ")}\n`;
-		}
-		return sql;
+	grant(commands, on, to, options) {
+		return this.getStatement("GRANT", Grant, {
+			commands,
+			on,
+			to,
+			options,
+		});
 	}
-	onObjects(on) {
-		let sql = "";
-		if (typeof on === "string") {
-			sql += `ON TABLE ${on}`;
-		} else {
-			if (on?.objectType !== undefined) {
-				sql += `ON ${this.checkObjectType(on.objectType)} ${on.name}`;
-			} else if (on?.objectType === undefined) {
-				sql += `ON TABLE ${on.name}`;
-			} else {
-				throw new Error("El objectType no es correcto");
-			}
-		}
-		return sql;
-	}
-	grant(privilegios, on, to, options) {
-		let sql = "GRANT ";
-		sql += this.privilegios(privilegios);
-		sql += this.onObjects(on);
-		if (typeof to === "string") {
-			if (/^(PUBLIC|ALL)$/i.test(to)) {
-				sql += "\nTO PUBLIC ";
-			}
-		} else {
-			sql += `\nTO ${to.join(", ")}`;
-		}
-		if (options?.withGrant === true) {
-			sql += " WITH GRANT OPTION";
-		}
-		if (options?.grantBy !== undefined) {
-			if (/^(CURRENT_USER|CURRENT_ROLE)$/i.test(options.grantBy)) {
-				sql += `\nGRANTED BY ${options.grantBy.toUpperCase()}`;
-			}
-		}
-		return sql;
-	}
-	revoke(privilegios, on, from, options) {
-		let sql = "REVOKE ";
-		if (options?.grantOption === true) {
-			sql += "GRANT OPTION FOR ";
-		}
-		sql += this.privilegios(privilegios);
-		sql += this.onObjects(on);
-		if (typeof from === "string") {
-			if (/^(PUBLIC|ALL)$/i.test(from)) {
-				sql += "\nFROM PUBLIC";
-			}
-		} else {
-			sql += `\nFROM ${from.join(", ")}`;
-		}
-		if (options?.with !== undefined) {
-			sql += " WITH GRANT OPTION";
-		}
-		if (options?.grantBy !== undefined) {
-			if (/^(CURRENT_USER|CURRENT_ROLE)$/i.test(options.grantBy)) {
-				sql += `\nGRANTED BY ${options.grantBy.toUpperCase()}`;
-			}
-		}
-		if (options?.restrict !== undefined) {
-			sql += " RESTRICT";
-		} else {
-			sql += " CASCADE";
-		}
-		return sql;
+	revoke(commands, on, from, options) {
+		return this.getStatement("REVOKE", Revoke, {
+			commands,
+			on,
+			from,
+			options,
+		});
 	}
 	grantRoles(roles, users, options) {
 		let sql = "GRANT";

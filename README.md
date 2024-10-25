@@ -114,6 +114,27 @@ La estructura de posgresSQL permite crear bases de datos y dentro de estas, Esqu
 - Base de datos
   - Schema
 
+## TIPOS DE COMANDOS SQL
+
+- **DDL**
+  - Create
+  - Drop
+  - Alter
+  - Truncate
+- **DCL**
+  - Grant
+  - Revoke
+- **DML**
+  - Insert
+  - Update
+  - Delete
+- **TCL**
+  - Commit
+  - Rollback
+  - SavePoint
+- **DQL**
+  - Select
+
 ## Creacion de Tablas
 
 ### SQL2006
@@ -809,3 +830,13 @@ COMMIT [ WORK ] [ AND [ NO ] CHAIN ]
 ROLLBACK [ WORK ] [ AND [ NO ] CHAIN ]
 [ TO SAVEPOINT <nombre del punto de recuperación> ]
 ```
+
+Plantilla
+
+```js
+const commandFormat = {
+   name: (name) => `${name}`,
+   orden: ["name"],
+  };
+  return this.getStatement("CREATE", commandFormat, { name, options });
+    ```

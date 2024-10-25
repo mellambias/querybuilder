@@ -2,17 +2,13 @@
 Implementa las variaciones al SQL2006 propias del SGBD
 */
 import Core from "../core.js";
+import QueryBuilder from "../querybuilder.js";
 class MySQL extends Core {
 	constructor() {
 		super();
 		this.dataType = "mysql";
 	}
-	createSchema(name, options) {
-		super.createDatabase(name, options);
-	}
-	dropSchema(name, options) {
-		super.dropDatabase(name, options);
-	}
+
 	createType(name, options) {
 		throw new Error("No soportado utilice SET o ENUM");
 	}
@@ -141,6 +137,47 @@ class MySQL extends Core {
 			sql += "\nIGNORE UNKNOWN USER";
 		}
 		return sql;
+	}
+
+	// 15.1.23 CREATE VIEW Statement
+	createView(name, options) {
+		const commandFormat = {
+			replace: (replace) => (replace === true ? "OR REPLACE" : ""),
+			algorithm: (algorithm) =>
+				/^(UNDEFINED|MERGE|TEMPTABLE)$/i.test(algorithm)
+					? `ALGORITHM=${algorithm.toUpperCase()}`
+					: "",
+			user: (user) => (user !== undefined ? `DEFINER=${user}` : ""),
+			security: (security) =>
+				/^(DEFINER|INVOKER)$/i.test(security)
+					? `SQL SECURITY ${security.toUpperCase()}`
+					: undefined,
+			name: (name) => `VIEW ${name}`,
+			cols: (cols) => `( ${cols.join(", ")} )`,
+			as: (vista) => {
+				if (vista instanceof QueryBuilder) {
+					return `AS ${vista.toString().replace(";", "")}`;
+				}
+				return `AS ${vista}`;
+			},
+			mode: (mode) =>
+				/^(CASCADED|LOCAL)$/i.test(mode) ? ` ${mode.toUpperCase()}` : "",
+			check: (check) =>
+				check === true
+					? `WITH${commandFormat.mode(options?.with)} CHECK OPTION`
+					: undefined,
+			orden: [
+				"replace",
+				"algorithm",
+				"user",
+				"security",
+				"name",
+				"cols",
+				"as",
+				"check",
+			],
+		};
+		return this.getStatement("CREATE", commandFormat, { name, ...options });
 	}
 }
 export default MySQL;

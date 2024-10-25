@@ -22,12 +22,9 @@ class MySqlDriver extends Driver {
 	async execute(query) {
 		try {
 			if (this.connection === null) {
-				console.log("Creando conexion...");
 				await this.connect();
 			}
-			console.log("Petición", query);
 			[this.queyResult, this.queryFields] = await this.connection.query(query);
-			console.log("respuesta", this.queyResult);
 			await this.close();
 			return this;
 		} catch (error) {
