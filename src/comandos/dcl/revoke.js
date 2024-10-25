@@ -1,6 +1,6 @@
-import { Grant } from "./grant.js";
-export const Revoke = {
-	...Grant,
+import { grant } from "./grant.js";
+export const revoke = {
+	...grant,
 
 	grantOption: (grantOption) =>
 		grantOption === true ? "GRANT OPTION FOR" : undefined,
@@ -8,14 +8,14 @@ export const Revoke = {
 		typeof from === "string"
 			? /^(PUBLIC|ALL)$/i.test(from)
 				? "FROM PUBLIC"
-				: undefined
+				: `FROM ${from}`
 			: `FROM ${from.join(", ")}`,
 	cascade: (value) =>
-		value === true && Revoke.options?.restrict === undefined
+		value === true && revoke._options?.restrict === undefined
 			? "CASCADE"
 			: "RESTRICT",
 	restrict: (value) =>
-		value === true && Revoke.options?.cascade === undefined
+		value === true && revoke._options?.cascade === undefined
 			? "RESTRICT"
 			: "CASCADE",
 	orden: [
@@ -27,5 +27,17 @@ export const Revoke = {
 		"grantBy",
 		"cascade",
 	],
-	options: {},
+	_options: {},
+	defaults: { cascade: true },
+};
+
+export const revokeRoles = {
+	adminOption: (adminOption) => (adminOption ? "ADMIN OPTION FOR" : undefined),
+	roles: (roles) => (typeof roles === "string" ? roles : roles.join(", ")),
+	from: (from) => revoke.from(from),
+	grantBy: (grantBy) => grant.grantBy(grantBy),
+	cascade: (cascade) => revoke.cascade(cascade),
+	restrict: (restrict) => revoke.restrict(restrict),
+	orden: ["adminOption", "roles", "from", "grantBy", "cascade", "restrict"],
+	defaults: { cascade: true },
 };

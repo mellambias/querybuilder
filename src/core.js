@@ -3,8 +3,14 @@
 */
 import QueryBuilder from "./querybuilder.js";
 import Column from "./column.js";
-import { privilegios, objectTypes, splitCommand } from "./utils/utils.js";
-import { Grant, Revoke } from "./comandos/sql2006.js";
+import { grant, grantRoles, revoke, revokeRoles } from "./comandos/dcl.js";
+import {
+	createSchema,
+	dropSchema,
+	createTable,
+	column,
+	constraint,
+} from "./comandos/ddl.js";
 
 class Core {
 	constructor() {
@@ -33,29 +39,13 @@ class Core {
 		return `USE ${database}`;
 	}
 	createSchema(name, options) {
-		const commandFormat = {
-			name: (name) => name,
-			authorization: (authorization) => `AUTHORIZATION ${authorization}`,
-			charset: (charset) => `DEFAULT CHARACTER SET ${charset}`,
-			orden: ["name", "authorization", "charset"],
-		};
-
-		return this.getStatement("CREATE SCHEMA", commandFormat, {
+		return this.getStatement("CREATE SCHEMA", createSchema, {
 			name,
 			options,
 		});
 	}
 	dropSchema(name, options) {
-		const commandFormat = {
-			name: (name) => name,
-			drop: (drop) =>
-				/^(CASCADE|RESTRICT)$/i.test(drop)
-					? `${query} ${options.drop.toUpperCase()}`
-					: undefined,
-			orden: ["name", "drop"],
-		};
-
-		return this.getStatement("DROP SCHEMA", commandFormat, {
+		return this.getStatement("DROP SCHEMA", dropSchema, {
 			name,
 			options,
 		});
@@ -67,104 +57,18 @@ class Core {
 [ ON COMMIT { PRESERVE | DELETE } ROWS ]
  */
 	createTable(name, options) {
-		const commandFormat = {
-			name: (name) => `TABLE ${name}`,
-			temporary: (temporary) =>
-				/^(GLOBAL|LOCAL)$/i.test(temporary)
-					? `${temporary.toUpperCase()} TEMPORARY`
-					: undefined,
-			cols: (cols) => {
-				const columns = Object.keys(cols).map((key) => {
-					return this.column(key, cols[key]);
-				});
-				if (options?.constraints) {
-					columns.push(this.tableConstraints(options.constraints));
-				}
-				return `( ${columns.join(",\n ")} )`;
-			},
-			onCommit: (onCommit) => {
-				if (options?.temporary && /^(PRESERVE|DELETE)$/i.test(onCommit)) {
-					return `ON COMMIT ${onCommit.toUpperCase()} ROWS`;
-				}
-			},
-			orden: ["temporary", "name", "cols", "onCommit"],
-		};
-
-		return this.getStatement("CREATE", commandFormat, { name, options });
+		return this.getStatement("CREATE", createTable, { name, options });
 	}
 	column(name, options) {
-		const commandFormat = {
-			name: (name) => {
-				if (typeof options === "string") {
-					const dataType = options.toDataType(this.dataType);
-					return `${name.validSqlId()} ${dataType}`;
-				}
-			},
-			type: (type) => `${name.validSqlId()} ${type.toDataType(this.dataType)}`,
-			values: (values) => {
-				return values
-					.filter((value) => /^(NOT NULL|UNIQUE|PRIMARY KEY)$/i.test(value))
-					.map((value) => value.toUpperCase())
-					.join(" ");
-			},
-			default: (valor) =>
-				`DEFAULT ${typeof valor === "string" ? `'${valor}'` : valor}`,
-			foreingKey: (data) => {
-				const commandForm = {
-					table: (name) => name,
-					cols: (cols) => `(${Array.isArray(cols) ? cols.join(", ") : cols})`,
-					match: (match) =>
-						/^(FULL|PARTIAL|SIMPLE)$/i.test(match)
-							? `MATCH ${match.toUpperCase()}`
-							: undefined,
-					check: (check) => `CHECK ( ${check} )`,
-					orden: ["table", "cols", "match"],
-				};
-				return this.getStatement("REFERENCES", commandForm, { ...data }, " ");
-			},
-			check: (check) => `CHECK ( ${check} )`,
-			orden: ["name", "type", "values", "default", "foreingKey", "check"],
-		};
-		return this.getStatement("", commandFormat, { name, options }, " ").trim();
+		return this.getStatement("", column, { name, options }, " ").trim();
 	}
 
-	tableConstraints(constraints) {
-		function acction(value) {
-			if (/^(CASCADE|SET NULL|SET DEFAULT|RESTRICT|NO ACTION)$/i.test(value)) {
-				return value.toUpperCase();
-			}
-			return "";
-		}
+	tableConstraints(restricciones) {
 		const command = [];
-		for (const constraint of constraints) {
-			if (/^(NOT NULL|UNIQUE|PRIMARY KEY)$/i.test(constraint.type)) {
-				command.push(
-					`CONSTRAINT ${constraint.name} ${constraint.type.toUpperCase()} (${constraint.cols.join(", ")})`,
-				);
-			}
-			if (/^(FOREIGN KEY)$/i.test(constraint.type) || constraint?.foreignKey) {
-				const { table, cols, match, actions } = constraint.foreignKey;
-				let foreignKey = `CONSTRAINT ${constraint.name} FOREIGN KEY (${constraint.cols.join(", ")}) REFERENCES ${table}`;
-				if (cols) {
-					foreignKey += ` (${cols})`;
-				}
-
-				if (/^(FULL|PARTIAL|SIMPLE)$/i.test(match)) {
-					foreignKey += ` MATCH ${match.toUpperCase()}`;
-				}
-				if (actions?.onUpdate) {
-					foreignKey += ` ON UPDATE ${acction(actions.onUpdate)}`;
-				}
-				if (actions?.onDelete) {
-					foreignKey += ` ON DELETE ${acction(actions.onDelete)}`;
-				}
-				command.push(foreignKey);
-			}
-			if (constraint?.check) {
-				command.push(
-					`CONSTRAINT ${constraint.name} CHECK ( ${constraint.check} )`,
-				);
-			}
+		for (const restriccion of restricciones) {
+			command.push(
+				this.getStatement("CONSTRAINT", constraint, restriccion, " "),
+			);
 		}
 		return command.join(",\n ");
 	}
@@ -259,14 +163,30 @@ class Core {
 
 		return this.getStatement("CREATE", commandFormat, { name, options });
 	}
-	getStatement(command, commandFormat, params, charJoin = "\n") {
+	getStatement(command, scheme, params, charJoin = "\n") {
 		const values = params?.options ? { ...params, ...params.options } : params;
-		if (params?.options) {
-			commandFormat.options = params?.options;
-		}
-		return `${command ? `${command} ` : ""}${commandFormat?.orden
-			.filter((key) => values[key] !== undefined)
-			.map((key) => commandFormat[key](values[key]))
+		scheme._options = params.options || {};
+		scheme._values = values || {};
+		const defaultOptions = Object.keys(scheme?.defaults || {});
+
+		return `${command ? `${command} ` : ""}${scheme?.orden
+			.filter(
+				(key) =>
+					values[key] !== undefined || defaultOptions.indexOf(key) !== -1,
+			)
+			.map((key) => {
+				if (typeof scheme[key] !== "function") {
+					throw new Error(
+						`${key} tiene que ser una funcion ${typeof scheme[key]}`,
+					);
+				}
+				const callFunction = scheme[key].bind(this);
+				if (values[key] !== undefined) {
+					return callFunction(values[key]);
+				}
+				return callFunction(scheme.defaults[key]);
+			})
+			.filter((result) => result !== undefined)
 			.join(charJoin)
 			.trim()}`;
 	}
@@ -310,7 +230,7 @@ class Core {
 	}
 
 	grant(commands, on, to, options) {
-		return this.getStatement("GRANT", Grant, {
+		return this.getStatement("GRANT", grant, {
 			commands,
 			on,
 			to,
@@ -318,7 +238,7 @@ class Core {
 		});
 	}
 	revoke(commands, on, from, options) {
-		return this.getStatement("REVOKE", Revoke, {
+		return this.getStatement("REVOKE", revoke, {
 			commands,
 			on,
 			from,
@@ -326,63 +246,38 @@ class Core {
 		});
 	}
 	grantRoles(roles, users, options) {
-		let sql = "GRANT";
-		if (typeof roles === "string") {
-			sql += ` ${roles}`;
-		} else {
-			sql += ` ${roles.join(", ")}`;
-		}
-		if (typeof users === "string") {
-			sql += ` TO ${users}`;
-		} else {
-			sql += ` TO ${users.join(", ")}`;
-		}
-		if (options?.admin === true) {
-			sql += " WITH ADMIN OPTION";
-		}
-		if (/^(CURRENT_USER|CURRENT_ROLE)$/i.test(options?.granted)) {
-			sql += `\nGRANTED BY ${options?.granted.toUpperCase()}`;
-		}
-		return sql;
+		return this.getStatement(
+			"GRANT",
+			grantRoles,
+			{
+				roles,
+				users,
+				options,
+			},
+			" ",
+		);
 	}
 	revokeRoles(roles, from, options) {
-		let sql = "";
 		const sqlStack = [];
 		if (typeof from === "string") {
-			sql = "REVOKE ";
-			if (options?.adminOption === true) {
-				sql += "ADMIN OPTION FOR ";
-			}
-			if (typeof roles === "string") {
-				sql += `${roles}`;
-			} else {
-				sql += `${roles.join(", ")}`;
-			}
-
-			if (/^(PUBLIC|ALL)$/i.test(from)) {
-				sql += " FROM PUBLIC";
-			} else {
-				sql += ` FROM ${from}`;
-			}
-			if (options?.grantBy !== undefined) {
-				if (/^(CURRENT_USER|CURRENT_ROLE)$/i.test(options.grantBy)) {
-					sql += `\nGRANTED BY ${options.grantBy.toUpperCase()}`;
-				}
-			}
-			if (options?.restrict !== undefined) {
-				sql += " RESTRICT";
-			} else {
-				sql += " CASCADE";
-			}
-			return sql;
+			return this.getStatement(
+				"REVOKE",
+				revokeRoles,
+				{
+					roles,
+					from,
+					options,
+				},
+				" ",
+			);
 		}
 		for (const userId of from) {
 			sqlStack.push(`${this.revokeRoles(roles, userId, options)}`);
 		}
-
 		return sqlStack.join(";\n");
 	}
-	//Consulta de datos SQL
+
+	//Comandos DQL
 	// SELECT [ DISTINCT | ALL ] { * | < selección de lista > }
 	select(columns, options) {
 		let sql = "SELECT";

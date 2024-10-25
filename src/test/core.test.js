@@ -61,7 +61,7 @@ describe("El Core del lenguaje SQL2006", () => {
 			"USE testing;\nCREATE LOCAL TEMPORARY\nTABLE table_test\n( ID INT )\nON COMMIT PRESERVE ROWS;",
 		);
 	});
-	test("Crear una tabla con varias columnas", { only: true }, () => {
+	test("Crear una tabla con varias columnas", () => {
 		const cols = {
 			ID_ARTISTA: "INTEGER",
 			NOMBRE_ARTISTA: { type: "CHARACTER(60)", default: "artista" },
@@ -200,7 +200,7 @@ ALTER COLUMN CIUDAD DROP DEFAULT;`,
 				"CREATE TABLE ARTISTAS\n( ID_ARTISTA INT NOT NULL UNIQUE );",
 			);
 		});
-		test("Aplicacion de PRIMARY KEY", { only: true }, () => {
+		test("Aplicacion de PRIMARY KEY", () => {
 			const tabla = {
 				ID_ARTISTA: { type: "INT", values: ["primary key"] },
 			};
@@ -210,7 +210,7 @@ ALTER COLUMN CIUDAD DROP DEFAULT;`,
 				"CREATE TABLE ARTISTAS\n( ID_ARTISTA INT PRIMARY KEY );",
 			);
 		});
-		test("Aplicacion de FOREIGN KEY", { only: true }, () => {
+		test("Aplicacion de FOREIGN KEY", () => {
 			const tabla = {
 				ID_ARTISTA: {
 					type: "INT",
@@ -252,7 +252,7 @@ ALTER COLUMN CIUDAD DROP DEFAULT;`,
 			);
 		});
 	});
-	describe("Restriccion de Tabla", () => {
+	describe("Restriccion de Tabla", { only: true }, () => {
 		test("Aplicacion de UNIQUE y NOT NULL", () => {
 			const tabla = {
 				ID_ARTISTA: { type: "INT", values: ["not null", "unique"] },
@@ -529,7 +529,7 @@ CASCADE;`,
 				.toString();
 			assert.equal(result, "REVOKE ADMINISTRADORES FROM LindaN CASCADE;");
 		});
-		test("revocar varios roles a varios  identificadores", () => {
+		test("revocar varios roles a varios identificadores", () => {
 			const result = sql
 				.revokeRoles(
 					["ADMINISTRADORES", "CONTABILIDAD"],
@@ -539,10 +539,8 @@ CASCADE;`,
 				.toString();
 			assert.equal(
 				result,
-				`REVOKE ADMIN OPTION FOR ADMINISTRADORES, CONTABILIDAD FROM LindaN
-GRANTED BY CURRENT_USER CASCADE;
-REVOKE ADMIN OPTION FOR ADMINISTRADORES, CONTABILIDAD FROM MARKETING
-GRANTED BY CURRENT_USER CASCADE;`,
+				`REVOKE ADMIN OPTION FOR ADMINISTRADORES, CONTABILIDAD FROM LindaN GRANTED BY CURRENT_USER CASCADE;
+REVOKE ADMIN OPTION FOR ADMINISTRADORES, CONTABILIDAD FROM MARKETING GRANTED BY CURRENT_USER CASCADE;`,
 			);
 		});
 	});

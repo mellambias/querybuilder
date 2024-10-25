@@ -1,5 +1,5 @@
 import { privilegios, objectTypes, splitCommand } from "../../utils/utils.js";
-export const Grant = {
+export const grant = {
 	checkPrivilegio: (name) => {
 		const nameUppercase = name.toUpperCase();
 		const [command, length] = splitCommand(nameUppercase);
@@ -16,14 +16,14 @@ export const Grant = {
 			}
 			return "";
 		}
-		return `${commands.filter((name) => Grant.checkPrivilegio(name)).join(", ")}`;
+		return `${commands.filter((name) => grant.checkPrivilegio(name)).join(", ")}`;
 	},
 	on: (on) => {
 		if (typeof on === "string") {
 			return `ON TABLE ${on}`;
 		}
 		if (on?.objectType !== undefined) {
-			return `ON ${Grant.checkObjectType(on.objectType)} ${on.name}`;
+			return `ON ${grant.checkObjectType(on.objectType)} ${on.name}`;
 		}
 		if (on?.objectType === undefined) {
 			return `ON TABLE ${on.name}`;
@@ -43,4 +43,13 @@ export const Grant = {
 			? `GRANTED BY ${grantBy.toUpperCase()}`
 			: undefined,
 	orden: ["commands", "on", "to", "withGrant", "grantBy"],
+};
+
+export const grantRoles = {
+	roles: (roles) => (typeof roles === "string" ? roles : roles.join(", ")),
+	users: (users) =>
+		typeof users === "string" ? `TO ${users}` : `TO ${users.join(", ")}`,
+	admin: (admin) => (admin ? "WITH ADMIN OPTION" : undefined),
+	granted: (granted) => grant.grantBy(granted),
+	orden: ["roles", "users", "admin", "granted"],
 };
