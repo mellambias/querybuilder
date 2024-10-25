@@ -23,6 +23,7 @@ import {
 	dropColumn,
 	dropTable,
 } from "./comandos/ddl.js";
+import { select } from "./comandos/dql.js";
 
 class Core {
 	constructor() {
@@ -226,34 +227,15 @@ class Core {
 	//Comandos DQL
 	// SELECT [ DISTINCT | ALL ] { * | < selección de lista > }
 	select(columns, options) {
-		let sql = "SELECT";
-		const colStack = [];
-		if (options?.unique === true) {
-			sql += " DISTINCT";
-		}
-		if (options?.all === true) {
-			sql += " ALL";
-		}
-		if (typeof columns === "string" || columns instanceof Column) {
-			sql += ` ${columns}`;
-			return sql;
-		}
-		for (const column of columns) {
-			if (typeof column === "string") {
-				colStack.push(`${column}`);
-			}
-			if (column instanceof Column) {
-				colStack.push(`${column}`);
-			}
-			if (column?.col !== undefined) {
-				if (column.as !== undefined) {
-					colStack.push(`${column.col} AS ${column.as}`);
-				} else {
-					colStack.push(`${column.col}`);
-				}
-			}
-		}
-		return `${sql} ${colStack.join(", ")}`;
+		return this.getStatement(
+			"SELECT",
+			select,
+			{
+				columns,
+				options,
+			},
+			" ",
+		);
 	}
 	from(tables, alias) {
 		if (typeof tables === "string") {
