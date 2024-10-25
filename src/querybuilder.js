@@ -197,10 +197,10 @@ class QueryBuilder {
 
 	// Seguridad
 
-	createRole(names, options) {
-		this.commandStack.push("createRole");
+	createRoles(names, options) {
+		this.commandStack.push("createRoles");
 		try {
-			this.query.push(`${this.language.createRole(names, options)}`);
+			this.query.push(`${this.language.createRoles(names, options)}`);
 		} catch (error) {
 			this.error = error.message;
 		}

@@ -102,6 +102,22 @@ CREATE TABLE IF NOT EXISTS table_test2
 		}
 	});
 
+	test("elimina una tabla", async () => {
+		const result = await sql
+			.use("testing")
+			.dropTable("TABLE_TEST_2", { secure: true, option: "cascade" })
+			.execute();
+
+		if (!result.error) {
+			assert.equal(
+				result.toString(),
+				"USE testing;\nDROP TABLE IF EXISTS TABLE_TEST_2 CASCADE;",
+			);
+		} else {
+			assert.equal(result.error, "");
+		}
+	});
+
 	after(async () => {
 		sql.use("testing").dropDatabase("testing").execute();
 	});
@@ -499,6 +515,102 @@ WITH CHECK OPTION;`,
 				);
 			} else {
 				assert.equal(result.error, "Table 'CDS_EN_EXISTENCIA' already exists");
+			}
+		});
+		test("añade la vista EDITORES_CD", async () => {
+			const result = await sql
+				.createView("EDITORES_CD", {
+					cols: ["TITULO_CD", "EDITOR"],
+					as: sql
+						.select([
+							sql.col("TITULO_CD", "DISCOS_COMPACTOS"),
+							sql.col("NOMBRE_DISCOGRAFICA", "DISQUERAS_CD"),
+						])
+						.from(["DISCOS_COMPACTOS", "DISQUERAS_CD"])
+						.where(
+							sql.and(
+								sql.eq(
+									sql.col("ID_DISQUERA", "DISCOS_COMPACTOS"),
+									sql.col("ID_DISQUERA", "DISQUERAS_CD"),
+								),
+								sql.or(
+									sql.eq(sql.col("ID_DISQUERA", "DISQUERAS_CD"), 5403),
+									sql.eq(sql.col("ID_DISQUERA", "DISQUERAS_CD"), 5402),
+								),
+							),
+						),
+				})
+				.execute();
+			if (!result.error) {
+				assert.equal(
+					result.toString(),
+					`USE INVENTARIO;
+CREATE VIEW EDITORES_CD
+( TITULO_CD, EDITOR )
+AS SELECT DISCOS_COMPACTOS.TITULO_CD, DISQUERAS_CD.NOMBRE_DISCOGRAFICA
+FROM DISCOS_COMPACTOS, DISQUERAS_CD
+WHERE (DISCOS_COMPACTOS.ID_DISQUERA = DISQUERAS_CD.ID_DISQUERA
+AND (DISQUERAS_CD.ID_DISQUERA = 5403
+OR DISQUERAS_CD.ID_DISQUERA = 5402));`,
+				);
+			} else {
+				assert.equal(result.error, "Table 'EDITORES_CD' already exists");
+			}
+		});
+
+		test("volver a crear la vista EDITORES_CD ahora sin restricciones", async () => {
+			const query = `SELECT DISCOS_COMPACTOS.TITULO_CD, DISQUERAS_CD.NOMBRE_COMPAÑIA
+FROM DISCOS_COMPACTOS, DISQUERAS_CD
+WHERE DISCOS_COMPACTOS.ID_DISQUERA = DISQUERAS_CD.ID_DISQUERA`;
+			const result = await sql
+				.dropView("EDITORES_CD")
+				.createView("EDITORES_CD", {
+					cols: ["TITULO_CD", "EDITOR"],
+					as: sql
+						.select([
+							sql.col("TITULO_CD", "DISCOS_COMPACTOS"),
+							sql.col("NOMBRE_DISCOGRAFICA", "DISQUERAS_CD"),
+						])
+						.from(["DISCOS_COMPACTOS", "DISQUERAS_CD"])
+						.where(
+							sql.eq(
+								sql.col("ID_DISQUERA", "DISCOS_COMPACTOS"),
+								sql.col("ID_DISQUERA", "DISQUERAS_CD"),
+							),
+						),
+				})
+				.execute();
+			if (!result.error) {
+				assert.equal(
+					result.toString(),
+					`USE INVENTARIO;
+DROP VIEW EDITORES_CD;
+CREATE VIEW EDITORES_CD
+( TITULO_CD, EDITOR )
+AS SELECT DISCOS_COMPACTOS.TITULO_CD, DISQUERAS_CD.NOMBRE_DISCOGRAFICA
+FROM DISCOS_COMPACTOS, DISQUERAS_CD
+WHERE DISCOS_COMPACTOS.ID_DISQUERA = DISQUERAS_CD.ID_DISQUERA;`,
+				);
+			} else {
+				assert.equal(result.error, "");
+			}
+		});
+	});
+
+	describe("Roles", { only: true }, () => {
+		test("crear un rol", async () => {
+			const result = await sql.createRoles(["ADMIN", "USER"], {
+				secure: true,
+				host: "localhost",
+			});
+
+			if (!result.error) {
+				assert.equal(
+					result.toString(),
+					"USE INVENTARIO;\nCREATE ROLE IF NOT EXISTS ADMIN@localhost, USER@localhost;",
+				);
+			} else {
+				assert.equal(result.error, "");
 			}
 		});
 	});

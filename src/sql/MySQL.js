@@ -3,6 +3,7 @@ Implementa las variaciones al SQL2006 propias del SGBD
 */
 import Core from "../core.js";
 import QueryBuilder from "../querybuilder.js";
+import { dropTable } from "../comandos/ddl.js";
 class MySQL extends Core {
 	constructor() {
 		super();
@@ -54,21 +55,26 @@ class MySQL extends Core {
 			throw new Error(error.message);
 		}
 	}
-	dropTable(name, option) {
-		let sql = "DROP";
-		if (option?.temporary === true) {
-			sql += " TEMPORARY";
-		}
-		sql += " TABLE";
-		if (option?.secure === true) {
-			sql += " IF EXISTS ";
-		}
-		sql += `${name}`;
-		if (/^(CASCADE|RESTRICT)$/i.test(option)) {
-			sql += ` ${option.toUpperCase()}`;
-		}
-
-		return sql;
+	dropTable(name, options) {
+		const MySqlDropTable = {
+			...dropTable,
+			temporary: (temporary) => (temporary === true ? "TEMPORARY" : undefined),
+			table: (table) => table,
+			name: (name) => name,
+			secure: (secure) => (secure === true ? "IF EXISTS" : undefined),
+			orden: ["temporary", "table", "secure", "name", "option"],
+		};
+		//return sql;
+		return this.getStatement(
+			"DROP",
+			MySqlDropTable,
+			{
+				name,
+				table: "TABLE",
+				options,
+			},
+			" ",
+		);
 	}
 	createDomain(name, options) {
 		/*
@@ -90,17 +96,23 @@ class MySQL extends Core {
 			"Este lenguaje no soporta los 'createAssertion' use 'TRIGGERS' o 'Constraints' ",
 		);
 	}
-	createRole(names, options) {
-		let sql = "CREATE ROLE ";
-		if (options?.secure === true) {
-			sql += "IF NOT EXISTS ";
-		}
-		if (Array.isArray(names)) {
-			sql += `${names.map((rol) => `${rol}${options?.host !== undefined ? `@${options.host}` : ""}`).join(", ")}`;
-		} else {
-			sql += `${names}${options?.host !== undefined ? `@${options.host}` : ""}`;
-		}
-		return sql;
+	createRoles(names, options) {
+		const createRole = {
+			secure: (secure) => (secure === true ? "IF NOT EXISTS" : undefined),
+			names: (names) => {
+				if (Array.isArray(names)) {
+					return `${names.map((rol) => `${rol}${createRole._options?.host !== undefined ? `@${createRole._options.host}` : ""}`).join(", ")}`;
+				}
+				return `${names}${createRole._options.host !== undefined ? `@${createRole._options.host}` : ""}`;
+			},
+			orden: ["secure", "names"],
+		};
+		return this.getStatement(
+			"CREATE ROLE",
+			createRole,
+			{ names, options },
+			" ",
+		);
 	}
 	dropRoles(names, options) {
 		let sql = "DROP ROLE ";

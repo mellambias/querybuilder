@@ -2,7 +2,6 @@
 @description Implementa el SQL 2006
 */
 import QueryBuilder from "./querybuilder.js";
-import Column from "./column.js";
 import {
 	grant,
 	grantRoles,
@@ -113,7 +112,7 @@ class Core {
 		}
 		return command.join(",\n ");
 	}
-	alterTable(name, builder) {
+	alterTable(name) {
 		return `ALTER TABLE ${name}\n`;
 	}
 	addColumn(name, options) {
@@ -169,7 +168,7 @@ class Core {
 	}
 	// Seguridad
 
-	createRole(names, options) {
+	createRoles(names, options) {
 		return this.getStatement("CREATE", createRole, { names, options }, " ");
 	}
 	dropRoles(names, options) {
