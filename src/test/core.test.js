@@ -460,7 +460,7 @@ WITH CHECK OPTION;`,
 	describe("SEGURIDAD", () => {
 		test("crear un ROL de usuario", () => {
 			const result = sql
-				.createRole("CLIENTES", { admin: "CURRENT_USER" })
+				.createRoles("CLIENTES", { admin: "CURRENT_USER" })
 				.toString();
 			assert.equal(result, "CREATE ROLE CLIENTES WITH ADMIN CURRENT_USER;");
 		});
@@ -1513,7 +1513,7 @@ CLOSE CD_4;`,
 			);
 		});
 	});
-	describe("trabajo con transacciones", () => {
+	describe("trabajo con transacciones", { only: true }, () => {
 		test("set transaction", () => {
 			const result = sql.setTransaction({
 				access: "read only",

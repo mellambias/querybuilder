@@ -2,27 +2,7 @@
 @description Implementa el SQL 2006
 */
 import QueryBuilder from "./querybuilder.js";
-import {
-	grant,
-	grantRoles,
-	revoke,
-	revokeRoles,
-	createRole,
-	dropRoles,
-} from "./comandos/dcl.js";
-import {
-	createSchema,
-	createTable,
-	createType,
-	createDomain,
-	createView,
-	dropSchema,
-	column,
-	constraint,
-	dropColumn,
-	dropTable,
-} from "./comandos/ddl.js";
-import { select } from "./comandos/dql.js";
+import sql2006 from "./comandos/sql2006.js";
 
 class Core {
 	constructor() {
@@ -36,7 +16,7 @@ class Core {
 
 	getStatement(command, scheme, params, charJoin = "\n") {
 		const values = params?.options ? { ...params, ...params.options } : params;
-		scheme._options = params.options || {};
+		scheme._options = params?.options || {};
 		scheme._values = values || {};
 		const defaultOptions = Object.keys(scheme?.defaults || {});
 
@@ -59,6 +39,7 @@ class Core {
 			})
 			.filter((result) => result !== undefined)
 			.join(charJoin)
+			.replaceAll(" \n", "\n")
 			.trim()}`;
 	}
 
@@ -79,13 +60,13 @@ class Core {
 		return `USE ${database}`;
 	}
 	createSchema(name, options) {
-		return this.getStatement("CREATE SCHEMA", createSchema, {
+		return this.getStatement("CREATE SCHEMA", sql2006.createSchema, {
 			name,
 			options,
 		});
 	}
 	dropSchema(name, options) {
-		return this.getStatement("DROP SCHEMA", dropSchema, {
+		return this.getStatement("DROP SCHEMA", sql2006.dropSchema, {
 			name,
 			options,
 		});
@@ -97,17 +78,20 @@ class Core {
 [ ON COMMIT { PRESERVE | DELETE } ROWS ]
  */
 	createTable(name, options) {
-		return this.getStatement("CREATE", createTable, { name, options });
+		return this.getStatement("CREATE", sql2006.createTable, {
+			name,
+			options,
+		});
 	}
 	column(name, options) {
-		return this.getStatement("", column, { name, options }, " ").trim();
+		return this.getStatement("", sql2006.column, { name, options }, " ").trim();
 	}
 
 	tableConstraints(restricciones) {
 		const command = [];
 		for (const restriccion of restricciones) {
 			command.push(
-				this.getStatement("CONSTRAINT", constraint, restriccion, " "),
+				this.getStatement("CONSTRAINT", sql2006.constraint, restriccion, " "),
 			);
 		}
 		return command.join(",\n ");
@@ -123,7 +107,7 @@ class Core {
 	}
 
 	dropColumn(name, option) {
-		return this.getStatement("DROP", dropColumn, { name, option }, " ");
+		return this.getStatement("DROP", sql2006.dropColumn, { name, option }, " ");
 	}
 	setDefault(value) {
 		return ` SET DEFAULT ${typeof value === "string" ? `'${value}'` : value}`;
@@ -144,23 +128,28 @@ class Core {
 	}
 
 	dropTable(name, option) {
-		return this.getStatement("DROP", dropTable, { name, option }, " ");
+		return this.getStatement("DROP", sql2006.dropTable, { name, option }, " ");
 	}
 
 	createType(name, options) {
-		return this.getStatement("CREATE", createType, { name, options }, " ");
+		return this.getStatement(
+			"CREATE",
+			sql2006.createType,
+			{ name, options },
+			" ",
+		);
 	}
 	createAssertion(name, assertion) {
 		return `CREATE ASSERTION ${name} CHECK ( ${assertion} )`;
 	}
 	createDomain(name, options) {
-		return this.getStatement("CREATE DOMAIN", createDomain, {
+		return this.getStatement("CREATE DOMAIN", sql2006.createDomain, {
 			name,
 			options,
 		});
 	}
 	createView(name, options) {
-		return this.getStatement("CREATE", createView, { name, options });
+		return this.getStatement("CREATE", sql2006.createView, { name, options });
 	}
 
 	dropView(name) {
@@ -169,14 +158,19 @@ class Core {
 	// Seguridad
 
 	createRoles(names, options) {
-		return this.getStatement("CREATE", createRole, { names, options }, " ");
+		return this.getStatement(
+			"CREATE",
+			sql2006.createRole,
+			{ names, options },
+			" ",
+		);
 	}
 	dropRoles(names, options) {
-		return this.getStatement("", dropRoles, { names, options });
+		return this.getStatement("", sql2006.dropRoles, { names, options });
 	}
 
 	grant(commands, on, to, options) {
-		return this.getStatement("GRANT", grant, {
+		return this.getStatement("GRANT", sql2006.grant, {
 			commands,
 			on,
 			to,
@@ -184,7 +178,7 @@ class Core {
 		});
 	}
 	revoke(commands, on, from, options) {
-		return this.getStatement("REVOKE", revoke, {
+		return this.getStatement("REVOKE", sql2006.revoke, {
 			commands,
 			on,
 			from,
@@ -194,7 +188,7 @@ class Core {
 	grantRoles(roles, users, options) {
 		return this.getStatement(
 			"GRANT",
-			grantRoles,
+			sql2006.grantRoles,
 			{
 				roles,
 				users,
@@ -208,7 +202,7 @@ class Core {
 		if (typeof from === "string") {
 			return this.getStatement(
 				"REVOKE",
-				revokeRoles,
+				sql2006.revokeRoles,
 				{
 					roles,
 					from,
@@ -228,7 +222,7 @@ class Core {
 	select(columns, options) {
 		return this.getStatement(
 			"SELECT",
-			select,
+			sql2006.select,
 			{
 				columns,
 				options,
@@ -541,42 +535,17 @@ class Core {
 		if (typeof name !== "string" || typeof name === "undefined") {
 			throw new Error("Es necesario un nombre valido para el cursor");
 		}
-		let sql = `DECLARE ${name}`;
-		// opciones
-		if (/^(SENSITIVE|INSENSITIVE|ASENSITIVE)$/i.test(options?.changes)) {
-			sql += ` ${options.changes.toUpperCase()}`;
-		}
-		if (/^(SCROLL|NO SCROLL)$/i.test(options?.cursor)) {
-			sql += ` ${options.cursor.toUpperCase()}`;
-		}
-		if (options?.hold !== undefined) {
-			sql += ` ${options.hold === true ? "WITH" : "WITHOUT"} HOLD`;
-		}
-		if (options?.return !== undefined) {
-			sql += ` ${options.return === true ? "WITH" : "WITHOUT"} RETURN`;
-		}
-		sql += " CURSOR\n";
-		if (typeof expresion === "string") {
-			sql += `FOR\n${expresion}`;
-		} else if (expresion instanceof QueryBuilder) {
-			sql += `FOR\n${expresion.toString().replace(";", "")}`;
-		} else {
-			throw new Error("la expresion no es valida");
-		}
-		if (options?.orderBy !== undefined) {
-			sql += `\nORDER BY ${options.orderBy}`;
-		}
-		if (options?.readOnly === true) {
-			sql += "\nFOR READ ONLY";
-		} else if (options?.update !== undefined && options?.update !== false) {
-			sql += "\nFOR UPDATE";
-			if (Array.isArray(options.update)) {
-				sql += ` OF ${options.update.join(", ")}`;
-			} else if (typeof options.update === "string") {
-				sql += ` OF ${options.update}`;
-			}
-		}
-		return `${sql}`;
+
+		return this.getStatement(
+			"DECLARE",
+			sql2006.createCursor,
+			{
+				name,
+				expresion,
+				options,
+			},
+			" ",
+		);
 	}
 	openCursor(name) {
 		return `OPEN ${name}`;
@@ -605,28 +574,9 @@ class Core {
 	}
 	// Transacciones
 	setTransaction(config) {
-		const sql = "SET TRANSACTION\n";
-		const stack = [];
-		if (Array.isArray(config)) {
-			for (const oneConfig of config) {
-				stack.push(this.setTransaction(oneConfig).replace(sql, ""));
-			}
-			return `${sql}${stack.join(",\n")}`;
-		}
-		if (/^(READ ONLY|READ WRITE)$/i.test(config?.access)) {
-			stack.push(`${config.access.toUpperCase()}`);
-		}
-		if (
-			/^(READ UNCOMMITTED|READ COMMITTED|REPEATABLE READ|SERIALIZABLE)$/i.test(
-				config?.isolation,
-			)
-		) {
-			stack.push(`ISOLATION LEVEL ${config.isolation.toUpperCase()}`);
-		}
-		if (typeof config?.diagnostic === "number") {
-			stack.push(`DIAGNOSTICS SIZE ${config.diagnostic}`);
-		}
-		return `${sql}${stack.join(",\n")}`;
+		return this.getStatement("SET TRANSACTION", sql2006.setTransaction, {
+			options: config,
+		});
 	}
 	startTransaction(config) {
 		return this.setTransaction(config).replace("SET", "START");
