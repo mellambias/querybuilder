@@ -1337,12 +1337,8 @@ WHERE NOMBRE_TIPO_DISCO = 'Blues' ) );`,
 
 			assert.equal(
 				result.toString(),
-				`DECLARE name ASENSITIVE SCROLL WITH HOLD WITHOUT RETURN CURSOR
-FOR
-SELECT *
-FROM TABLA
-ORDER BY COLUMN
-FOR UPDATE OF COL1, COL2;`,
+				`DECLARE name ASENSITIVE SCROLL WITH HOLD WITHOUT RETURN CURSOR FOR SELECT *
+FROM TABLA ORDER BY COLUMN FOR UPDATE OF COL1, COL2;`,
 			);
 		});
 		test("instrucción de cursor básica con deplazamiento", () => {
@@ -1354,12 +1350,8 @@ FOR UPDATE OF COL1, COL2;`,
 
 			assert.equal(
 				result.toString(),
-				`DECLARE CD_1 SCROLL CURSOR
-FOR
-SELECT *
-FROM INVENTARIO_CD
-ORDER BY DISCO_COMPACTO
-FOR READ ONLY;`,
+				`DECLARE CD_1 SCROLL CURSOR FOR SELECT *
+FROM INVENTARIO_CD ORDER BY DISCO_COMPACTO FOR READ ONLY;`,
 			);
 		});
 		test("un cursor actualizable", () => {
@@ -1373,11 +1365,8 @@ FOR READ ONLY;`,
 
 			assert.equal(
 				result.toString(),
-				`DECLARE CD_4 CURSOR
-FOR
-SELECT *
-FROM INVENTARIO_CD
-FOR UPDATE OF DISCO_COMPACTO;`,
+				`DECLARE CD_4 CURSOR FOR SELECT *
+FROM INVENTARIO_CD FOR UPDATE OF DISCO_COMPACTO;`,
 			);
 		});
 		test("Recuperar datos de un cursor", () => {
@@ -1389,12 +1378,8 @@ FOR UPDATE OF DISCO_COMPACTO;`,
 
 			assert.equal(
 				cursor.toString(),
-				`DECLARE CD_2 SCROLL CURSOR
-FOR
-SELECT *
-FROM INVENTARIO_CD
-ORDER BY DISCO_COMPACTO
-FOR READ ONLY;`,
+				`DECLARE CD_2 SCROLL CURSOR FOR SELECT *
+FROM INVENTARIO_CD ORDER BY DISCO_COMPACTO FOR READ ONLY;`,
 			);
 
 			assert.equal(cursor.status, "declared");
@@ -1402,12 +1387,8 @@ FOR READ ONLY;`,
 			const openCursor = sql.openCursor("CD_2");
 			assert.equal(
 				sql.toString(),
-				`DECLARE CD_2 SCROLL CURSOR
-FOR
-SELECT *
-FROM INVENTARIO_CD
-ORDER BY DISCO_COMPACTO
-FOR READ ONLY;
+				`DECLARE CD_2 SCROLL CURSOR FOR SELECT *
+FROM INVENTARIO_CD ORDER BY DISCO_COMPACTO FOR READ ONLY;
 OPEN CD_2;`,
 			);
 			assert.ok(openCursor.name);
@@ -1442,11 +1423,8 @@ CLOSE CD_2;`,
 
 			assert.equal(
 				cursor.toString(),
-				`DECLARE CD_4 CURSOR
-FOR
-SELECT *
-FROM INVENTARIO_CD
-FOR UPDATE;`,
+				`DECLARE CD_4 CURSOR FOR SELECT *
+FROM INVENTARIO_CD FOR UPDATE;`,
 			);
 
 			// abre el cursor creado
@@ -1470,11 +1448,8 @@ INTO :CD, :Categoria, :Precio, :A_la_mano`,
 
 			assert.equal(
 				result.toString(),
-				`DECLARE CD_4 CURSOR
-FOR
-SELECT *
-FROM INVENTARIO_CD
-FOR UPDATE;
+				`DECLARE CD_4 CURSOR FOR SELECT *
+FROM INVENTARIO_CD FOR UPDATE;
 OPEN CD_4;
 FETCH CD_4
 INTO :CD, :Categoria, :Precio, :A_la_mano;
@@ -1499,11 +1474,8 @@ CLOSE CD_4;`,
 
 			assert.equal(
 				result.toString(),
-				`DECLARE CD_4 CURSOR
-FOR
-SELECT *
-FROM INVENTARIO_CD
-FOR UPDATE;
+				`DECLARE CD_4 CURSOR FOR SELECT *
+FROM INVENTARIO_CD FOR UPDATE;
 OPEN CD_4;
 FETCH CD_4
 INTO :CD;
@@ -1513,7 +1485,7 @@ CLOSE CD_4;`,
 			);
 		});
 	});
-	describe("trabajo con transacciones", { only: true }, () => {
+	describe("trabajo con transacciones", () => {
 		test("set transaction", () => {
 			const result = sql.setTransaction({
 				access: "read only",
@@ -1523,8 +1495,7 @@ CLOSE CD_4;`,
 
 			assert.equal(
 				result.toString(),
-				`SET TRANSACTION
-READ ONLY,
+				`SET TRANSACTION READ ONLY,
 ISOLATION LEVEL READ UNCOMMITTED,
 DIAGNOSTICS SIZE 5;`,
 			);
@@ -1538,8 +1509,7 @@ DIAGNOSTICS SIZE 5;`,
 
 			assert.equal(
 				result.toString(),
-				`SET TRANSACTION
-READ WRITE,
+				`SET TRANSACTION READ WRITE,
 ISOLATION LEVEL SERIALIZABLE,
 DIAGNOSTICS SIZE 8;`,
 			);
@@ -1553,8 +1523,7 @@ DIAGNOSTICS SIZE 8;`,
 
 			assert.equal(
 				result.toString(),
-				`START TRANSACTION
-READ ONLY,
+				`START TRANSACTION READ ONLY,
 ISOLATION LEVEL READ UNCOMMITTED,
 DIAGNOSTICS SIZE 5;`,
 			);

@@ -8,5 +8,5 @@ export const setTransaction = {
 			? `ISOLATION LEVEL ${isolation.toUpperCase()}`
 			: undefined,
 	diagnostic: (diagnostic) => `DIAGNOSTICS SIZE ${diagnostic}`,
-	orden: ["access", "isolation", diagnostic],
+	orden: ["access", "isolation", "diagnostic"],
 };

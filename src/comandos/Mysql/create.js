@@ -1,0 +1,75 @@
+import QueryBuilder from "../../querybuilder.js";
+export const createView = {
+	replace: (replace) => (replace === true ? "OR REPLACE" : ""),
+	algorithm: (algorithm) =>
+		/^(UNDEFINED|MERGE|TEMPTABLE)$/i.test(algorithm)
+			? `ALGORITHM=${algorithm.toUpperCase()}`
+			: "",
+	user: (user) => (user !== undefined ? `DEFINER=${user}` : ""),
+	security: (security) =>
+		/^(DEFINER|INVOKER)$/i.test(security)
+			? `SQL SECURITY ${security.toUpperCase()}`
+			: undefined,
+	name: (name) => `VIEW ${name}`,
+	cols: (cols) => `( ${cols.join(", ")} )`,
+	as: (vista) => {
+		if (vista instanceof QueryBuilder) {
+			return `AS ${vista.toString().replace(";", "")}`;
+		}
+		return `AS ${vista}`;
+	},
+	mode: (mode) =>
+		/^(CASCADED|LOCAL)$/i.test(mode) ? ` ${mode.toUpperCase()}` : "",
+	check: (check) =>
+		check === true
+			? `WITH${createView.mode(createView._options?.with)} CHECK OPTION`
+			: undefined,
+	orden: [
+		"replace",
+		"algorithm",
+		"user",
+		"security",
+		"name",
+		"cols",
+		"as",
+		"check",
+	],
+};
+
+export const createTable = {
+	columns: [],
+	temporary: (temporary) =>
+		/^(GLOBAL|LOCAL)$/i.test(temporary)
+			? `${temporary.toUpperCase()} TEMPORARY`
+			: undefined,
+	table: (table) => table,
+	secure: (secure) => (secure === true ? "IF NOT EXISTS" : undefined),
+	name: (name) => `${name}`,
+	cols: function (cols) {
+		createTable.columns = Object.keys(cols).map((key) => {
+			if (cols[key]?.foreingKey !== undefined) {
+				const fk = this.column(key, cols[key]);
+				const fk_col = {
+					name: `FK_${cols[key].foreingKey.table}`,
+					type: "foreign key",
+					cols: [key],
+					foreignKey: cols[key].foreingKey,
+				};
+				if (createTable._options?.constraints !== undefined) {
+					createTable._options.constraints.push(this.tableConstraints(fk_col));
+				} else {
+					createTable._options.constraints = [fk_col];
+				}
+				return fk;
+			}
+			return this.column(key, cols[key]);
+		});
+		if (createTable._options?.constraints) {
+			createTable.columns.push(
+				this.tableConstraints(createTable._options.constraints),
+			);
+		}
+		return `\n( ${createTable.columns.join(",\n ")} )`;
+	},
+	orden: ["temporary", "table", "secure", "name", "cols"],
+};

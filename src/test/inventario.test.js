@@ -327,7 +327,6 @@ WHERE DISCOS_COMPACTOS.ID_DISQUERA = DISQUERAS_CD.ID_DISQUERA;`,
 		assert(otorga.toString(), "GRANT SELECT ON CD_EN_EXISTENCIA TO PUBLIC;");
 		/* al rol PERSONAL_VENTAS Se otorgan los privilegios SELECT, INSERT y UPDATE en la tabla DISCOS_COMPACTOS.
     Para el privilegio UPDATE se especifica la columna TITULO_CD. PERSONAL_VENTAS puede otorgar estos privilegios a otros usuarios
-    *
     */
 		otorga = sql.grant(
 			["SELECT", "INSERT", "UPDATE(TITULO_CD)"],

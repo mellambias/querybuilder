@@ -14,7 +14,7 @@ export const grant = {
 			if (/^(ALL PRIVILEGES|ALL)$/i.test(commands)) {
 				return "ALL PRIVILEGES";
 			}
-			return "";
+			return `${grant.checkPrivilegio(commands)}`;
 		}
 		return `${commands.filter((name) => grant.checkPrivilegio(name)).join(", ")}`;
 	},

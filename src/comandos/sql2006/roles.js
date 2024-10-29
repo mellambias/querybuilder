@@ -1,4 +1,4 @@
-export const createRole = {
+export const createRoles = {
 	names: (names) => `ROLE ${Array.isArray(names) ? names.join(", ") : names}`,
 	admin: (admin) =>
 		/^(CURRENT_USER|CURRENT_ROLE)$/i.test(admin)

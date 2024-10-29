@@ -12,6 +12,7 @@ class Core {
 		this.functionDate();
 		this.joins();
 		this.fetches();
+		this.currentDatabase = null;
 	}
 
 	getStatement(command, scheme, params, charJoin = "\n") {
@@ -19,8 +20,7 @@ class Core {
 		scheme._options = params?.options || {};
 		scheme._values = values || {};
 		const defaultOptions = Object.keys(scheme?.defaults || {});
-
-		return `${command ? `${command} ` : ""}${scheme?.orden
+		const commandArray = scheme?.orden
 			.filter(
 				(key) =>
 					values[key] !== undefined || defaultOptions.indexOf(key) !== -1,
@@ -33,14 +33,16 @@ class Core {
 				}
 				const callFunction = scheme[key].bind(this);
 				if (values[key] !== undefined) {
-					return callFunction(values[key]);
+					const respuesta = callFunction(values[key]);
+					return respuesta;
 				}
 				return callFunction(scheme.defaults[key]);
 			})
 			.filter((result) => result !== undefined)
 			.join(charJoin)
 			.replaceAll(" \n", "\n")
-			.trim()}`;
+			.trim();
+		return `${command ? `${command} ` : ""}${commandArray}`;
 	}
 
 	// DDL
@@ -52,12 +54,20 @@ class Core {
 		return query;
 	}
 	dropDatabase(name, options) {
+		this.useDatabase = null;
 		const query = `DROP DATABASE ${name}`;
 		return query;
 	}
 
 	use(database) {
+		this.useDatabase = database;
 		return `USE ${database}`;
+	}
+	set useDatabase(value) {
+		this.currentDatabase = value;
+	}
+	get useDatabase() {
+		return this.currentDatabase;
 	}
 	createSchema(name, options) {
 		return this.getStatement("CREATE SCHEMA", sql2006.createSchema, {
@@ -160,7 +170,7 @@ class Core {
 	createRoles(names, options) {
 		return this.getStatement(
 			"CREATE",
-			sql2006.createRole,
+			sql2006.createRoles,
 			{ names, options },
 			" ",
 		);
@@ -574,9 +584,14 @@ class Core {
 	}
 	// Transacciones
 	setTransaction(config) {
-		return this.getStatement("SET TRANSACTION", sql2006.setTransaction, {
-			options: config,
-		});
+		return this.getStatement(
+			"SET TRANSACTION",
+			sql2006.setTransaction,
+			{
+				options: config,
+			},
+			",\n",
+		);
 	}
 	startTransaction(config) {
 		return this.setTransaction(config).replace("SET", "START");

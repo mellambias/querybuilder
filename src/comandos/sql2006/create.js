@@ -72,26 +72,26 @@ export const createCursor = {
 	return: (value) => `${value === true ? "WITH" : "WITHOUT"} RETURN`,
 	expresion: (expresion) => {
 		if (typeof expresion === "string") {
-			return `CURSOR\nFOR\n${expresion}`;
+			return `CURSOR FOR ${expresion}`;
 		}
 		if (expresion instanceof QueryBuilder) {
-			return `CURSOR\nFOR\n${expresion.toString().replace(";", "")}`;
+			return `CURSOR FOR ${expresion.toString().replace(";", "")}`;
 		}
 		throw new Error("la expresion no es valida");
 	},
-	orderBy: (orderBy) => `\nORDER BY ${orderBy}`,
-	readOnly: (readOnly) => (readOnly === true ? "\nFOR READ ONLY" : undefined),
+	orderBy: (orderBy) => `ORDER BY ${orderBy}`,
+	readOnly: (readOnly) => (readOnly === true ? "FOR READ ONLY" : undefined),
 	update: (update) => {
 		if (createCursor._options?.readOnly === true)
 			throw new Error("No puede actualizar un curson de solo lectura");
 		if (Array.isArray(update)) {
-			return `\nFOR UPDATE OF ${update.join(", ")}`;
+			return `FOR UPDATE OF ${update.join(", ")}`;
 		}
 		if (typeof update === "string") {
-			return `\nFOR UPDATE OF ${update}`;
+			return `FOR UPDATE OF ${update}`;
 		}
 		if (update === true) {
-			return "\nFOR UPDATE";
+			return "FOR UPDATE";
 		}
 	},
 	orden: [

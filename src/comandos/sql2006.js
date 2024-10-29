@@ -1,6 +1,6 @@
 import { grant, grantRoles } from "./sql2006/grant.js";
 import { revoke, revokeRoles } from "./sql2006/revoke.js";
-import { createRole, dropRoles } from "./sql2006/roles.js";
+import { createRoles, dropRoles } from "./sql2006/roles.js";
 import {
 	createSchema,
 	createTable,
@@ -20,7 +20,7 @@ const sql2006 = {
 	grantRoles,
 	revoke,
 	revokeRoles,
-	createRole,
+	createRoles,
 	dropRoles,
 	createSchema,
 	createTable,

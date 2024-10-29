@@ -5,20 +5,20 @@ import MySQL from "../sql/MySQL.js";
 import { config } from "../../config.js";
 
 const MySql8 = config.databases.MySql8;
-let sql;
+let qb;
 beforeEach(() => {
 	const queryBuilder = new QueryBuilder(MySQL, {
 		typeIdentificator: "regular",
 		mode: "test",
 	});
-	sql = queryBuilder.driver(MySql8.driver, MySql8.params);
+	qb = queryBuilder.driver(MySql8.driver, MySql8.params);
 });
 
 describe("Driver MySqlDriver", async () => {
 	test("crea una base de datos", async () => {
 		try {
-			await sql.createDatabase("testing").execute();
-			assert.equal(sql.toString(), "CREATE DATABASE testing;");
+			await qb.createDatabase("testing").execute();
+			assert.equal(qb.toString(), "CREATE DATABASE testing;");
 		} catch (error) {
 			assert.equal(
 				error.message,
@@ -27,7 +27,7 @@ describe("Driver MySqlDriver", async () => {
 		}
 	});
 	test("Crear una tabla en la base de datos testing", async () => {
-		const result = await sql
+		const result = await qb
 			.use("testing")
 			.createTable("TABLE_TEST", { cols: { ID: "INT" } })
 			.execute();
@@ -35,7 +35,7 @@ describe("Driver MySqlDriver", async () => {
 		if (!result.error) {
 			assert.equal(
 				result.toString(),
-				"USE testing;\nCREATE TABLE TABLE_TEST\n ( ID INT );",
+				"USE testing;\nCREATE TABLE TABLE_TEST\n( ID INT );",
 			);
 		} else {
 			assert.equal(result.error, "Table 'table_test' already exists");
@@ -43,7 +43,7 @@ describe("Driver MySqlDriver", async () => {
 	});
 
 	test("Crear una tabla temporal global", async () => {
-		const result = await sql
+		const result = await qb
 			.use("testing")
 			.createTable("table_test_temp", {
 				temporary: "global",
@@ -55,7 +55,7 @@ describe("Driver MySqlDriver", async () => {
 		if (!result.error) {
 			assert.equal(
 				result.toString(),
-				"USE testing;\nCREATE TEMPORARY TABLE table_test_temp\n ( ID INT );",
+				"USE testing;\nCREATE TEMPORARY TABLE table_test_temp ( ID INT );",
 			);
 			assert.ok(result.queryResult);
 		} else {
@@ -69,7 +69,7 @@ describe("Driver MySqlDriver", async () => {
 			FDN_ARTISTA: "DATE",
 			POSTER_EN_EXISTENCIA: "BOOLEAN",
 		};
-		const result = await sql
+		const result = await qb
 			.use("testing")
 			.createTable("table_test2", { cols, secure: true })
 			.execute();
@@ -79,7 +79,7 @@ describe("Driver MySqlDriver", async () => {
 				result.toString(),
 				`USE testing;
 CREATE TABLE IF NOT EXISTS table_test2
- ( ID_ARTISTA INT,
+( ID_ARTISTA INT,
  NOMBRE_ARTISTA CHAR(60) DEFAULT 'artista',
  FDN_ARTISTA DATE,
  POSTER_EN_EXISTENCIA TINYINT );`,
@@ -90,7 +90,7 @@ CREATE TABLE IF NOT EXISTS table_test2
 	});
 
 	test("Crear un tipo definido por el usuario", async () => {
-		const result = await sql
+		const result = await qb
 			.use("testing")
 			.createType("SALARIO", { as: "NUMERIC(8,2)", final: false })
 			.execute();
@@ -103,7 +103,7 @@ CREATE TABLE IF NOT EXISTS table_test2
 	});
 
 	test("elimina una tabla", async () => {
-		const result = await sql
+		const result = await qb
 			.use("testing")
 			.dropTable("TABLE_TEST_2", { secure: true, option: "cascade" })
 			.execute();
@@ -119,7 +119,7 @@ CREATE TABLE IF NOT EXISTS table_test2
 	});
 
 	after(async () => {
-		sql.use("testing").dropDatabase("testing").execute();
+		qb.use("testing").dropDatabase("testing").execute();
 	});
 });
 
@@ -173,9 +173,12 @@ const CDS_ARTISTA = {
 
 describe("Trabaja con INVENTARIO", () => {
 	test("Crea la base de datos inventario", async () => {
-		const result = await sql.createDatabase("INVENTARIO").execute();
+		const result = await qb.createDatabase("INVENTARIO").execute();
 
-		assert.equal(result.toString(), "CREATE DATABASE INVENTARIO;");
+		assert.equal(
+			result.toString(),
+			"USE INVENTARIO;\nCREATE DATABASE INVENTARIO;",
+		);
 
 		if (result.error) {
 			assert.equal(
@@ -185,11 +188,11 @@ describe("Trabaja con INVENTARIO", () => {
 		}
 	});
 	beforeEach(async () => {
-		sql = sql.use("INVENTARIO");
+		qb = qb.use("INVENTARIO");
 	});
 	describe("Crea las tablas", () => {
 		test("crear tabla TIPOS_MUSICA", async () => {
-			const result = await sql
+			const result = await qb
 				.createTable("TIPOS_MUSICA", {
 					secure: true,
 					cols: TIPOS_MUSICA,
@@ -213,7 +216,7 @@ describe("Trabaja con INVENTARIO", () => {
 					result.toString(),
 					`USE INVENTARIO;
 CREATE TABLE IF NOT EXISTS TIPOS_MUSICA
- ( ID_TIPO INT,
+( ID_TIPO INT,
  NOMBRE_TIPO VARCHAR(20) NOT NULL,
  CONSTRAINT UN_NOMBRE_TIPO UNIQUE (NOMBRE_TIPO),
  CONSTRAINT PK_TIPOS_MUSICA PRIMARY KEY (ID_TIPO) );`,
@@ -224,7 +227,7 @@ CREATE TABLE IF NOT EXISTS TIPOS_MUSICA
 		});
 
 		test("crear tabla DISQUERAS_CD", async () => {
-			const result = await sql
+			const result = await qb
 				.createTable("DISQUERAS_CD", {
 					secure: true,
 					cols: DISQUERAS_CD,
@@ -243,7 +246,7 @@ CREATE TABLE IF NOT EXISTS TIPOS_MUSICA
 					result.toString(),
 					`USE INVENTARIO;
 CREATE TABLE IF NOT EXISTS DISQUERAS_CD
- ( ID_DISQUERA INT,
+( ID_DISQUERA INT,
  NOMBRE_DISCOGRAFICA VARCHAR(60) NOT NULL DEFAULT 'Independiente',
  CONSTRAINT PK_DISQUERAS_CD PRIMARY KEY (ID_DISQUERA) );`,
 				);
@@ -253,7 +256,7 @@ CREATE TABLE IF NOT EXISTS DISQUERAS_CD
 		});
 
 		test("crear la tabla DISCOS_COMPACTOS", async () => {
-			const result = await sql
+			const result = await qb
 				.createTable("DISCOS_COMPACTOS", {
 					secure: true,
 					cols: DISCOS_COMPACTOS,
@@ -282,7 +285,7 @@ CREATE TABLE IF NOT EXISTS DISQUERAS_CD
 					result.toString(),
 					`USE INVENTARIO;
 CREATE TABLE IF NOT EXISTS DISCOS_COMPACTOS
- ( ID_DISCO_COMPACTO INT,
+( ID_DISCO_COMPACTO INT,
  TITULO_CD VARCHAR(60) NOT NULL,
  ID_DISQUERA INT NOT NULL,
  CONSTRAINT PK_DISCOS_COMPACTOS PRIMARY KEY (ID_DISCO_COMPACTO),
@@ -294,7 +297,7 @@ CREATE TABLE IF NOT EXISTS DISCOS_COMPACTOS
 		});
 
 		test("crear tabla TIPOS_DISCO_COMPACTO", async () => {
-			const result = await sql
+			const result = await qb
 				.createTable("TIPOS_DISCO_COMPACTO", {
 					secure: true,
 					cols: TIPOS_DISCO_COMPACTO,
@@ -331,7 +334,7 @@ CREATE TABLE IF NOT EXISTS DISCOS_COMPACTOS
 					result.toString(),
 					`USE INVENTARIO;
 CREATE TABLE IF NOT EXISTS TIPOS_DISCO_COMPACTO
- ( ID_DISCO_COMPACTO INT,
+( ID_DISCO_COMPACTO INT,
  ID_TIPO_MUSICA INT,
  CONSTRAINT PK_TIPOS_DISCO_COMPACTO PRIMARY KEY (ID_DISCO_COMPACTO, ID_TIPO_MUSICA),
  CONSTRAINT FK_ID_DISCO_COMPACTO_01 FOREIGN KEY (ID_DISCO_COMPACTO) REFERENCES DISCOS_COMPACTOS (ID_DISCO_COMPACTO),
@@ -345,7 +348,7 @@ CREATE TABLE IF NOT EXISTS TIPOS_DISCO_COMPACTO
 			}
 		});
 		test("crear tabla ARTISTAS", async () => {
-			const result = await sql
+			const result = await qb
 				.createTable("ARTISTAS", {
 					secure: true,
 					cols: ARTISTAS,
@@ -364,7 +367,7 @@ CREATE TABLE IF NOT EXISTS TIPOS_DISCO_COMPACTO
 					result.toString(),
 					`USE INVENTARIO;
 CREATE TABLE IF NOT EXISTS ARTISTAS
- ( ID_ARTISTA INT,
+( ID_ARTISTA INT,
  NOMBRE_ARTISTA VARCHAR(60) NOT NULL,
  LUGAR_DE_NACIMIENTO VARCHAR(60) NOT NULL DEFAULT 'Desconocido',
  CONSTRAINT PK_ARTISTAS PRIMARY KEY (ID_ARTISTA) );`,
@@ -375,7 +378,7 @@ CREATE TABLE IF NOT EXISTS ARTISTAS
 		});
 
 		test("crear tabla CDS_ARTISTA", async () => {
-			const result = await sql
+			const result = await qb
 				.createTable("CDS_ARTISTA", {
 					secure: true,
 					cols: CDS_ARTISTA,
@@ -412,7 +415,7 @@ CREATE TABLE IF NOT EXISTS ARTISTAS
 					result.toString(),
 					`USE INVENTARIO;
 CREATE TABLE IF NOT EXISTS CDS_ARTISTA
- ( ID_ARTISTA INT,
+( ID_ARTISTA INT,
  ID_DISCO_COMPACTO INT,
  CONSTRAINT PK_CDS_ARTISTA PRIMARY KEY (ID_ARTISTA, ID_DISCO_COMPACTO),
  CONSTRAINT FK_ID_ARTISTA FOREIGN KEY (ID_ARTISTA) REFERENCES ARTISTAS (ID_ARTISTA),
@@ -424,7 +427,7 @@ CREATE TABLE IF NOT EXISTS CDS_ARTISTA
 		});
 
 		test("Crea tabla TITULOS_CD", async () => {
-			const result = await sql
+			const result = await qb
 				.createTable("TITULOS_CD", {
 					secure: true,
 					cols: TITULOS_CD,
@@ -436,7 +439,7 @@ CREATE TABLE IF NOT EXISTS CDS_ARTISTA
 					result.toString(),
 					`USE INVENTARIO;
 CREATE TABLE IF NOT EXISTS TITULOS_CD
- ( ID_DISCO_COMPACTO INT,
+( ID_DISCO_COMPACTO INT,
  TITULO_CD VARCHAR(60) NOT NULL,
  EN_EXISTENCIA INT NOT NULL );`,
 				);
@@ -448,7 +451,7 @@ CREATE TABLE IF NOT EXISTS TITULOS_CD
 
 	describe("Alterar las tablas", () => {
 		test("Añadir una columna a la tabla DISCOS_COMPACTOS", async () => {
-			const result = await sql
+			const result = await qb
 				.alterTable("DISCOS_COMPACTOS")
 				.addColumn("EN_EXISTENCIA", { type: "INT", values: ["not null"] })
 				.execute();
@@ -466,13 +469,10 @@ ADD COLUMN EN_EXISTENCIA INT NOT NULL;`,
 		});
 
 		test("añade una constraint de tipo CHECK al campo EN_EXISTENCIA", async () => {
-			const result = await sql
+			const result = await qb
 				.alterTable("DISCOS_COMPACTOS")
 				.addConstraint("CK_EN_EXISTENCIA", {
-					check: sql.and(
-						sql.gt("EN_EXISTENCIA", 0),
-						sql.lt("EN_EXISTENCIA", 50),
-					),
+					check: qb.and(qb.gt("EN_EXISTENCIA", 0), qb.lt("EN_EXISTENCIA", 50)),
 				})
 				.execute();
 
@@ -493,13 +493,13 @@ AND EN_EXISTENCIA < 50) );`,
 		});
 	});
 
-	describe("Crear vistas", { only: true }, () => {
+	describe("Crear vistas", () => {
 		test("crea la vista CDS_EN_EXISTENCIA", async () => {
-			const result = await sql.createView("CDS_EN_EXISTENCIA", {
-				as: sql
+			const result = await qb.createView("CDS_EN_EXISTENCIA", {
+				as: qb
 					.select(["TITULO_CD", "EN_EXISTENCIA"])
 					.from("DISCOS_COMPACTOS")
-					.where(sql.gt("EN_EXISTENCIA", 10)),
+					.where(qb.gt("EN_EXISTENCIA", 10)),
 				check: true,
 			});
 
@@ -518,24 +518,24 @@ WITH CHECK OPTION;`,
 			}
 		});
 		test("añade la vista EDITORES_CD", async () => {
-			const result = await sql
+			const result = await qb
 				.createView("EDITORES_CD", {
 					cols: ["TITULO_CD", "EDITOR"],
-					as: sql
+					as: qb
 						.select([
-							sql.col("TITULO_CD", "DISCOS_COMPACTOS"),
-							sql.col("NOMBRE_DISCOGRAFICA", "DISQUERAS_CD"),
+							qb.col("TITULO_CD", "DISCOS_COMPACTOS"),
+							qb.col("NOMBRE_DISCOGRAFICA", "DISQUERAS_CD"),
 						])
 						.from(["DISCOS_COMPACTOS", "DISQUERAS_CD"])
 						.where(
-							sql.and(
-								sql.eq(
-									sql.col("ID_DISQUERA", "DISCOS_COMPACTOS"),
-									sql.col("ID_DISQUERA", "DISQUERAS_CD"),
+							qb.and(
+								qb.eq(
+									qb.col("ID_DISQUERA", "DISCOS_COMPACTOS"),
+									qb.col("ID_DISQUERA", "DISQUERAS_CD"),
 								),
-								sql.or(
-									sql.eq(sql.col("ID_DISQUERA", "DISQUERAS_CD"), 5403),
-									sql.eq(sql.col("ID_DISQUERA", "DISQUERAS_CD"), 5402),
+								qb.or(
+									qb.eq(qb.col("ID_DISQUERA", "DISQUERAS_CD"), 5403),
+									qb.eq(qb.col("ID_DISQUERA", "DISQUERAS_CD"), 5402),
 								),
 							),
 						),
@@ -562,20 +562,20 @@ OR DISQUERAS_CD.ID_DISQUERA = 5402));`,
 			const query = `SELECT DISCOS_COMPACTOS.TITULO_CD, DISQUERAS_CD.NOMBRE_COMPAÑIA
 FROM DISCOS_COMPACTOS, DISQUERAS_CD
 WHERE DISCOS_COMPACTOS.ID_DISQUERA = DISQUERAS_CD.ID_DISQUERA`;
-			const result = await sql
+			const result = await qb
 				.dropView("EDITORES_CD")
 				.createView("EDITORES_CD", {
 					cols: ["TITULO_CD", "EDITOR"],
-					as: sql
+					as: qb
 						.select([
-							sql.col("TITULO_CD", "DISCOS_COMPACTOS"),
-							sql.col("NOMBRE_DISCOGRAFICA", "DISQUERAS_CD"),
+							qb.col("TITULO_CD", "DISCOS_COMPACTOS"),
+							qb.col("NOMBRE_DISCOGRAFICA", "DISQUERAS_CD"),
 						])
 						.from(["DISCOS_COMPACTOS", "DISQUERAS_CD"])
 						.where(
-							sql.eq(
-								sql.col("ID_DISQUERA", "DISCOS_COMPACTOS"),
-								sql.col("ID_DISQUERA", "DISQUERAS_CD"),
+							qb.eq(
+								qb.col("ID_DISQUERA", "DISCOS_COMPACTOS"),
+								qb.col("ID_DISQUERA", "DISQUERAS_CD"),
 							),
 						),
 				})
@@ -599,7 +599,7 @@ WHERE DISCOS_COMPACTOS.ID_DISQUERA = DISQUERAS_CD.ID_DISQUERA;`,
 
 	describe("Roles", { only: true }, () => {
 		test("crear un rol", async () => {
-			const result = await sql.createRoles(["ADMIN", "USER"], {
+			const result = await qb.createRoles(["ADMIN", "USER"], {
 				secure: true,
 				host: "localhost",
 			});
@@ -612,6 +612,94 @@ WHERE DISCOS_COMPACTOS.ID_DISQUERA = DISQUERAS_CD.ID_DISQUERA;`,
 			} else {
 				assert.equal(result.error, "");
 			}
+		});
+
+		test("Gestion de roles y privilegios", { only: true }, async () => {
+			let nuevoRol = await qb
+				.createRoles("MRKT", {
+					secure: true,
+					host: "localhost",
+				})
+				.execute();
+
+			if (!nuevoRol.error) {
+				assert.equal(
+					nuevoRol.toString(),
+					"USE INVENTARIO;\nCREATE ROLE IF NOT EXISTS MRKT@localhost;",
+				);
+			} else {
+				assert.equal(nuevoRol.error, "");
+			}
+			nuevoRol = await qb
+				.createRoles("PERSONAL_VENTAS", { secure: true })
+				.execute();
+
+			if (!nuevoRol.error) {
+				assert.equal(
+					nuevoRol.toString(),
+					"CREATE ROLE IF NOT EXISTS PERSONAL_VENTAS;",
+				);
+			} else {
+				assert.equal(nuevoRol.error, "");
+			}
+		});
+
+		test("otorga el privilegio SELECT en la vista CDS_EN_EXISTENCIA a PERSONAL_VENTAS", async () => {
+			const otorga = await qb
+				.grant("select", "CDS_EN_EXISTENCIA", ["PERSONAL_VENTAS"])
+				.execute();
+
+			assert.equal(
+				otorga.toString(),
+				"USE INVENTARIO;\nGRANT SELECT ON INVENTARIO.CDS_EN_EXISTENCIA TO 'PERSONAL_VENTAS'@'%';",
+			);
+		});
+		test("al rol PERSONAL_VENTAS Se otorgan los privilegios SELECT, INSERT y UPDATE en la tabla DISCOS_COMPACTOS", async () => {
+			/* al rol PERSONAL_VENTAS Se otorgan los privilegios SELECT, INSERT y UPDATE en la tabla DISCOS_COMPACTOS.
+    Para el privilegio UPDATE se especifica la columna TITULO_CD. PERSONAL_VENTAS puede otorgar estos privilegios a otros usuarios
+    */
+			const otorga = await qb
+				.grant(
+					["SELECT", "INSERT", "UPDATE(TITULO_CD)"],
+					"DISCOS_COMPACTOS",
+					"PERSONAL_VENTAS",
+				)
+				.execute();
+
+			assert.equal(
+				otorga.toString(),
+				`USE INVENTARIO;\nGRANT SELECT, INSERT, UPDATE(TITULO_CD) ON INVENTARIO.DISCOS_COMPACTOS TO 'PERSONAL_VENTAS'@'%';`,
+			);
+		});
+
+		test(
+			"se otorga el rol PERSONAL_VENTAS al rol MRKT",
+			{ only: true },
+			async () => {
+				const otorga = await qb.grantRoles("PERSONAL_VENTAS", "MRKT", {
+					host: "localhost",
+				});
+
+				console.log(
+					"Query:\n%s \nStatus:\n%o",
+					otorga.queryJoin(),
+					otorga.error,
+				);
+				assert.equal(
+					otorga.toString(),
+					"USE INVENTARIO;\nGRANT PERSONAL_VENTAS TO 'MRKT'@'localhost';",
+				);
+			},
+		);
+		test("revocar el privilegio", async () => {
+			// El siguiente paso es revocar el privilegio SELECT que se otorgó al identificador de autorización PUBLIC;
+			const revoca = await qb.revoke("SELECT", "CD_EN_EXISTENCIA", "PUBLIC");
+
+			console.log("Query:\n%s \nStatus:\n%o", otorga.queryJoin(), otorga.error);
+			assert(
+				revoca.toString(),
+				"USE INVENTARIO;\nREVOKE SELECT ON CD_EN_EXISTENCIA FROM PUBLIC CASCADE;",
+			);
 		});
 	});
 });

@@ -83,9 +83,8 @@ class QueryBuilder {
 			if (options?.cols === undefined) {
 				this.error = "Tiene que especificar como mínimo una columna";
 			}
-			this.query.push(
-				`${this.language.createTable(name.validSqlId(), options)}`,
-			);
+			const sql = `${this.language.createTable(name.validSqlId(), options)}`;
+			this.query.push(sql);
 		} catch (error) {
 			this.error = error.message;
 		}
@@ -629,8 +628,6 @@ class QueryBuilder {
 			this.commandStack.push("execute");
 			return this;
 		} catch (error) {
-			console.error("Mensaje", error.message);
-			console.error("Causa", error.cause);
 			this.error = error.message;
 			this.result = undefined;
 			return this;

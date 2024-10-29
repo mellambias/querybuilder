@@ -5,6 +5,13 @@ const privilegios = [
 	"DELETE",
 	"REFERENCES",
 	"TRIGGER",
+	"ALTER",
+	"CREATE VIEW",
+	"CREATE",
+	"DROP",
+	"GRANT OPTION",
+	"INDEX",
+	"SHOW VIEW",
 ];
 
 const objectTypes = [
