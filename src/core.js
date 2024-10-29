@@ -17,8 +17,8 @@ class Core {
 
 	getStatement(command, scheme, params, charJoin = "\n") {
 		const values = params?.options ? { ...params, ...params.options } : params;
-		scheme._options = params?.options || {};
-		scheme._values = values || {};
+		scheme._options = { ...params?.options };
+		scheme._values = { ...values };
 		const defaultOptions = Object.keys(scheme?.defaults || {});
 		const commandArray = scheme?.orden
 			.filter(

@@ -91,22 +91,24 @@ class MySQL extends Core {
 			" ",
 		);
 	}
-	revoke(privilegios, on, from, options) {
-		let sql = "REVOKE ";
-		if (options?.secure === true) {
-			sql += "IF EXISTS ";
-		}
-		sql += this.privilegios(privilegios);
-		sql += this.onObjects(on);
-		if (Array.isArray(from)) {
-			sql += `\nFROM ${from.join(", ")}`;
-		} else {
-			sql += `\nFROM ${from}`;
-		}
-		if (options?.secure === true) {
-			sql += "\nIGNORE UNKNOWN USER";
-		}
-		return sql;
+	revoke(commands, on, to, options) {
+		const revoque = {
+			...Mysql.grant,
+			secure: (value) => (value === true ? "IF EXISTS" : undefined),
+			orden: ["host", "secure", "commands", "on", "to"],
+		};
+		console.log("revoque", grant);
+		return this.getStatement(
+			"REVOKE",
+			revoque,
+			{
+				commands,
+				on,
+				to,
+				options,
+			},
+			" ",
+		);
 	}
 	grantRoles(roles, users, options) {
 		return this.getStatement(

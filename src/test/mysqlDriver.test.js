@@ -672,32 +672,30 @@ WHERE DISCOS_COMPACTOS.ID_DISQUERA = DISQUERAS_CD.ID_DISQUERA;`,
 			);
 		});
 
-		test(
-			"se otorga el rol PERSONAL_VENTAS al rol MRKT",
-			{ only: true },
-			async () => {
-				const otorga = await qb.grantRoles("PERSONAL_VENTAS", "MRKT", {
+		test("se otorga el rol PERSONAL_VENTAS al rol MRKT", async () => {
+			const otorga = await qb
+				.grantRoles("PERSONAL_VENTAS", "MRKT", {
 					host: "localhost",
-				});
+				})
+				.execute();
 
-				console.log(
-					"Query:\n%s \nStatus:\n%o",
-					otorga.queryJoin(),
-					otorga.error,
-				);
-				assert.equal(
-					otorga.toString(),
-					"USE INVENTARIO;\nGRANT PERSONAL_VENTAS TO 'MRKT'@'localhost';",
-				);
-			},
-		);
-		test("revocar el privilegio", async () => {
+			assert.equal(
+				otorga.toString(),
+				"USE INVENTARIO;\nGRANT PERSONAL_VENTAS TO 'MRKT'@'localhost';",
+			);
+		});
+		test("revocar el privilegio", { only: true }, async () => {
 			// El siguiente paso es revocar el privilegio SELECT que se otorgó al identificador de autorización PUBLIC;
-			const revoca = await qb.revoke("SELECT", "CD_EN_EXISTENCIA", "PUBLIC");
+			const result = await qb.revoke(
+				"SELECT",
+				"CDS_EN_EXISTENCIA",
+				"PERSONAL_VENTAS",
+				{ secure: true },
+			);
 
-			console.log("Query:\n%s \nStatus:\n%o", otorga.queryJoin(), otorga.error);
-			assert(
-				revoca.toString(),
+			console.log("Query:\n%s \nStatus:\n%o", result.queryJoin(), result.error);
+			assert.equal(
+				result.toString(),
 				"USE INVENTARIO;\nREVOKE SELECT ON CD_EN_EXISTENCIA FROM PUBLIC CASCADE;",
 			);
 		});

@@ -100,10 +100,17 @@ export const grant = {
 };
 
 export const grantRoles = {
+	host: (host) => {
+		grantRoles._options.host = host;
+		return undefined;
+	},
 	roles: (roles) => (typeof roles === "string" ? roles : roles.join(", ")),
 	users: (users) =>
-		typeof users === "string" ? `TO ${users}` : `TO ${users.join(", ")}`,
+		typeof users === "string"
+			? `TO '${users}'@'${grantRoles._options.host}'`
+			: `TO ${users.map((user) => `'${user}'@'${grantRoles._options.host}'`).join(", ")}`,
 	admin: (admin) => (admin ? "WITH ADMIN OPTION" : undefined),
 	granted: (granted) => grant.grantBy(granted),
-	orden: ["roles", "users", "admin", "granted"],
+	defaults: { host: "%" },
+	orden: ["host", "roles", "users", "admin", "granted"],
 };
