@@ -3,5 +3,19 @@ export const revoke = {
 	...grant,
 	secure: (value) => (value === true ? "IF EXISTS" : undefined),
 	from: (from, self) => self.to(from, self).replace("TO", "FROM"),
-	orden: ["host", "secure", "commands", "on", "from"],
+	ignoreUser: (value) => (value === true ? "IGNORE UNKNOWN USER" : undefined),
+	orden: ["host", "secure", "commands", "on", "from", "ignoreUser"],
+};
+
+export const revokeRoles = {
+	...grant,
+	roles: (roles) => {
+		if (/^(ALL|ALL PROVILEGES)$/i.test(roles)) {
+			return "ALL PRIVILEGES, GRANT OPTION";
+		}
+		return typeof roles === "string" ? roles : roles.join(", ");
+	},
+	from: (from, self) => self.to(from, self).replace("TO", "FROM"),
+	ignoreUser: (value) => (value === true ? "IGNORE UNKNOWN USER" : undefined),
+	orden: ["host", "roles", "from", "ignoreUser"],
 };

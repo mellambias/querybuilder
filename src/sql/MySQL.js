@@ -2,12 +2,21 @@
 Implementa las variaciones al SQL2006 propias del SGBD
 */
 import Core from "../core.js";
-import Mysql from "../comandos/Mysql.js";
+import Mysql84 from "../comandos/Mysql.js";
 
 class MySQL extends Core {
 	constructor() {
 		super();
 		this.dataType = "mysql";
+	}
+
+	getAccount(userOrRole, host = "%") {
+		if (typeof userOrRole === "string") {
+			return `'${userOrRole}'${host !== undefined ? `@'${host}'` : ""}`;
+		}
+		if (typeof userOrRole === "object") {
+			return `'${userOrRole?.name}'${userOrRole?.host !== undefined ? `@'${userOrRole.host}'` : `@'${host}'`}`;
+		}
 	}
 
 	createType(name, options) {
@@ -17,7 +26,7 @@ class MySQL extends Core {
 		try {
 			const sql = this.getStatement(
 				"CREATE",
-				Mysql.createTable,
+				Mysql84.createTable,
 				{
 					name,
 					options,
@@ -33,7 +42,7 @@ class MySQL extends Core {
 	dropTable(name, options) {
 		return this.getStatement(
 			"DROP",
-			Mysql.dropTable,
+			Mysql84.dropTable,
 			{
 				name,
 				table: "TABLE",
@@ -65,7 +74,7 @@ class MySQL extends Core {
 	createRoles(names, options) {
 		return this.getStatement(
 			"CREATE ROLE",
-			Mysql.createRoles,
+			Mysql84.createRoles,
 			{ names, options },
 			" ",
 		);
@@ -73,7 +82,7 @@ class MySQL extends Core {
 	dropRoles(names, options) {
 		return this.getStatement(
 			"DROP ROLE",
-			Mysql.dropRoles,
+			Mysql84.dropRoles,
 			{ names, options },
 			" ",
 		);
@@ -81,7 +90,7 @@ class MySQL extends Core {
 	grant(commands, on, to, options) {
 		return this.getStatement(
 			"GRANT",
-			Mysql.grant,
+			Mysql84.grant,
 			{
 				commands,
 				on,
@@ -94,7 +103,7 @@ class MySQL extends Core {
 	revoke(commands, on, from, options) {
 		return this.getStatement(
 			"REVOKE",
-			Mysql.revoke,
+			Mysql84.revoke,
 			{
 				commands,
 				on,
@@ -107,7 +116,7 @@ class MySQL extends Core {
 	grantRoles(roles, users, options) {
 		return this.getStatement(
 			"GRANT",
-			Mysql.grantRoles,
+			Mysql84.grantRoles,
 			{
 				roles,
 				users,
@@ -115,6 +124,26 @@ class MySQL extends Core {
 			},
 			" ",
 		);
+	}
+
+	revokeRoles(roles, from, options) {
+		const sqlStack = [];
+		if (typeof from === "string") {
+			return this.getStatement(
+				"REVOKE",
+				Mysql84.revokeRoles,
+				{
+					roles,
+					from,
+					options,
+				},
+				" ",
+			);
+		}
+		for (const userId of from) {
+			sqlStack.push(`${this.revokeRoles(roles, userId, options)}`);
+		}
+		return sqlStack.join(";\n");
 	}
 	// 15.1.23 CREATE VIEW Statement
 	createView(name, options) {

@@ -2,7 +2,7 @@ import { createView, createTable } from "./Mysql/create.js";
 import { dropTable } from "./Mysql/drop.js";
 import { createRoles, dropRoles } from "./Mysql/roles.js";
 import { grant, grantRoles } from "./Mysql/grant.js";
-import { revoke } from "./Mysql/revoke.js";
+import { revoke, revokeRoles } from "./Mysql/revoke.js";
 
 const Mysql = {
 	createTable,
@@ -13,6 +13,7 @@ const Mysql = {
 	grant,
 	grantRoles,
 	revoke,
+	revokeRoles,
 };
 
 export default Mysql;

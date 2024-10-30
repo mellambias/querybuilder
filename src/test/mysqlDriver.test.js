@@ -597,7 +597,7 @@ WHERE DISCOS_COMPACTOS.ID_DISQUERA = DISQUERAS_CD.ID_DISQUERA;`,
 		});
 	});
 
-	describe("Roles", { only: true }, () => {
+	describe("Roles", () => {
 		test("crear un rol", async () => {
 			const result = await qb.createRoles(["ADMIN", "USER"], {
 				secure: true,
@@ -614,7 +614,7 @@ WHERE DISCOS_COMPACTOS.ID_DISQUERA = DISQUERAS_CD.ID_DISQUERA;`,
 			}
 		});
 
-		test("Gestion de roles y privilegios", { only: true }, async () => {
+		test("Gestion de roles y privilegios", async () => {
 			let nuevoRol = await qb
 				.createRoles("MRKT", {
 					secure: true,
@@ -625,7 +625,7 @@ WHERE DISCOS_COMPACTOS.ID_DISQUERA = DISQUERAS_CD.ID_DISQUERA;`,
 			if (!nuevoRol.error) {
 				assert.equal(
 					nuevoRol.toString(),
-					"USE INVENTARIO;\nCREATE ROLE IF NOT EXISTS MRKT@localhost;",
+					"USE INVENTARIO;\nCREATE ROLE IF NOT EXISTS 'MRKT'@'localhost';",
 				);
 			} else {
 				assert.equal(nuevoRol.error, "");
@@ -684,19 +684,108 @@ WHERE DISCOS_COMPACTOS.ID_DISQUERA = DISQUERAS_CD.ID_DISQUERA;`,
 				"USE INVENTARIO;\nGRANT PERSONAL_VENTAS TO 'MRKT'@'localhost';",
 			);
 		});
-		test("revocar el privilegio", { only: true }, async () => {
-			// El siguiente paso es revocar el privilegio SELECT que se otorgó al identificador de autorización PUBLIC;
+		test("revocar el privilegio SELECT a PERSONAL_VENTAS de la tabla CDS_EN_EXISTENCIA", async () => {
 			const result = await qb
 				.revoke("SELECT", "CDS_EN_EXISTENCIA", "PERSONAL_VENTAS", {
 					secure: true,
+					ignoreUser: true,
 				})
 				.execute();
 
-			console.log("Query:\n%s \nStatus:\n%o", result.queryJoin(), result.error);
 			assert.equal(
 				result.toString(),
 				"USE INVENTARIO;\nREVOKE IF EXISTS SELECT ON INVENTARIO.CDS_EN_EXISTENCIA FROM 'PERSONAL_VENTAS'@'%';",
 			);
 		});
+		test("revocan todos los privilegios al rol PERSONAL_VENTAS sobre DISCOS_COMPACTOS", async () => {
+			const result = await qb
+				.revoke("all", "DISCOS_COMPACTOS", "PERSONAL_VENTAS", {
+					ignoreUser: true,
+				})
+				.execute();
+
+			assert.equal(
+				result.toString(),
+				"USE INVENTARIO;\nREVOKE ALL ON INVENTARIO.DISCOS_COMPACTOS FROM 'PERSONAL_VENTAS'@'%' IGNORE UNKNOWN USER;",
+			);
+		});
+
+		test("eliminar MRKT del PERSONAL_VENTAS", async () => {
+			const result = await qb
+				.revokeRoles("PERSONAL_VENTAS", "MRKT", {
+					ignoreUser: true,
+					host: "localhost",
+				})
+				.execute();
+
+			assert.equal(
+				result.toString(),
+				"USE INVENTARIO;\nREVOKE PERSONAL_VENTAS FROM 'MRKT'@'localhost' IGNORE UNKNOWN USER;",
+			);
+		});
+
+		test("eliminar el rol MRKT", async () => {
+			// Se puede usar un objeto {name,host} si el rol o usuario tiene un host distinto al host por defecto
+			// se puede utilizar la propiedad options.host como host por defecto distinto de '%'
+			const result = await qb
+				.dropRoles(
+					{ name: "MRKT", host: "localhost" },
+					{
+						secure: true,
+						host: "%",
+					},
+				)
+				.execute();
+
+			assert.equal(
+				result.toString(),
+				"USE INVENTARIO;\nDROP ROLE IF EXISTS 'MRKT'@'localhost';",
+			);
+		});
+
+		test("eliminar el rol PERSONAL_VENTAS", async () => {
+			const result = await qb
+				.dropRoles(
+					{ name: "PERSONAL_VENTAS" },
+					{
+						secure: true,
+					},
+				)
+				.execute();
+
+			assert.equal(
+				result.toString(),
+				"USE INVENTARIO;\nDROP ROLE IF EXISTS 'PERSONAL_VENTAS'@'%';",
+			);
+		});
+	});
+
+	describe("Manejo de datos", async () => {
+		test("Insertar datos", { only: true }, async () => {
+			const result = await qb
+				.insert("DISQUERAS_CD", [], [837, "DRG Records"])
+				.insert("DISCOS_COMPACTOS", [], [116, "Ann Hampton Callaway", 837, 14])
+				.insert(
+					"DISCOS_COMPACTOS",
+					["ID_DISCO_COMPACTO", "TITULO_CD", "ID_DISQUERA", "EN_EXISTENCIA"],
+					[117, "Rhythm Country and Blues", 837, 21],
+				)
+				.execute();
+
+			console.log("Query:\n%s \nStatus:\n%o", result.queryJoin(), result.error);
+			assert.equal(
+				result.toString(),
+				`USE INVENTARIO;
+INSERT INTO DISQUERAS_CD
+VALUES ( 837, 'DRG Records' );
+INSERT INTO DISCOS_COMPACTOS
+VALUES ( 116, 'Ann Hampton Callaway', 837, 14 );
+INSERT INTO DISCOS_COMPACTOS
+( ID_DISCO_COMPACTO, TITULO_CD, ID_DISQUERA, EN_EXISTENCIA )
+VALUES ( 117, 'Rhythm Country and Blues', 837, 21 );`,
+			);
+		});
+
+		test("Update");
 	});
 });

@@ -400,24 +400,7 @@ DROP ROLE MRKT;
 DROP ROLE PERSONAL_VENTAS;`,
 		);
 	});
-	test("consulta de las existencias inferiores a 20 unidades", () => {
-		const result = sql
-			.select("*")
-			.from("INVENTARIO")
-			.where([
-				sql.lt("EN_EXISTENCIA", 20),
-				"AND",
-				sql.lt("PRECIO_MENUDEO", 15),
-			]);
-		assert.equal(
-			result.toString(),
-			`SELECT *
-FROM INVENTARIO
-WHERE EN_EXISTENCIA < 20
-AND
-PRECIO_MENUDEO < 15;`,
-		);
-	});
+
 	test("Modificar datos SQL", () => {
 		const sqlInsert = sql
 			.insert("DISQUERAS_CD", [], [837, "DRG Records"])
@@ -481,6 +464,24 @@ WHERE (ID_DISCO_COMPACTO = 116
 OR ID_DISCO_COMPACTO = 117);
 DELETE FROM DISQUERAS_CD
 WHERE ID_DISQUERA = 837;`,
+		);
+	});
+	test("consulta de las existencias inferiores a 20 unidades", () => {
+		const result = sql
+			.select("*")
+			.from("INVENTARIO")
+			.where([
+				sql.lt("EN_EXISTENCIA", 20),
+				"AND",
+				sql.lt("PRECIO_MENUDEO", 15),
+			]);
+		assert.equal(
+			result.toString(),
+			`SELECT *
+FROM INVENTARIO
+WHERE EN_EXISTENCIA < 20
+AND
+PRECIO_MENUDEO < 15;`,
 		);
 	});
 	describe("Uso de predicados capitulo9", () => {

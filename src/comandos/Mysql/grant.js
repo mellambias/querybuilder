@@ -12,22 +12,6 @@ const globalPrivileges = [
 	"SUPER",
 ];
 /*
-GRANT
-    priv_type [(column_list)]
-      [, priv_type [(column_list)]] ...
-    ON [object_type] priv_level
-    TO user_or_role [, user_or_role] ...
-    [WITH GRANT OPTION]
-    [AS user
-      [WITH ROLE
-        DEFAULT
-        | NONE
-        | ALL
-        | ALL EXCEPT role [, role ] ...
-        | role [, role ] ...
-      ]
-    ]
-}
     En una sentencia sole se pueden otorgar privilegios o roles
     ON distingue entre unos y otros
       - Con ON se otorgan privilegios
@@ -85,15 +69,13 @@ export const grant = {
 			return `ON ${this.useDatabase ? `${this.useDatabase}.` : ""}${on}`;
 		}
 	},
-	to: (to, self) =>
-		Array.isArray(to)
+	to: function (to, self) {
+		return Array.isArray(to)
 			? `TO ${to
-					.map(
-						(user) =>
-							`'${user}'${self._options?.host ? `@'${self._options.host}'` : ""}`,
-					)
+					.map((user) => this.getAccount(user, self._options?.host))
 					.join(", ")}`
-			: `TO '${to}'${self._options.host ? `@'${self._options.host}'` : ""}`,
+			: `TO ${this.getAccount(to, self._options?.host)}`;
+	},
 
 	defaults: { host: "%" },
 	orden: ["host", "commands", "on", "to"],
@@ -105,10 +87,11 @@ export const grantRoles = {
 		return undefined;
 	},
 	roles: (roles) => (typeof roles === "string" ? roles : roles.join(", ")),
-	users: (users, self) =>
-		typeof users === "string"
-			? `TO '${users}'@'${self._options.host}'`
-			: `TO ${users.map((user) => `'${user}'@'${self._options.host}'`).join(", ")}`,
+	users: function (users, self) {
+		return typeof users === "string"
+			? `TO ${this.getAccount(users, self._options?.host)}`
+			: `TO ${users.map((user) => this.getAccount(user, self._options?.host)).join(", ")}`;
+	},
 	admin: (admin) => (admin ? "WITH ADMIN OPTION" : undefined),
 	defaults: { host: "%" },
 	orden: ["host", "roles", "users", "admin", "granted"],
