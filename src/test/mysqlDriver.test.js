@@ -686,17 +686,16 @@ WHERE DISCOS_COMPACTOS.ID_DISQUERA = DISQUERAS_CD.ID_DISQUERA;`,
 		});
 		test("revocar el privilegio", { only: true }, async () => {
 			// El siguiente paso es revocar el privilegio SELECT que se otorgó al identificador de autorización PUBLIC;
-			const result = await qb.revoke(
-				"SELECT",
-				"CDS_EN_EXISTENCIA",
-				"PERSONAL_VENTAS",
-				{ secure: true },
-			);
+			const result = await qb
+				.revoke("SELECT", "CDS_EN_EXISTENCIA", "PERSONAL_VENTAS", {
+					secure: true,
+				})
+				.execute();
 
 			console.log("Query:\n%s \nStatus:\n%o", result.queryJoin(), result.error);
 			assert.equal(
 				result.toString(),
-				"USE INVENTARIO;\nREVOKE SELECT ON CD_EN_EXISTENCIA FROM PUBLIC CASCADE;",
+				"USE INVENTARIO;\nREVOKE IF EXISTS SELECT ON INVENTARIO.CDS_EN_EXISTENCIA FROM 'PERSONAL_VENTAS'@'%';",
 			);
 		});
 	});

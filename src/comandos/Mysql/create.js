@@ -20,9 +20,9 @@ export const createView = {
 	},
 	mode: (mode) =>
 		/^(CASCADED|LOCAL)$/i.test(mode) ? ` ${mode.toUpperCase()}` : "",
-	check: (check) =>
+	check: (check, self) =>
 		check === true
-			? `WITH${createView.mode(createView._options?.with)} CHECK OPTION`
+			? `WITH${self.mode(self._options?.with)} CHECK OPTION`
 			: undefined,
 	orden: [
 		"replace",
@@ -45,8 +45,8 @@ export const createTable = {
 	table: (table) => table,
 	secure: (secure) => (secure === true ? "IF NOT EXISTS" : undefined),
 	name: (name) => `${name}`,
-	cols: function (cols) {
-		createTable.columns = Object.keys(cols).map((key) => {
+	cols: function (cols, self) {
+		self.columns = Object.keys(cols).map((key) => {
 			if (cols[key]?.foreingKey !== undefined) {
 				const fk = this.column(key, cols[key]);
 				const fk_col = {
@@ -55,21 +55,19 @@ export const createTable = {
 					cols: [key],
 					foreignKey: cols[key].foreingKey,
 				};
-				if (createTable._options?.constraints !== undefined) {
-					createTable._options.constraints.push(this.tableConstraints(fk_col));
+				if (self._options?.constraints !== undefined) {
+					self._options.constraints.push(this.tableConstraints(fk_col));
 				} else {
-					createTable._options.constraints = [fk_col];
+					self._options.constraints = [fk_col];
 				}
 				return fk;
 			}
 			return this.column(key, cols[key]);
 		});
-		if (createTable._options?.constraints) {
-			createTable.columns.push(
-				this.tableConstraints(createTable._options.constraints),
-			);
+		if (self._options?.constraints) {
+			self.columns.push(this.tableConstraints(self._options.constraints));
 		}
-		return `\n( ${createTable.columns.join(",\n ")} )`;
+		return `\n( ${self.columns.join(",\n ")} )`;
 	},
 	orden: ["temporary", "table", "secure", "name", "cols"],
 };

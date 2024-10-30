@@ -1,14 +1,14 @@
 export const constraint = {
 	name: (name) => `${name}`,
-	type: (type) =>
+	type: (type, self) =>
 		/^(NOT NULL|UNIQUE|PRIMARY KEY)$/i.test(type)
-			? `${type.toUpperCase()} ${constraint.cols(constraint._values.cols)}`
+			? `${type.toUpperCase()} ${self.cols(self._values.cols)}`
 			: undefined,
 	cols: (cols) => `(${cols.join(", ")})`,
-	foreignKey: function (data) {
+	foreignKey: function (data, self) {
 		const foreingKey = {
 			table: (table) =>
-				`FOREIGN KEY ${constraint.cols(constraint._values.cols)} REFERENCES ${table}`,
+				`FOREIGN KEY ${self.cols(self._values.cols)} REFERENCES ${table}`,
 			cols: (cols) => `(${cols.join(", ")})`,
 			match: (match) =>
 				/^(FULL|PARTIAL|SIMPLE)$/i.test(match)

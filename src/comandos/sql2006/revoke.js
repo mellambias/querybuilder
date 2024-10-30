@@ -10,12 +10,12 @@ export const revoke = {
 				? "FROM PUBLIC"
 				: `FROM ${from}`
 			: `FROM ${from.join(", ")}`,
-	cascade: (value) =>
-		value === true && revoke._options?.restrict === undefined
+	cascade: (value, self) =>
+		value === true && self._options?.restrict === undefined
 			? "CASCADE"
 			: "RESTRICT",
-	restrict: (value) =>
-		value === true && revoke._options?.cascade === undefined
+	restrict: (value, self) =>
+		value === true && self._options?.cascade === undefined
 			? "RESTRICT"
 			: "CASCADE",
 	orden: [
@@ -34,10 +34,10 @@ export const revoke = {
 export const revokeRoles = {
 	adminOption: (adminOption) => (adminOption ? "ADMIN OPTION FOR" : undefined),
 	roles: (roles) => (typeof roles === "string" ? roles : roles.join(", ")),
-	from: (from) => revoke.from(from),
-	grantBy: (grantBy) => grant.grantBy(grantBy),
-	cascade: (cascade) => revoke.cascade(cascade),
-	restrict: (restrict) => revoke.restrict(restrict),
+	from: (from, self) => revoke.from(from, self),
+	grantBy: (grantBy, self) => grant.grantBy(grantBy, self),
+	cascade: (cascade, self) => revoke.cascade(cascade, self),
+	restrict: (restrict, self) => revoke.restrict(restrict, self),
 	orden: ["adminOption", "roles", "from", "grantBy", "cascade", "restrict"],
 	defaults: { cascade: true },
 };

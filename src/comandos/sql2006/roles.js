@@ -8,15 +8,15 @@ export const createRoles = {
 };
 export const dropRoles = {
 	stack: [],
-	names: function (names) {
+	names: function (names, self) {
 		if (typeof names === "string") {
 			return `DROP ROLE ${names}`;
 		}
 		if (Array.isArray(names)) {
 			for (const name of names) {
-				dropRoles.stack.push(this.dropRoles(name));
+				self.stack.push(this.dropRoles(name));
 			}
-			return dropRoles.stack.join(";\n");
+			return self.stack.join(";\n");
 		}
 		throw new Error(
 			"Error en la firma 'dropRoles(names:string | [strings], options?:{})'",

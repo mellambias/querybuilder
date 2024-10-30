@@ -51,25 +51,25 @@ export const grant = {
 		const nameUppercase = name.toUpperCase();
 		return objectTypes.find((item) => item === nameUppercase);
 	},
-	commands: (commands) => {
+	commands: (commands, self) => {
 		if (typeof commands === "string") {
 			if (/^(ALL PRIVILEGES|ALL)$/i.test(commands)) {
 				return "ALL";
 			}
-			return `${grant.checkPrivilegio(commands)}`;
+			return `${self.checkPrivilegio(commands)}`;
 		}
-		return `${commands.filter((name) => grant.checkPrivilegio(name)).join(", ")}`;
+		return `${commands.filter((name) => self.checkPrivilegio(name)).join(", ")}`;
 	},
-	host: (host) => {
-		grant._options.host = host;
+	host: (host, self) => {
+		self._options.host = host;
 		return undefined;
 	},
-	on: function (on) {
+	on: function (on, self) {
 		if (/^(global)$/i.test(on)) {
 			return "ON *.*";
 		}
-		const globalPrivilegesOnCommands = grant.checkGlobalPrivilegio(
-			grant._values.commands,
+		const globalPrivilegesOnCommands = self.checkGlobalPrivilegio(
+			self._values.commands,
 		);
 
 		if (globalPrivilegesOnCommands.length) {
@@ -85,32 +85,31 @@ export const grant = {
 			return `ON ${this.useDatabase ? `${this.useDatabase}.` : ""}${on}`;
 		}
 	},
-	to: (to) =>
+	to: (to, self) =>
 		Array.isArray(to)
 			? `TO ${to
 					.map(
 						(user) =>
-							`'${user}'${grant._options?.host ? `@'${grant._options.host}'` : ""}`,
+							`'${user}'${self._options?.host ? `@'${self._options.host}'` : ""}`,
 					)
 					.join(", ")}`
-			: `TO '${to}'${grant._options.host ? `@'${grant._options.host}'` : ""}`,
+			: `TO '${to}'${self._options.host ? `@'${self._options.host}'` : ""}`,
 
 	defaults: { host: "%" },
 	orden: ["host", "commands", "on", "to"],
 };
 
 export const grantRoles = {
-	host: (host) => {
-		grantRoles._options.host = host;
+	host: (host, self) => {
+		self._options.host = host;
 		return undefined;
 	},
 	roles: (roles) => (typeof roles === "string" ? roles : roles.join(", ")),
-	users: (users) =>
+	users: (users, self) =>
 		typeof users === "string"
-			? `TO '${users}'@'${grantRoles._options.host}'`
-			: `TO ${users.map((user) => `'${user}'@'${grantRoles._options.host}'`).join(", ")}`,
+			? `TO '${users}'@'${self._options.host}'`
+			: `TO ${users.map((user) => `'${user}'@'${self._options.host}'`).join(", ")}`,
 	admin: (admin) => (admin ? "WITH ADMIN OPTION" : undefined),
-	granted: (granted) => grant.grantBy(granted),
 	defaults: { host: "%" },
 	orden: ["host", "roles", "users", "admin", "granted"],
 };

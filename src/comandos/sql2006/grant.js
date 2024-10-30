@@ -9,21 +9,21 @@ export const grant = {
 		const nameUppercase = name.toUpperCase();
 		return objectTypes.find((item) => item === nameUppercase);
 	},
-	commands: (commands) => {
+	commands: (commands, self) => {
 		if (typeof commands === "string") {
 			if (/^(ALL PRIVILEGES|ALL)$/i.test(commands)) {
 				return "ALL PRIVILEGES";
 			}
-			return `${grant.checkPrivilegio(commands)}`;
+			return `${self.checkPrivilegio(commands)}`;
 		}
-		return `${commands.filter((name) => grant.checkPrivilegio(name)).join(", ")}`;
+		return `${commands.filter((name) => self.checkPrivilegio(name)).join(", ")}`;
 	},
-	on: (on) => {
+	on: (on, self) => {
 		if (typeof on === "string") {
 			return `ON TABLE ${on}`;
 		}
 		if (on?.objectType !== undefined) {
-			return `ON ${grant.checkObjectType(on.objectType)} ${on.name}`;
+			return `ON ${self.checkObjectType(on.objectType)} ${on.name}`;
 		}
 		if (on?.objectType === undefined) {
 			return `ON TABLE ${on.name}`;

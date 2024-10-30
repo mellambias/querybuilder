@@ -12,20 +12,19 @@ export const createTable = {
 		/^(GLOBAL|LOCAL)$/i.test(temporary)
 			? `${temporary.toUpperCase()} TEMPORARY`
 			: undefined,
-	cols: function (cols) {
+	cols: function (cols, self) {
 		const columns = Object.keys(cols).map((key) => {
-			return this.column(key, cols[key]);
+			const newColumn = this.column(key, cols[key]);
+			return newColumn;
 		});
-		if (createTable._options?.constraints) {
-			columns.push(this.tableConstraints(createTable._options.constraints));
+		if (self._options?.constraints) {
+			columns.push(this.tableConstraints(self._options.constraints));
 		}
+
 		return `( ${columns.join(",\n ")} )`;
 	},
-	onCommit: (onCommit) => {
-		if (
-			createTable._options?.temporary &&
-			/^(PRESERVE|DELETE)$/i.test(onCommit)
-		) {
+	onCommit: (onCommit, self) => {
+		if (self._options?.temporary && /^(PRESERVE|DELETE)$/i.test(onCommit)) {
 			return `ON COMMIT ${onCommit.toUpperCase()} ROWS`;
 		}
 	},
@@ -81,8 +80,8 @@ export const createCursor = {
 	},
 	orderBy: (orderBy) => `ORDER BY ${orderBy}`,
 	readOnly: (readOnly) => (readOnly === true ? "FOR READ ONLY" : undefined),
-	update: (update) => {
-		if (createCursor._options?.readOnly === true)
+	update: (update, self) => {
+		if (self._options?.readOnly === true)
 			throw new Error("No puede actualizar un curson de solo lectura");
 		if (Array.isArray(update)) {
 			return `FOR UPDATE OF ${update.join(", ")}`;

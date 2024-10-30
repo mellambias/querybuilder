@@ -1,12 +1,12 @@
 export const column = {
-	name: function (name) {
-		if (typeof column._options === "string") {
-			const dataType = column._options.toDataType(this.dataType);
+	name: function (name, self) {
+		if (typeof self._values.options === "string") {
+			const dataType = self._values.options.toDataType(this.dataType);
 			return `${name.validSqlId()} ${dataType}`;
 		}
 	},
-	type: function (type) {
-		return `${column._values.name.validSqlId()} ${type.toDataType(this.dataType)}`;
+	type: function (type, self) {
+		return `${self._values.name.validSqlId()} ${type.toDataType(this.dataType)}`;
 	},
 	values: (values) => {
 		return values

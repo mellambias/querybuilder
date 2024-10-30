@@ -91,20 +91,14 @@ class MySQL extends Core {
 			" ",
 		);
 	}
-	revoke(commands, on, to, options) {
-		const revoque = {
-			...Mysql.grant,
-			secure: (value) => (value === true ? "IF EXISTS" : undefined),
-			orden: ["host", "secure", "commands", "on", "to"],
-		};
-		console.log("revoque", grant);
+	revoke(commands, on, from, options) {
 		return this.getStatement(
 			"REVOKE",
-			revoque,
+			Mysql.revoke,
 			{
 				commands,
 				on,
-				to,
+				from,
 				options,
 			},
 			" ",

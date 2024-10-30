@@ -252,7 +252,7 @@ ALTER COLUMN CIUDAD DROP DEFAULT;`,
 			);
 		});
 	});
-	describe("Restriccion de Tabla", { only: true }, () => {
+	describe("Restriccion de Tabla", () => {
 		test("Aplicacion de UNIQUE y NOT NULL", () => {
 			const tabla = {
 				ID_ARTISTA: { type: "INT", values: ["not null", "unique"] },

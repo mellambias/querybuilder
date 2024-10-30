@@ -33,10 +33,10 @@ class Core {
 				}
 				const callFunction = scheme[key].bind(this);
 				if (values[key] !== undefined) {
-					const respuesta = callFunction(values[key]);
+					const respuesta = callFunction(values[key], scheme);
 					return respuesta;
 				}
-				return callFunction(scheme.defaults[key]);
+				return callFunction(scheme.defaults[key], scheme);
 			})
 			.filter((result) => result !== undefined)
 			.join(charJoin)
@@ -94,7 +94,13 @@ class Core {
 		});
 	}
 	column(name, options) {
-		return this.getStatement("", sql2006.column, { name, options }, " ").trim();
+		const resultado = this.getStatement(
+			"",
+			sql2006.column,
+			{ name, options },
+			" ",
+		).trim();
+		return resultado;
 	}
 
 	tableConstraints(restricciones) {
