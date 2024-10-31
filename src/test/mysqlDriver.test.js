@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import QueryBuilder from "../querybuilder.js";
 import MySQL from "../sql/MySQL.js";
 import { config } from "../../config.js";
+import { tableFormat } from "./utilsForTest/tableFormat.js";
 
 const MySql8 = config.databases.MySql8;
 let qb;
@@ -824,18 +825,22 @@ WHERE ID_DISCO_COMPACTO = 116;`,
 						qb.eq("ID_DISCO_COMPACTO", 116),
 						qb.eq("ID_DISCO_COMPACTO", 117),
 					),
-				);
+				)
+				.execute();
 
 			console.log(
 				"Query:\n%s \nStatus:\n%o\nResultado %o\n",
 				result.queryJoin(),
 				result.error ? result.error : "OK",
-				result.resultado,
-				result.id,
+				result.result,
 			);
+			if (result.result) {
+				const { columns, rows } = result.result;
+				tableFormat(columns, rows);
+			}
 
-			assert(
-				result,
+			assert.equal(
+				result.toString(),
 				`USE INVENTARIO;
 SELECT *
 FROM DISCOS_COMPACTOS

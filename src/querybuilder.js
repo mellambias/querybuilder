@@ -24,7 +24,6 @@ class QueryBuilder {
 		this.functionOneParam();
 		this.functionDate();
 		this.joins();
-		this.id = 0;
 		this.prevInstance = null;
 	}
 
@@ -270,7 +269,6 @@ class QueryBuilder {
 			nuevoSelect.selectCommand = nuevoSelect.language.select(columns, options);
 			nuevoSelect.commandStack.push("select");
 			nuevoSelect.prevInstance = this;
-			nuevoSelect.id = this.id + ((Date.now() % 100) / 100) * 100;
 			nuevoSelect.driverDB = this?.driverDB;
 			return nuevoSelect;
 		} catch (error) {
@@ -599,6 +597,7 @@ class QueryBuilder {
 				if (prevQuery !== null) {
 					this.query.unshift(prevQuery);
 				}
+				this.prevInstance = null;
 			}
 		}
 		if (this.alterTableCommand?.length > 0) {
@@ -615,7 +614,7 @@ class QueryBuilder {
 			this.selectCommand = undefined;
 			this.selectStack = [];
 		}
-		console.log("devolver %o", this.query);
+
 		if (this.query.length > 0) {
 			const send = this.query.join(";\n").concat(";").replace(";;", ";");
 			return `${send}`;
@@ -644,7 +643,8 @@ class QueryBuilder {
 		}
 
 		try {
-			await this.driverDB.execute(this.queryJoin());
+			const send = this.queryJoin();
+			await this.driverDB.execute(send);
 			this.result = this.driverDB.response();
 			this.error = undefined;
 			this.commandStack.push("execute");

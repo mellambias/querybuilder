@@ -34,10 +34,14 @@ class MySqlDriver extends Driver {
 	}
 
 	response() {
-		return this.queyResult;
+		const [response, rows] = this.queyResult;
+		const columns = this.fields();
+		return { response, rows, columns };
 	}
 	fields() {
-		return this.queryFields;
+		return this.queryFields
+			.filter((item) => item !== undefined)
+			.reduce((prev, item) => item, []);
 	}
 
 	async close() {
