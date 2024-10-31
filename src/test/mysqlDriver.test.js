@@ -762,7 +762,7 @@ WHERE DISCOS_COMPACTOS.ID_DISQUERA = DISQUERAS_CD.ID_DISQUERA;`,
 	});
 
 	describe("Manejo de datos", async () => {
-		test("Insertar datos", async () => {
+		test("Insertar datos", { only: true }, async () => {
 			const result = await qb
 				.insert("DISQUERAS_CD", [], [837, "DRG Records"])
 				.insert("DISCOS_COMPACTOS", [], [116, "Ann Hampton Callaway", 837, 14])
@@ -772,6 +772,12 @@ WHERE DISCOS_COMPACTOS.ID_DISQUERA = DISQUERAS_CD.ID_DISQUERA;`,
 					[117, "Rhythm Country and Blues", 837, 21],
 				)
 				.execute();
+
+			if (result) {
+				console.log("Status:%o\n", result.error ? result.error : "OK");
+				const { columns, rows } = result.result;
+				tableFormat(columns, rows, result.queryJoin());
+			}
 
 			assert.equal(
 				result.toString(),
@@ -841,6 +847,36 @@ SELECT *
 FROM DISCOS_COMPACTOS
 WHERE (ID_DISCO_COMPACTO = 116
 OR ID_DISCO_COMPACTO = 117);`,
+			);
+		});
+
+		test("borrar registros", { only: true }, async () => {
+			const result = await qb
+				.delete("DISCOS_COMPACTOS")
+				.where(
+					qb.or(
+						qb.eq("ID_DISCO_COMPACTO", 116),
+						qb.eq("ID_DISCO_COMPACTO", 117),
+					),
+				)
+				.delete("DISQUERAS_CD")
+				.where(qb.eq("ID_DISQUERA", 837))
+				.execute();
+
+			if (result) {
+				console.log("Status:%o\n", result.error ? result.error : "OK");
+				const { columns, rows } = result.result;
+				tableFormat(columns, rows, result.queryJoin());
+			}
+
+			assert.equal(
+				result.toString(),
+				`USE INVENTARIO;
+DELETE FROM DISCOS_COMPACTOS
+WHERE (ID_DISCO_COMPACTO = 116
+OR ID_DISCO_COMPACTO = 117);
+DELETE FROM DISQUERAS_CD
+WHERE ID_DISQUERA = 837;`,
 			);
 		});
 	});
