@@ -828,15 +828,10 @@ WHERE ID_DISCO_COMPACTO = 116;`,
 				)
 				.execute();
 
-			console.log(
-				"Query:\n%s \nStatus:\n%o\nResultado %o\n",
-				result.queryJoin(),
-				result.error ? result.error : "OK",
-				result.result,
-			);
+			console.log("Status:\n%o", result.error ? result.error : "OK");
 			if (result.result) {
 				const { columns, rows } = result.result;
-				tableFormat(columns, rows);
+				tableFormat(columns, rows, result.queryJoin());
 			}
 
 			assert.equal(
