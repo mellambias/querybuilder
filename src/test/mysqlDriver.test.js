@@ -762,7 +762,7 @@ WHERE DISCOS_COMPACTOS.ID_DISQUERA = DISQUERAS_CD.ID_DISQUERA;`,
 	});
 
 	describe("Manejo de datos", async () => {
-		test("Insertar datos", { only: true }, async () => {
+		test("Insertar datos", async () => {
 			const result = await qb
 				.insert("DISQUERAS_CD", [], [837, "DRG Records"])
 				.insert("DISCOS_COMPACTOS", [], [116, "Ann Hampton Callaway", 837, 14])
@@ -773,8 +773,8 @@ WHERE DISCOS_COMPACTOS.ID_DISQUERA = DISQUERAS_CD.ID_DISQUERA;`,
 				)
 				.execute();
 
-			if (result) {
-				console.log("Status:%o\n", result.error ? result.error : "OK");
+			console.log("Status:%o\n", result.error ? result.error : "OK");
+			if (result.result) {
 				const { columns, rows } = result.result;
 				tableFormat(columns, rows, result.queryJoin());
 			}
@@ -792,7 +792,7 @@ VALUES ( 117, 'Rhythm Country and Blues', 837, 21 );`,
 			);
 		});
 
-		test("Actualiza datos", { only: false }, async () => {
+		test("Actualiza datos", async () => {
 			const result = await qb
 				.update("DISCOS_COMPACTOS", {
 					ID_DISQUERA: qb
@@ -803,12 +803,11 @@ VALUES ( 117, 'Rhythm Country and Blues', 837, 21 );`,
 				.where("ID_DISCO_COMPACTO = 116")
 				.execute();
 
-			console.log(
-				"Query:\n%s \nStatus:\n%o\nResultado %o\n",
-				result.queryJoin(),
-				result.error ? result.error : "OK",
-				result.result,
-			);
+			console.log("Status:%o\n", result.error ? result.error : "OK");
+			if (result.result) {
+				const { columns, rows } = result.result;
+				tableFormat(columns, rows, result.queryJoin());
+			}
 
 			assert.equal(
 				result.toString(),
@@ -822,7 +821,7 @@ WHERE ID_DISCO_COMPACTO = 116;`,
 			);
 		});
 
-		test("leer datos de la tabla DISCOS_COMPACTO", { only: true }, async () => {
+		test("leer datos de la tabla DISCOS_COMPACTO", async () => {
 			const result = await qb
 				.select("*")
 				.from("DISCOS_COMPACTOS")
@@ -850,7 +849,7 @@ OR ID_DISCO_COMPACTO = 117);`,
 			);
 		});
 
-		test("borrar registros", { only: true }, async () => {
+		test("borrar registros", async () => {
 			const result = await qb
 				.delete("DISCOS_COMPACTOS")
 				.where(
@@ -863,8 +862,8 @@ OR ID_DISCO_COMPACTO = 117);`,
 				.where(qb.eq("ID_DISQUERA", 837))
 				.execute();
 
-			if (result) {
-				console.log("Status:%o\n", result.error ? result.error : "OK");
+			console.log("Status:%o\n", result.error ? result.error : "OK");
+			if (result.result) {
 				const { columns, rows } = result.result;
 				tableFormat(columns, rows, result.queryJoin());
 			}
@@ -879,5 +878,88 @@ DELETE FROM DISQUERAS_CD
 WHERE ID_DISQUERA = 837;`,
 			);
 		});
+	});
+
+	describe("Uso de predicados capitulo 9", () => {
+		test("se consultará la tabla TIPOS_MUSICA para arrojar los nombres de aquellas filas cuyo valor ID_TIPO sea igual a 11 o 12", async () => {
+			const result = await qb
+				.select(["ID_TIPO", "NOMBRE_TIPO"])
+				.from("TIPOS_MUSICA")
+				.where(qb.or(qb.eq("ID_TIPO", 11), qb.eq("ID_TIPO", 12)))
+				.execute();
+
+			console.log("Status:%o\n", result.error ? result.error : "OK");
+			if (result.result) {
+				const { columns, rows } = result.result;
+				tableFormat(columns, rows, result.queryJoin());
+			}
+
+			assert.equal(
+				result.toString(),
+				`USE INVENTARIO;
+SELECT ID_TIPO, NOMBRE_TIPO
+FROM TIPOS_MUSICA
+WHERE (ID_TIPO = 11
+OR ID_TIPO = 12);`,
+			);
+		});
+		test("se consultará la tabla ARTISTAS para buscar artistas diferentes a Patsy Cline y Bing Crosby", async () => {
+			const result = await qb
+				.select(["NOMBRE_ARTISTA", "LUGAR_DE_NACIMIENTO"])
+				.from("ARTISTAS")
+				.where(
+					qb.and(
+						qb.ne("NOMBRE_ARTISTA", "Patsy Cline"),
+						qb.ne("NOMBRE_ARTISTA", "Bing Crosby"),
+					),
+				)
+				.execute();
+
+			console.log("Status:%o\n", result.error ? result.error : "OK");
+			if (result.result) {
+				const { columns, rows } = result.result;
+				tableFormat(columns, rows, result.queryJoin());
+			}
+
+			assert.equal(
+				result.toString(),
+				`USE INVENTARIO;
+SELECT NOMBRE_ARTISTA, LUGAR_DE_NACIMIENTO
+FROM ARTISTAS
+WHERE (NOMBRE_ARTISTA <> 'Patsy Cline'
+AND NOMBRE_ARTISTA <> 'Bing Crosby');`,
+			);
+		});
+		test(
+			"combinar un predicado LIKE con otro predicado LIKE",
+			{ only: true },
+			async () => {
+				const result = await qb
+					.select("*")
+					.from("DISCOS_COMPACTOS")
+					.where(
+						qb.and(
+							qb.notLike("TITULO_CD", "%Christmas%"),
+							qb.like("TITULO_CD", "%Blue%"),
+						),
+					)
+					.execute();
+
+				console.log("Status:%o\n", result.error ? result.error : "OK");
+				if (result.result) {
+					const { columns, rows } = result.result;
+					tableFormat(columns, rows, result.queryJoin());
+				}
+
+				assert.equal(
+					result.toString(),
+					`USE INVENTARIO;
+SELECT *
+FROM DISCOS_COMPACTOS
+WHERE (TITULO_CD NOT LIKE ('%Christmas%')
+AND TITULO_CD LIKE ('%Blue%'));`,
+				);
+			},
+		);
 	});
 });
