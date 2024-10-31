@@ -29,7 +29,7 @@ class MySqlDriver extends Driver {
 			return this;
 		} catch (error) {
 			await this.close();
-			throw new Error(error.message);
+			throw new Error(`[Driver execute] ${error.message}`);
 		}
 	}
 

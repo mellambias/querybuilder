@@ -376,7 +376,7 @@ class Core {
 				typeof value === "string"
 					? `'${value}'`
 					: value instanceof QueryBuilder
-						? value.toString().replace(";", "")
+						? value.toString({ as: "subselect" })
 						: value,
 			);
 		} else {
@@ -384,7 +384,7 @@ class Core {
 				typeof value === "string"
 					? `'${value}'`
 					: value instanceof QueryBuilder
-						? value.toString().replace(";", "")
+						? value.toString({ as: "subselect" })
 						: value,
 			);
 		}
@@ -492,7 +492,7 @@ class Core {
 				.join(", ")} )`;
 		}
 		if (values instanceof QueryBuilder) {
-			sql = `${sql}\n${values.toString().replace(";", "")}`;
+			sql = `${sql}\n${values.toString({ as: "subselect" })}`;
 		}
 		if (typeof values === "string") {
 			sql = `${sql}\n${values}`;
@@ -506,7 +506,8 @@ class Core {
 			if (typeof sets[col] === "string" && /(:)/.test(sets[col]) === false) {
 				setStack.push(`${col} = '${sets[col]}'`);
 			} else if (sets[col] instanceof QueryBuilder) {
-				setStack.push(`${col} =\n( ${sets[col].toString().replace(";", "")} )`);
+				const subSelect = sets[col].toString({ as: "subselect" });
+				setStack.push(`${col} =\n( ${subSelect} )`);
 			} else {
 				setStack.push(`${col} = ${sets[col]}`);
 			}

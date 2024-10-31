@@ -24,6 +24,8 @@ class QueryBuilder {
 		this.functionOneParam();
 		this.functionDate();
 		this.joins();
+		this.id = 0;
+		this.prevInstance = null;
 	}
 
 	driver(driverClass, params) {
@@ -259,13 +261,17 @@ class QueryBuilder {
 	// SELECT [ DISTINCT | ALL ] { * | < selección de lista > }
 	select(columns, options) {
 		try {
-			if (this.commandStack[0] === "union") {
+			if (/^(union)$/i.test(this.commandStack[0])) {
 				this.selectCommand += this.language.select(columns, options);
-				this.commandStack = ["select"];
+				this.commandStack.push("select");
 				return this;
 			}
 			const nuevoSelect = new QueryBuilder(this.languageClass, this.options);
 			nuevoSelect.selectCommand = nuevoSelect.language.select(columns, options);
+			nuevoSelect.commandStack.push("select");
+			nuevoSelect.prevInstance = this;
+			nuevoSelect.id = this.id + ((Date.now() % 100) / 100) * 100;
+			nuevoSelect.driverDB = this?.driverDB;
 			return nuevoSelect;
 		} catch (error) {
 			this.error = error.message;
@@ -586,7 +592,15 @@ class QueryBuilder {
 		return this;
 	}
 
-	queryJoin() {
+	queryJoin(options) {
+		if (/^(subselect)$/i.test(options?.as) === false) {
+			if (this.prevInstance !== null) {
+				const prevQuery = this.prevInstance.queryJoin(options);
+				if (prevQuery !== null) {
+					this.query.unshift(prevQuery);
+				}
+			}
+		}
 		if (this.alterTableCommand?.length > 0) {
 			this.alterTableCommand = this.alterTableStack.join(";\n");
 			this.query.push(this.alterTableCommand);
@@ -601,11 +615,18 @@ class QueryBuilder {
 			this.selectCommand = undefined;
 			this.selectStack = [];
 		}
-		const send = this.query.join(";\n");
-		return `${send}${/(;)$/.test(send) ? "" : ";"}`;
+		console.log("devolver %o", this.query);
+		if (this.query.length > 0) {
+			const send = this.query.join(";\n").concat(";").replace(";;", ";");
+			return `${send}`;
+		}
+		return null;
 	}
-	toString() {
-		const joinQuery = this.queryJoin();
+	toString(options) {
+		let joinQuery = this.queryJoin(options);
+		if (/^(subselect)$/i.test(options?.as)) {
+			joinQuery = joinQuery.replace(/;$/, "");
+		}
 		this.dropQuery();
 		return joinQuery;
 	}
@@ -619,8 +640,9 @@ class QueryBuilder {
 	}
 	async execute() {
 		if (!this.driverDB) {
-			this.error = "No ha establecido un driver.";
+			throw new Error("No ha establecido un driver.");
 		}
+
 		try {
 			await this.driverDB.execute(this.queryJoin());
 			this.result = this.driverDB.response();
@@ -628,7 +650,7 @@ class QueryBuilder {
 			this.commandStack.push("execute");
 			return this;
 		} catch (error) {
-			this.error = error.message;
+			this.error = `Capture on QueryBuilder [execute] ${error.message}`;
 			this.result = undefined;
 			return this;
 		}

@@ -761,7 +761,7 @@ WHERE DISCOS_COMPACTOS.ID_DISQUERA = DISQUERAS_CD.ID_DISQUERA;`,
 	});
 
 	describe("Manejo de datos", async () => {
-		test("Insertar datos", { only: true }, async () => {
+		test("Insertar datos", async () => {
 			const result = await qb
 				.insert("DISQUERAS_CD", [], [837, "DRG Records"])
 				.insert("DISCOS_COMPACTOS", [], [116, "Ann Hampton Callaway", 837, 14])
@@ -772,7 +772,6 @@ WHERE DISCOS_COMPACTOS.ID_DISQUERA = DISQUERAS_CD.ID_DISQUERA;`,
 				)
 				.execute();
 
-			console.log("Query:\n%s \nStatus:\n%o", result.queryJoin(), result.error);
 			assert.equal(
 				result.toString(),
 				`USE INVENTARIO;
@@ -786,6 +785,63 @@ VALUES ( 117, 'Rhythm Country and Blues', 837, 21 );`,
 			);
 		});
 
-		test("Update");
+		test("Actualiza datos", { only: false }, async () => {
+			const result = await qb
+				.update("DISCOS_COMPACTOS", {
+					ID_DISQUERA: qb
+						.select("ID_DISQUERA")
+						.from("DISQUERAS_CD")
+						.where(qb.eq("NOMBRE_DISCOGRAFICA", "DRG Records")),
+				})
+				.where("ID_DISCO_COMPACTO = 116")
+				.execute();
+
+			console.log(
+				"Query:\n%s \nStatus:\n%o\nResultado %o\n",
+				result.queryJoin(),
+				result.error ? result.error : "OK",
+				result.result,
+			);
+
+			assert.equal(
+				result.toString(),
+				`USE INVENTARIO;
+UPDATE DISCOS_COMPACTOS
+SET ID_DISQUERA =
+( SELECT ID_DISQUERA
+FROM DISQUERAS_CD
+WHERE NOMBRE_DISCOGRAFICA = 'DRG Records' )
+WHERE ID_DISCO_COMPACTO = 116;`,
+			);
+		});
+
+		test("leer datos de la tabla DISCOS_COMPACTO", { only: true }, async () => {
+			const result = await qb
+				.select("*")
+				.from("DISCOS_COMPACTOS")
+				.where(
+					qb.or(
+						qb.eq("ID_DISCO_COMPACTO", 116),
+						qb.eq("ID_DISCO_COMPACTO", 117),
+					),
+				);
+
+			console.log(
+				"Query:\n%s \nStatus:\n%o\nResultado %o\n",
+				result.queryJoin(),
+				result.error ? result.error : "OK",
+				result.resultado,
+				result.id,
+			);
+
+			assert(
+				result,
+				`USE INVENTARIO;
+SELECT *
+FROM DISCOS_COMPACTOS
+WHERE (ID_DISCO_COMPACTO = 116
+OR ID_DISCO_COMPACTO = 117);`,
+			);
+		});
 	});
 });
