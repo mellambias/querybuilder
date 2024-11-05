@@ -44,7 +44,9 @@ class QueryBuilder {
 		}
 		return this;
 	}
-
+	/** 
+	@param {string} name - Nombre de la base de datos
+ */
 	createDatabase(name, options) {
 		this.commandStack.push("createDatabase");
 		try {
@@ -78,6 +80,19 @@ class QueryBuilder {
 		this.query.push(`${this.language.dropSchema(name, options)}`);
 		return this;
 	}
+
+	/**
+	 * Crea una nueva tabla con el nombre y las opciones especificadas.
+	 *
+	 * @param {string} name - El nombre de la tabla.
+	 * @param {Object} options - Opciones de configuración para la tabla.
+	 * @param {Object} options.cols - Objeto donde cada clave es el nombre de la columna.
+	 * @param {type|column} options.cols[].column - columna name:<string|column>
+	 * @param {GLOBAL|LOCAL} [options.temporary] - GLOBAL|LOCAL.
+	 * @param {PRESERVE|DELETE} [options.onCommit] - ON COMMIT PRESERVE|DELETE
+	 *
+	 * @returns {QueryBuilder}
+	 */
 	createTable(name, options) {
 		this.commandStack.push("createTable");
 		try {
@@ -350,17 +365,6 @@ class QueryBuilder {
 	// Predicados
 
 	predicados() {
-		const operTwoCols = [
-			"eq",
-			"ne",
-			"gt",
-			"gte",
-			"lt",
-			"lte",
-			"between",
-			"like",
-			"notLike",
-		];
 		const operOneCol = [
 			"isNull",
 			"isNotNull",
@@ -369,13 +373,31 @@ class QueryBuilder {
 			"any",
 			"some",
 			"all",
+			"distinct",
 		];
+
+		const operTwoCols = [
+			"eq",
+			"ne",
+			"gt",
+			"gte",
+			"lt",
+			"lte",
+			"like",
+			"notLike",
+		];
+
+		const operTreeArg = ["between", "notBetween"];
+
 		const logicos = ["and", "or", "not"];
 		for (const operTwo of operTwoCols) {
 			this[operTwo] = (a, b) => this.language[operTwo](a, b);
 		}
 		for (const operOne of operOneCol) {
 			this[operOne] = (a) => this.language[operOne](a);
+		}
+		for (const operTree of operTreeArg) {
+			this[operTree] = (a, b, c) => this.language[operTree](a, b, c);
 		}
 
 		for (const oper of logicos) {
@@ -469,6 +491,11 @@ class QueryBuilder {
 		return this;
 	}
 	// funciones SET
+
+	/**
+	 * @param {string|column} funcion - argumento o columna sobre la que opera la función SQL
+	 * @param {string} alias - nombre AS
+	 */
 	functionOneParam() {
 		const names = ["count", "max", "min", "sum", "avg", "upper", "lower"];
 		for (const name of names) {

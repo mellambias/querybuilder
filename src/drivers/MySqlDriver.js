@@ -24,6 +24,12 @@ class MySqlDriver extends Driver {
 			if (this.connection === null) {
 				await this.connect();
 			}
+			/**  this.queyResult Puede ser
+			 * - INSERT, UPDATE, DELETE, etc un objeto ResultSetHeader, which provides details about the operation executed by the server.
+			 * - Si multipleStatements=true entonces contiene un Array de objetos ResultSetHeader
+			 * - SELECT -> contains rows returned by server
+			 * this.queryFields contains extra meta data about the operation, if available
+			 */
 			[this.queyResult, this.queryFields] = await this.connection.query(query);
 			await this.close();
 			return this;
@@ -32,9 +38,31 @@ class MySqlDriver extends Driver {
 			throw new Error(`[Driver execute] ${error.message}`);
 		}
 	}
+	isResultSetHeader(data) {
+		if (!data || typeof data !== "object") return false;
+		const keys = [
+			"fieldCount",
+			"affectedRows",
+			"insertId",
+			"info",
+			"serverStatus",
+			"warningStatus",
+			"changedRows",
+		];
+
+		return keys.every((key) => key in data);
+	}
 
 	response() {
-		const [response, rows] = this.queyResult;
+		const response = [];
+		const rows = [];
+		for (const element of this.queyResult) {
+			if (this.isResultSetHeader(element)) {
+				response.push(element);
+			} else {
+				rows.push(...element);
+			}
+		}
 		const columns = this.fields();
 		return { response, rows, columns };
 	}

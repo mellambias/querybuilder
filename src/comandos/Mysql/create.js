@@ -35,7 +35,11 @@ export const createView = {
 		"check",
 	],
 };
-
+/**
+ * @type createTable
+ * @prop {GLOBAL|LOCAL} temporary - Tipo de tabla
+ * @prop {BOOLEAN} secure - crea si no existe
+ */
 export const createTable = {
 	columns: [],
 	temporary: (temporary) =>

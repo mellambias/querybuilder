@@ -1,11 +1,24 @@
-export function tableFormat(columns, rows, query) {
+export function tableFormat(columns, rows, responses, query) {
 	try {
-		if (columns.length === 0) {
-			console.log(`${textCenter("RESULTADOS", 60, "* ")}\n${query}\n\n`);
-			console.log("columns %o\nrows %o\n\n", columns, rows);
-			return;
+		console.log(`${textCenter("SOLICITUD", 60, " +")}\n\n${query}`);
+		console.log("");
+		const queryList = query.split(";");
+		if (responses.length) {
+			console.log(`${textCenter("RESPUESTAS", 60, " -")}`);
+			for (let i = 0; i < responses.length; i++) {
+				console.log(
+					"\nComando_%s:\n%s;\n\n%o",
+					i + 1,
+					queryList[i],
+					responses[i],
+				);
+			}
 		}
 
+		if (!rows.length) {
+			return;
+		}
+		console.log("");
 		const header = [];
 		const grid = [];
 		let maxTable = 10;
@@ -32,13 +45,14 @@ export function tableFormat(columns, rows, query) {
 			i++;
 		}
 		// imprime en consola
-		console.log(`${textCenter("RESULTADOS", maxTable, "* ")}\n${query}\n\n`);
+		console.log(`${textCenter("FILAS", maxTable, "* ")}\n\n`);
 		console.log(header.join(" | "));
 		console.log(header.map((col) => "-".repeat(col.length)).join(" | "));
 		for (const row of grid) {
 			console.log(row.join(" | "));
 		}
 		console.log(header.map((col) => "-".repeat(col.length)).join(" | "));
+		console.log(`registros/filas: ${i}\n`);
 		console.log("\n");
 	} catch (error) {
 		console.log(`[tableFormat] ${error}`);
@@ -48,7 +62,13 @@ export function tableFormat(columns, rows, query) {
 function textCenter(text, width, fill) {
 	const paddingTotal = width - text.length;
 	const paddingStart = Math.floor(paddingTotal / 2);
-	const paddingEnd = paddingTotal - paddingStart;
-
 	return text.padStart(text.length + paddingStart, fill).padEnd(width, fill);
+}
+
+export function showResults(datos) {
+	console.log("Comando:%o\n", datos.error ? datos.error : "OK");
+	if (datos.result) {
+		const { response, columns, rows } = datos.result;
+		tableFormat(columns, rows, response, datos.queryJoin());
+	}
 }

@@ -826,7 +826,7 @@ OR col > 10))`,
 			);
 		});
 		test("Un valor entre un mínimo y un máximo", () => {
-			assert.equal(sql.between(12, 15), "BETWEEN 12 AND 15");
+			assert.equal(sql.between("CAMPO", 12, 15), "CAMPO BETWEEN 12 AND 15");
 		});
 		test("Valores que pueden ser Null o no Null", () => {
 			assert.equal(sql.isNull("col"), "col IS NULL");
