@@ -51,5 +51,36 @@ String.prototype.isReserved = function () {
 String.prototype.toCapital = function () {
 	return `${this.toString().charAt(0).toUpperCase()}${this.toString().slice(1).toLowerCase()}`;
 };
-
-export { dataTypes, Types, privilegios, objectTypes, splitCommand };
+function check(format, values) {
+	const ini = format.indexOf("(") + 1;
+	const fin = format.indexOf(")");
+	const datas = format
+		.slice(ini, fin)
+		.split(",")
+		.reduce((obj, item, index) => {
+			const [clave, valor] = item.split(":");
+			obj[clave.trim()] = { type: valor.trim(), value: values[index] };
+			return obj;
+		}, {});
+	const errors = [format];
+	for (const item of Object.keys(datas)) {
+		const { value, type } = datas[item];
+		const types = type.split("|");
+		const exist = types.some((type) => {
+			if (value === undefined) return false;
+			if (/^(Array|array)$/i.test(type)) {
+				return Array.isArray(value);
+			}
+			if (/^(String|string)$/i.test(type)) {
+				// biome-ignore lint/suspicious/useValidTypeof: <explanation>
+				return typeof value === String(type).toLowerCase();
+			}
+			return value.constructor.name === type;
+		});
+		if (!exist && value !== undefined) {
+			errors.push(`> "${item}" tipo incorrecto '${value.constructor.name}' `);
+		}
+	}
+	return errors.length > 1 ? errors.join("\n") : "";
+}
+export { dataTypes, Types, privilegios, objectTypes, splitCommand, check };

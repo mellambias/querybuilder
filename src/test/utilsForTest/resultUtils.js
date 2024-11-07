@@ -37,10 +37,10 @@ export function tableFormat(columns, rows, responses, query) {
 					maxTable += header[j].length;
 					// recalcula anteriores
 					for (let k = i - 1; k >= 0; k--) {
-						grid[k][j] = grid[k][j].padStart(valor.length, " ");
+						grid[k][j] = justifica(grid[k][j], valor.length, " ");
 					}
 				}
-				grid[i].push(valor.padStart(header[j].length, " "));
+				grid[i].push(justifica(valor, header[j].length, " "));
 			}
 			i++;
 		}
@@ -63,6 +63,13 @@ function textCenter(text, width, fill) {
 	const paddingTotal = width - text.length;
 	const paddingStart = Math.floor(paddingTotal / 2);
 	return text.padStart(text.length + paddingStart, fill).padEnd(width, fill);
+}
+
+function justifica(valor, width, fill) {
+	if (Number.isNaN(valor.trim() * 1)) {
+		return valor.padEnd(width, fill);
+	}
+	return valor.padStart(width, fill);
 }
 
 export function showResults(datos) {

@@ -1,9 +1,14 @@
 import Column from "../../column.js";
+import Expresion from "../../expresion.js";
 export const select = {
 	unique: (unique) => (unique === true ? "DISTINCT" : undefined),
 	all: (all) => (all === true ? "ALL" : undefined),
 	columns: (columns) => {
-		if (typeof columns === "string" || columns instanceof Column) {
+		if (
+			typeof columns === "string" ||
+			columns instanceof Column ||
+			columns instanceof Expresion
+		) {
 			return columns;
 		}
 		const colStack = [];
@@ -11,7 +16,7 @@ export const select = {
 			if (typeof column === "string") {
 				colStack.push(`${column}`);
 			}
-			if (column instanceof Column) {
+			if (column instanceof Column || column instanceof Expresion) {
 				colStack.push(`${column}`);
 			}
 			if (column?.col !== undefined) {

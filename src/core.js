@@ -3,6 +3,7 @@
 */
 import QueryBuilder from "./querybuilder.js";
 import sql2006 from "./comandos/sql2006.js";
+import Expresion from "./expresion.js";
 
 class Core {
 	constructor() {
@@ -280,7 +281,12 @@ class Core {
 							` ${joinTypes[join]} `,
 						)}${Array.isArray(using) ? `\nUSING (${using.join(", ")})` : ""}`;
 				}
-				return `FROM ${tables.join(` ${joinTypes[join]} `)}`;
+				if (join !== "join") {
+					return `FROM ${tables.join(` ${joinTypes[join]} `)}`;
+				}
+				throw new Error(
+					`[core:287] la funcion ${join}(tables,alias,using) => ${join}(${tables}, ${alias}, ${using})`,
+				);
 			};
 		}
 	}
@@ -325,6 +331,9 @@ class Core {
 		for (const oper in operadores) {
 			this[oper] = (a, b) => {
 				if (b !== undefined) {
+					if (b instanceof QueryBuilder) {
+						return `${a} ${operadores[oper]} ( ${b.toString({ as: "subselect" })} )`;
+					}
 					return `${a} ${operadores[oper]} ${typeof b === "string" ? (/^(ANY|SOME|ALL)$/.test(b.match(/^\w+/)[0]) ? b : `'${b}'`) : b}`;
 				}
 				if (Array.isArray(a)) {
@@ -532,16 +541,59 @@ class Core {
 	functionOneParam() {
 		const names = ["count", "max", "min", "sum", "avg", "upper", "lower"];
 		for (const name of names) {
+			/**
+			 * @argument {string|column} column - Nombre de la columna sobre la funcion
+			 * @argument {string} alias - alias de la columna AS
+			 */
 			this[name] = (column, alias) =>
 				`${name.toUpperCase()}(${column})${typeof alias !== "undefined" ? ` AS ${alias}` : ""}`;
 		}
 	}
+
 	// funciones VALOR de cadena
+
+	/**
+	 *
+	 * @param {string|column} column - Columna
+	 * @param {int} inicio - Valor inicial
+	 * @param  {...any} options
+	 * @returns {string} - instruccion
+	 */
 	substr(column, inicio, ...options) {
 		if (typeof options[0] === "string") {
 			return `SUBSTRING(${column} FROM ${inicio})${typeof options[0] !== "undefined" ? ` AS ${options[0]}` : ""}`;
 		}
 		return `SUBSTRING(${column} FROM ${inicio}${typeof options[0] !== "undefined" ? ` FOR ${options[0]}` : ""})${typeof options[1] !== "undefined" ? ` AS ${options[1]}` : ""}`;
+	}
+
+	/**
+	 * columna = CASE [WHEN condicion THEN resultado,..] ELSE defecto END
+	 * @param {string|column} column - columna
+	 * @param {Array<column,string>} casos - [condicion, resultado]
+	 * @param {string} defecto - Caso else
+	 * @returns {string}
+	 */
+	case(column, casos, defecto) {
+		let command = "";
+		let items = [];
+		let lastChance = "";
+		if (Array.isArray(column)) {
+			command = `${column} = \nCASE\n`;
+			items = casos;
+			lastChance = defecto;
+		} else {
+			command = "CASE\n";
+			items = column;
+			lastChance = casos;
+		}
+		command += items
+			.map((item) => {
+				return `WHEN ${item[0]} THEN ${item[1]}`;
+			})
+			.join("\n");
+		command += `\n${lastChance !== undefined ? `ELSE ${lastChance}\n` : ""}`;
+		command += "END";
+		return new Expresion(command);
 	}
 	functionDate() {
 		const names = {

@@ -1614,7 +1614,7 @@ FROM CDS_VENDIDOS;`;
 			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
-		test("contar valores en una columna", { only: true }, async () => {
+		test("contar valores en una columna", async () => {
 			const query = `SELECT COUNT(NOMBRE_ARTISTA) AS TOTAL_DE_ARTISTAS
 FROM CDS_VENDIDOS
 WHERE VENDIDOS > 20;`;
@@ -1654,7 +1654,594 @@ FROM CDS_VENDIDOS );`;
 			const result = await qb
 				.select(["NOMBRE_ARTISTA", "NOMBRE_CD", "VENDIDOS"])
 				.from("CDS_VENDIDOS")
-				.where(qb.select(qb.max("VENDIDOS")).from("CDS_VENDIDOS"))
+				.where(
+					qb.eq("VENDIDOS", qb.select(qb.max("VENDIDOS")).from("CDS_VENDIDOS")),
+				)
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("el valor mas alto para una columna usando agrupacion", async () => {
+			const query = `SELECT NOMBRE_ARTISTA, MAX(VENDIDOS) AS MAX_VENDIDOS
+FROM CDS_VENDIDOS
+WHERE VENDIDOS > 30
+GROUP BY NOMBRE_ARTISTA;`;
+
+			const result = await qb
+				.select(["NOMBRE_ARTISTA", qb.max("VENDIDOS", "MAX_VENDIDOS")])
+				.from("CDS_VENDIDOS")
+				.where(qb.gt("VENDIDOS", 30))
+				.groupBy("NOMBRE_ARTISTA")
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("suma de valores de una columna usando grupos", async () => {
+			const query = `SELECT NOMBRE_ARTISTA, SUM(VENDIDOS) AS TOTAL_VENDIDOS
+FROM CDS_VENDIDOS
+WHERE VENDIDOS > 30
+GROUP BY NOMBRE_ARTISTA;`;
+
+			const result = await qb
+				.select(["NOMBRE_ARTISTA", qb.sum("VENDIDOS", "TOTAL_VENDIDOS")])
+				.from("CDS_VENDIDOS")
+				.where(qb.gt("VENDIDOS", 30))
+				.groupBy("NOMBRE_ARTISTA")
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("promedio de valores de una columna usando grupos", async () => {
+			const query = `SELECT NOMBRE_ARTISTA, AVG(VENDIDOS) AS PROM_VENDIDOS
+FROM CDS_VENDIDOS
+WHERE VENDIDOS > 30
+GROUP BY NOMBRE_ARTISTA;`;
+
+			const result = await qb
+				.select(["NOMBRE_ARTISTA", qb.avg("VENDIDOS", "PROM_VENDIDOS")])
+				.from("CDS_VENDIDOS")
+				.where(qb.gt("VENDIDOS", 30))
+				.groupBy("NOMBRE_ARTISTA")
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+	});
+
+	describe("uso de funciones de valor capitulo 10", () => {
+		test("crea tabla FECHAS_VENTAS", async () => {
+			const fechasVentas = {
+				DISCO_COMPACTO: "VARCHAR(60)",
+				FECHA_VENTA: "TIMESTAMP",
+			};
+			const fechasVentasRows = [
+				["Famous Blue Raincoat", "2002-12-22 10:58:05.120"],
+				["Blue", "2002-12-22 12:02:05.033"],
+				["Court and Spark", "2002-12-22 16:15:22.930"],
+				["Past Light", "2002-12-23 11:29:14.223"],
+				["That Christmas Feeling", "2002-12-23 13:32:45.547"],
+				["Patsy Cline: 12 Greatest Hits", "2002-12-23 15:51:15.730"],
+				["Out of Africa", "2002-12-23 17:01:32.270"],
+				["Leonard Cohen The Best of", "2002-12-24 10:46:35.123"],
+				["Fundamental", "2002-12-24 12:19:13.843"],
+				["Blues on the Bayou", "2002-12-24 14:15:09.673"],
+			];
+
+			const query = `CREATE TABLE IF NOT EXISTS FECHAS_VENTAS
+( DISCO_COMPACTO VARCHAR(60),
+ FECHA_VENTA TIMESTAMP );
+INSERT INTO FECHAS_VENTAS
+VALUES
+('Famous Blue Raincoat', '2002-12-22 10:58:05.120'),
+('Blue', '2002-12-22 12:02:05.033'),
+('Court and Spark', '2002-12-22 16:15:22.930'),
+('Past Light', '2002-12-23 11:29:14.223'),
+('That Christmas Feeling', '2002-12-23 13:32:45.547'),
+('Patsy Cline: 12 Greatest Hits', '2002-12-23 15:51:15.730'),
+('Out of Africa', '2002-12-23 17:01:32.270'),
+('Leonard Cohen The Best of', '2002-12-24 10:46:35.123'),
+('Fundamental', '2002-12-24 12:19:13.843'),
+('Blues on the Bayou', '2002-12-24 14:15:09.673');`;
+
+			const result = await qb
+				.createTable("FECHAS_VENTAS", { cols: fechasVentas, secure: true })
+				.insert("FECHAS_VENTAS", [], fechasVentasRows)
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("extrae un número definido de caracteres", async () => {
+			const query = `SELECT SUBSTRING(DISCO_COMPACTO FROM 1 FOR 10) AS NOMBRE_ABREVIADO
+FROM FECHAS_VENTAS;`;
+
+			const result = await qb
+				.select([qb.substr("DISCO_COMPACTO", 1, 10, "NOMBRE_ABREVIADO")])
+				.from("FECHAS_VENTAS")
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("uso de substring en la clausula WHERE", async () => {
+			const query = `SELECT DISCO_COMPACTO, FECHA_VENTA
+FROM FECHAS_VENTAS
+WHERE SUBSTRING(DISCO_COMPACTO FROM 1 FOR 4) = 'Blue';`;
+
+			const result = await qb
+				.select(["DISCO_COMPACTO", "FECHA_VENTA"])
+				.from("FECHAS_VENTAS")
+				.where(qb.eq(qb.substr("DISCO_COMPACTO", 1, 4), "Blue"))
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("uso de UPPER y LOWER", async () => {
+			const query = `SELECT UPPER(DISCO_COMPACTO) AS TITULO, FECHA_VENTA
+FROM FECHAS_VENTAS
+WHERE SUBSTRING(DISCO_COMPACTO FROM 1 FOR 4) = 'Blue';`;
+
+			const result = await qb
+				.select([qb.upper("DISCO_COMPACTO", "TITULO"), "FECHA_VENTA"])
+				.from("FECHAS_VENTAS")
+				.where(qb.eq(qb.substr("DISCO_COMPACTO", 1, 4), "Blue"))
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+	});
+	describe("uso de funciones valor  numericas", () => {
+		test("crea la tabla RASTREO_CD", async () => {
+			const rastreoCd = {
+				NOMBRE_CD: "VARCHAR(60)",
+				CATEGORIA_CD: "CHAR(4)",
+				EN_EXISTENCIA: "INT",
+				EN_PEDIDO: "INT",
+				VENDIDOS: "INT",
+			};
+			const rastreoCdRows = [
+				["Famous Blue Raincoat", "FROK", 19, 16, 34],
+				["Blue", "CPOP", 28, 22, 56],
+				["Past Light", "CPOP", 12, 11, 48],
+				["That Christmas Feeling", "NEWA", 6, 7, 22],
+				["Patsy Cline: 12 Greatest Hits", "XMAS", 14, 14, 34],
+				["Court and Spark", "CTRY", 15, 18, 54],
+				["Out of Africa", "STRK", 8, 5, 26],
+				["Leonard Cohen The Best of", "FROK", 6, 8, 18],
+				["Fundamental", "BLUS", 10, 6, 21],
+				["Blues on the Bayou", "BLUS", 11, 10, 17],
+			];
+			const query = `CREATE TABLE IF NOT EXISTS RASTREO_CD
+( NOMBRE_CD VARCHAR(60),
+ CATEGORIA_CD CHAR(4),
+ EN_EXISTENCIA INT,
+ EN_PEDIDO INT,
+ VENDIDOS INT );
+INSERT INTO RASTREO_CD
+VALUES
+('Famous Blue Raincoat', 'FROK', 19, 16, 34),
+('Blue', 'CPOP', 28, 22, 56),
+('Past Light', 'CPOP', 12, 11, 48),
+('That Christmas Feeling', 'NEWA', 6, 7, 22),
+('Patsy Cline: 12 Greatest Hits', 'XMAS', 14, 14, 34),
+('Court and Spark', 'CTRY', 15, 18, 54),
+('Out of Africa', 'STRK', 8, 5, 26),
+('Leonard Cohen The Best of', 'FROK', 6, 8, 18),
+('Fundamental', 'BLUS', 10, 6, 21),
+('Blues on the Bayou', 'BLUS', 11, 10, 17);`;
+
+			const result = await qb
+				.createTable("RASTREO_CD", {
+					cols: rastreoCd,
+					secure: true,
+				})
+				.insert("RASTREO_CD", [], rastreoCdRows)
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("expresion de valor numerico", async () => {
+			const query = `SELECT NOMBRE_CD, EN_EXISTENCIA, EN_PEDIDO, (EN_EXISTENCIA + EN_PEDIDO) AS TOTAL
+FROM RASTREO_CD
+WHERE (EN_EXISTENCIA + EN_PEDIDO) > 25;`;
+
+			const result = await qb
+				.select([
+					"NOMBRE_CD",
+					"EN_EXISTENCIA",
+					"EN_PEDIDO",
+					"(EN_EXISTENCIA + EN_PEDIDO) AS TOTAL",
+				])
+				.from("RASTREO_CD")
+				.where(qb.gt("(EN_EXISTENCIA + EN_PEDIDO)", 25))
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("expresion de valor numerico case", async () => {
+			const query = `SELECT NOMBRE_CD, EN_PEDIDO, CASE
+WHEN EN_PEDIDO < 6 THEN EN_PEDIDO + 4
+WHEN EN_PEDIDO BETWEEN 6 AND 8 THEN EN_PEDIDO + 2
+ELSE EN_PEDIDO
+END AS NUEVAS_ORDENES
+FROM RASTREO_CD
+WHERE EN_PEDIDO < 11;`;
+
+			const result = await qb
+				.select([
+					"NOMBRE_CD",
+					"EN_PEDIDO",
+					qb.case(
+						"NUEVAS_ORDENES",
+						[
+							[qb.lt("EN_PEDIDO", 6), "EN_PEDIDO + 4"],
+							[qb.between("EN_PEDIDO", 6, 8), "EN_PEDIDO + 2"],
+						],
+						"EN_PEDIDO",
+					),
+				])
+				.from("RASTREO_CD")
+				.where(qb.lt("EN_PEDIDO", 11))
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("expresion de valor numerico case en un SET", async () => {
+			const query = `UPDATE RASTREO_CD
+SET EN_PEDIDO = CASE
+WHEN EN_PEDIDO < 6 THEN EN_PEDIDO + 4
+WHEN EN_PEDIDO BETWEEN 6 AND 8 THEN EN_PEDIDO + 2
+ELSE EN_PEDIDO
+END;`;
+
+			const result = await qb
+				.update("RASTREO_CD", {
+					EN_PEDIDO: qb.case(
+						[
+							[qb.lt("EN_PEDIDO", 6), "EN_PEDIDO + 4"],
+							[qb.between("EN_PEDIDO", 6, 8), "EN_PEDIDO + 2"],
+						],
+						"EN_PEDIDO",
+					),
+				})
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("utilizar la expresión CAST en SELECT", async () => {
+			const query = `SELECT DISCO_COMPACTO, FECHA_VENTA, CAST(FECHA_VENTA AS CHAR(25)) AS CHAR_FECHA
+FROM FECHAS_VENTAS
+WHERE DISCO_COMPACTO LIKE ('%Blue%');`;
+
+			const result = await qb
+				.select([
+					"DISCO_COMPACTO",
+					"FECHA_VENTA",
+					"CAST(FECHA_VENTA AS CHAR(25)) AS CHAR_FECHA",
+				])
+				.from("FECHAS_VENTAS")
+				.where(qb.like("DISCO_COMPACTO", "%Blue%"))
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+	});
+	describe("Capitulo 11 Acceso a multiples tablas", () => {
+		test("crea la tabla INVENTARIO_CD", async () => {
+			const inventarioCD = {
+				NOMBRE_CD: "VARCHAR(60)",
+				ID_INTER: "INT",
+				EN_EXISTENCIA: "INT",
+			};
+			const inventarioCDRows = [
+				["Famous Blue Raincoat", 102, 12],
+				["Blue", 101, 24],
+				["Court and Spark", 101, 17],
+				["Past Light", 105, 9],
+				["Fundamental", 104, 22],
+				["Blues on the Bayou", 103, 19],
+				["Longing in Their Hearts", 104, 18],
+				["Luck of the Draw", 104, 25],
+				["Deuces Wild", 103, 17],
+				["Nick of Time", 104, 11],
+				["Both Sides Now", 101, 13],
+			];
+			const query = `CREATE TABLE INVENTARIO_CD
+( NOMBRE_CD VARCHAR(60),
+ ID_INTER INT,
+ EN_EXISTENCIA INT );
+INSERT INTO INVENTARIO_CD
+VALUES
+('Famous Blue Raincoat', 102, 12),
+('Blue', 101, 24),
+('Court and Spark', 101, 17),
+('Past Light', 105, 9),
+('Fundamental', 104, 22),
+('Blues on the Bayou', 103, 19),
+('Longing in Their Hearts', 104, 18),
+('Luck of the Draw', 104, 25),
+('Deuces Wild', 103, 17),
+('Nick of Time', 104, 11),
+('Both Sides Now', 101, 13);`;
+
+			const result = await qb
+				.createTable("INVENTARIO_CD", { cols: inventarioCD })
+				.insert("INVENTARIO_CD", [], inventarioCDRows)
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("crea la tabla INTERPRETES", async () => {
+			const interpretes = {
+				ID_INTER: "INT",
+				NOMBRE_INTER: "VARCHAR(60)",
+				ID_TIPO: "INT",
+			};
+			const interpretesRows = [
+				[101, "Joni Mitchell", 10],
+				[102, "Jennifer Warnes", 12],
+				[103, "B.B. King", 11],
+				[104, "Bonnie Raitt", 10],
+				[105, "William Ackerman", 15],
+				[106, "Bing Crosby", 16],
+				[107, "Patsy Cline", 17],
+				[108, "John Barry", 18],
+				[109, "Leonard Cohen", 12],
+			];
+			const query = `CREATE TABLE INTERPRETES
+( ID_INTER INT,
+ NOMBRE_INTER VARCHAR(60),
+ ID_TIPO INT );
+INSERT INTO INTERPRETES
+VALUES
+(101, 'Joni Mitchell', 10),
+(102, 'Jennifer Warnes', 12),
+(103, 'B.B. King', 11),
+(104, 'Bonnie Raitt', 10),
+(105, 'William Ackerman', 15),
+(106, 'Bing Crosby', 16),
+(107, 'Patsy Cline', 17),
+(108, 'John Barry', 18),
+(109, 'Leonard Cohen', 12);`;
+
+			const result = await qb
+				.createTable("INTERPRETES", { cols: interpretes })
+				.insert("INTERPRETES", [], interpretesRows)
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("crea la tabla TIPO_INTER", async () => {
+			const tipoInterprete = {
+				ID_TIPO: "INT",
+				NOMBRE_TIPO: "CHAR(20)",
+			};
+			const tipoInterpreteRows = [
+				[10, "Popular"],
+				[11, "Blues"],
+				[12, "Folk"],
+				[13, "Rock"],
+				[14, "Classical"],
+				[15, "New Age"],
+				[16, "Classic Pop"],
+				[17, "Country"],
+				[18, "Soundtrack"],
+			];
+			const query = `CREATE TABLE TIPO_INTER
+( ID_TIPO INT,
+ NOMBRE_TIPO CHAR(20) );
+INSERT INTO TIPO_INTER
+VALUES
+(10, 'Popular'),
+(11, 'Blues'),
+(12, 'Folk'),
+(13, 'Rock'),
+(14, 'Classical'),
+(15, 'New Age'),
+(16, 'Classic Pop'),
+(17, 'Country'),
+(18, 'Soundtrack');`;
+
+			const result = await qb
+				.createTable("TIPO_INTER", { cols: tipoInterprete })
+				.insert("TIPO_INTER", [], tipoInterpreteRows)
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("operciones basicas JOIN", async () => {
+			const query = `SELECT INVENTARIO_CD.NOMBRE_CD, INTERPRETES.NOMBRE_INTER, INVENTARIO_CD.EN_EXISTENCIA
+FROM INVENTARIO_CD, INTERPRETES
+WHERE (INVENTARIO_CD.ID_INTER = INTERPRETES.ID_INTER
+AND INVENTARIO_CD.EN_EXISTENCIA < 15);`;
+
+			const result = await qb
+				.select([
+					qb.coltn("INVENTARIO_CD", "NOMBRE_CD"),
+					qb.coltn("INTERPRETES", "NOMBRE_INTER"),
+					qb.coltn("INVENTARIO_CD", "EN_EXISTENCIA"),
+				])
+				.from(["INVENTARIO_CD", "INTERPRETES"])
+				.where(
+					qb.and(
+						qb.eq(
+							qb.col("ID_INTER", "INVENTARIO_CD"),
+							qb.col("ID_INTER", "INTERPRETES"),
+						),
+						qb.lt(qb.col("EN_EXISTENCIA", "INVENTARIO_CD"), 15),
+					),
+				)
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("uso de nombres de correlacion", async () => {
+			const query = `SELECT c.NOMBRE_CD, p.NOMBRE_INTER, c.EN_EXISTENCIA
+FROM INVENTARIO_CD AS c, INTERPRETES AS p
+WHERE (c.ID_INTER = p.ID_INTER
+AND c.EN_EXISTENCIA < 15);`;
+
+			const result = await qb
+				.select([
+					qb.coltn("c", "NOMBRE_CD"),
+					qb.coltn("p", "NOMBRE_INTER"),
+					qb.coltn("c", "EN_EXISTENCIA"),
+				])
+				.from(["INVENTARIO_CD", "INTERPRETES"], ["c", "p"])
+				.where(
+					qb.and(
+						qb.eq(qb.col("ID_INTER", "c"), qb.col("ID_INTER", "p")),
+						qb.lt(qb.col("EN_EXISTENCIA", "c"), 15),
+					),
+				)
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("JOIN con mas de dos tablas", async () => {
+			const query = `SELECT c.NOMBRE_CD, p.NOMBRE_INTER, t.NOMBRE_TIPO
+FROM INVENTARIO_CD AS c, INTERPRETES AS p, TIPO_INTER AS t
+WHERE (c.ID_INTER = p.ID_INTER
+AND p.ID_TIPO = t.ID_TIPO
+AND NOMBRE_TIPO = 'Popular');`;
+
+			const result = await qb
+				.select([
+					qb.coltn("c", "NOMBRE_CD"),
+					qb.coltn("p", "NOMBRE_INTER"),
+					qb.coltn("t", "NOMBRE_TIPO"),
+				])
+				.from(["INVENTARIO_CD", "INTERPRETES", "TIPO_INTER"], ["c", "p", "t"])
+				.where(
+					qb.and(
+						qb.eq(qb.col("ID_INTER", "c"), qb.col("ID_INTER", "p")),
+						qb.eq(qb.col("ID_TIPO", "p"), qb.col("ID_TIPO", "t")),
+						qb.eq("NOMBRE_TIPO", "Popular"),
+					),
+				)
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("operacion CROSS JOIN", async () => {
+			const query = `SELECT c.NOMBRE_CD, p.NOMBRE_INTER, c.EN_EXISTENCIA
+FROM INVENTARIO_CD c CROSS JOIN INTERPRETES p
+WHERE (c.ID_INTER = p.ID_INTER
+AND c.EN_EXISTENCIA < 15);`;
+
+			const result = await qb
+				.select([
+					qb.coltn("c", "NOMBRE_CD"),
+					qb.coltn("p", "NOMBRE_INTER"),
+					qb.coltn("c", "EN_EXISTENCIA"),
+				])
+				.crossJoin(["INVENTARIO_CD", "INTERPRETES"], ["c", "p"])
+				.where(
+					qb.and(
+						qb.eq(qb.col("ID_INTER", "c"), qb.col("ID_INTER", "p")),
+						qb.lt(qb.col("EN_EXISTENCIA", "c"), 15),
+					),
+				)
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("crea tabla EMPLEADOS", { only: true }, async () => {
+			const empleados = {
+				ID_EMP: "INT",
+				NOMBRE_EMP: "VARCHAR(60)",
+				ADMIN: "INT",
+			};
+
+			const empleadosRows = [
+				[101, "Ms. Smith", qb.expresion("null")],
+				[102, "Mr. Jones", 101],
+				[103, "Mr. Roberts", 101],
+				[104, "Ms. Hanson", 103],
+				[105, "Mr. Fields", 102],
+				[106, "Ms. Lee", 102],
+				[107, "Mr. Carver", 103],
+			];
+			const query = `CREATE TABLE IF NOT EXISTS EMPLEADOS
+( ID_EMP INT,
+ NOMBRE_EMP VARCHAR(60),
+ ADMIN INT );
+INSERT INTO EMPLEADOS
+VALUES
+(101, 'Ms. Smith', 'null'),
+(102, 'Mr. Jones', 101),
+(103, 'Mr. Roberts', 101),
+(104, 'Ms. Hanson', 103),
+(105, 'Mr. Fields', 102),
+(106, 'Ms. Lee', 102),
+(107, 'Mr. Carver', 103);`;
+
+			const result = await qb
+				.createTable("EMPLEADOS", { cols: empleados, secure: true })
+				.insert("EMPLEADOS", [], empleadosRows)
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("operacion SELF JOIN", { only: false }, async () => {
+			const query = `SELECT a.ID_EMP, a.NOMBRE_EMP, b.NOMBRE_EMP AS ADMINISTRADOR
+FROM EMPLEADOS a, EMPLEADOS b
+WHERE a.ADMIN = b.ID_EMP
+ORDER BY a.ID_EMP;`;
+
+			const result = await qb
+				.select([
+					qb.coltn("c", "NOMBRE_CD"),
+					qb.coltn("p", "NOMBRE_INTER"),
+					qb.coltn("c", "EN_EXISTENCIA"),
+				])
+				.crossJoin(["INVENTARIO_CD", "INTERPRETES"], ["c", "p"])
+				.where(
+					qb.and(
+						qb.eq(qb.col("ID_INTER", "c"), qb.col("ID_INTER", "p")),
+						qb.lt(qb.col("EN_EXISTENCIA", "c"), 15),
+					),
+				)
 				.execute();
 
 			showResults(result);

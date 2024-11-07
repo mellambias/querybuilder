@@ -3,6 +3,7 @@ Implementa las variaciones al SQL2006 propias del SGBD
 */
 import Core from "../core.js";
 import Mysql84 from "../comandos/Mysql.js";
+import Expresion from "../expresion.js";
 
 class MySQL extends Core {
 	constructor() {
@@ -148,6 +149,35 @@ class MySQL extends Core {
 	// 15.1.23 CREATE VIEW Statement
 	createView(name, options) {
 		return this.getStatement("CREATE", Mysql.createView, { name, ...options });
+	}
+
+	/**
+	 * columna = CASE [WHEN condicion THEN resultado,..] ELSE defecto END
+	 * @param {string|column} column - columna
+	 * @param {Array<column,string>} casos - [condicion, resultado]
+	 * @param {string} defecto - Caso else
+	 * @returns {string}
+	 */
+	case(column, casos, defecto) {
+		let command = "CASE\n";
+		let items;
+		let lastChance = "";
+		if (Array.isArray(column)) {
+			items = column;
+			lastChance = casos;
+		} else {
+			items = casos;
+			lastChance = defecto;
+		}
+
+		command += items
+			.map((item) => {
+				return `WHEN ${item[0]} THEN ${item[1]}`;
+			})
+			.join("\n");
+		command += `\n${lastChance !== undefined ? `ELSE ${lastChance}\n` : ""}`;
+		command += `${Array.isArray(column) ? "END" : `END AS ${column}`}`;
+		return new Expresion(command);
 	}
 }
 export default MySQL;

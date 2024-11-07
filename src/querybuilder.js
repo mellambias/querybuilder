@@ -1,6 +1,7 @@
-import { Types } from "./utils/utils.js";
+import { Types, check } from "./utils/utils.js";
 import Column from "./column.js";
 import Cursor from "./cursor.js";
+import Expresion from "./expresion.js";
 class QueryBuilder {
 	constructor(language, options = {}) {
 		this.languageClass = language;
@@ -291,7 +292,26 @@ class QueryBuilder {
 		}
 	}
 
+	checkFrom(tables, alias) {
+		const error = check("checkFrom(tables:string|array, alias:array)", [
+			tables,
+			alias,
+		]);
+		if (error) {
+			throw new Error(error);
+		}
+		if (
+			alias !== undefined &&
+			Array.isArray(tables) &&
+			alias.length < tables.length
+		) {
+			throw new Error(
+				"la lista de 'Alias' deben tener como mínimo el mismo numero de elementos que 'tablas'",
+			);
+		}
+	}
 	from(tables, alias) {
+		this.checkFrom(tables, alias);
 		this.commandStack.push("from");
 		if (this.selectCommand?.length > 0) {
 			this.selectStack.push(this.language.from(tables, alias));
@@ -315,6 +335,7 @@ class QueryBuilder {
 		for (const join of joinTypes) {
 			this[join] = (tables, alias, using) => {
 				this.commandStack.push(join);
+				this.checkFrom(tables, alias);
 				if (this.selectCommand?.length > 0) {
 					this.selectStack.push(this.language[join](tables, alias, using));
 				} else {
@@ -414,10 +435,39 @@ class QueryBuilder {
 		return this.language.notIn(columna, ...values);
 	}
 
+	/**
+	 *
+	 * @param {string} name - nombre de la columna
+	 * @param {string} table - nombre de la tabla
+	 * @returns {Column}
+	 */
 	col(name, table) {
+		const error = check("col(name:string, table:string)", [name, table]);
+		if (error) {
+			throw new Error(error);
+		}
 		this.commandStack.push("col");
 		return new Column(name, table);
 	}
+	/**
+	 * Es igual a col salvo el orden de los parametros
+	 * @param {string} table - nombre de la tabla
+	 * @param {string} name - nombre de la columna
+	 * @returns {Column}
+	 */
+	coltn(table, name) {
+		const error = check("col(name:string, table:string)", [name, table]);
+		if (error) {
+			throw new Error(error);
+		}
+		this.commandStack.push("coltn");
+		return new Column(name, table);
+	}
+
+	exp(expresion) {
+		return new Expresion(expresion);
+	}
+
 	groupBy(columns, options) {
 		this.commandStack.push("groupBy");
 		if (this.selectCommand?.length > 0) {
@@ -446,7 +496,23 @@ class QueryBuilder {
 		return this;
 	}
 	// Mofificacion de Datos
+	/**
+	 *
+	 * @param {string} table - nombre de la tabla
+	 * @param {array} cols - columnas a insertar
+	 * @param {array} values - Array de Arrays con los valores
+	 * @returns
+	 */
 	insert(table, cols, values) {
+		const error = check("insert(table:string, cols:array, values:array)", [
+			table,
+			cols,
+			values,
+		]);
+		if (error) {
+			throw new Error(error);
+		}
+
 		this.commandStack.push("insert");
 		try {
 			this.query.push(this.language.insert(table, cols, values));
@@ -506,6 +572,17 @@ class QueryBuilder {
 	// funciones VALOR de cadena
 	substr(column, inicio, ...options) {
 		return this.language.substr(column, inicio, ...options);
+	}
+
+	/**
+	 * columna = CASE [WHEN condicion THEN resultado,..] ELSE defecto END
+	 * @param {string|column} column - columna
+	 * @param {Array<column,string>} casos - [condicion, resultado]
+	 * @param {string} defecto - Caso else
+	 * @returns {string}
+	 */
+	case(column, casos, defecto) {
+		return this.language.case(column, casos, defecto);
 	}
 
 	functionDate() {
@@ -677,7 +754,7 @@ class QueryBuilder {
 			this.commandStack.push("execute");
 			return this;
 		} catch (error) {
-			this.error = `Capture on QueryBuilder [execute] ${error.message}`;
+			this.error = `Capture on QueryBuilder [execute] ${error.message} ${this.commandStack.join("->")}`;
 			this.result = undefined;
 			return this;
 		}
