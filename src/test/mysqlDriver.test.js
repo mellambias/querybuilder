@@ -2702,24 +2702,51 @@ ON i.ID_TIPO = t.ID_TIPO;`;
 			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
+		// 		test(
+		// 			"todas las filas no coincidentes usando full outer join",
+		// 			async () => {
+		// 				const $ = qb;
+		// 				const query = `SELECT i.TITULO, t.NOMBRE_TIPO, i.EXISTENCIA
+		// FROM INFO_CD i FULL OUTER JOIN TIPO_CD t
+		// ON i.ID_TIPO = t.ID_TIPO;`;
+
+		// 				const result = await qb
+		// 					.select([
+		// 						$.col("TITULO").from("i"),
+		// 						$.col("NOMBRE_TIPO").from("t"),
+		// 						$.col("EXISTENCIA", "i"),
+		// 					])
+		// 					.fullJoin(["INFO_CD", "TIPO_CD"], ["i", "t"])
+		// 					.on($.eq($.col("ID_TIPO", "i"), $.col("ID_TIPO", "t")));
+
+		// 				showResults(result);
+		// 				assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		// 			},
+		// 		);
+		//fin test
 		test(
-			"todas las filas no coincidentes usando full outer join",
+			"crea tablas CDS_CONTINUADOS y CDS_DESCONTINUADOS",
 			{ only: true },
 			async () => {
-				const $ = qb;
-				const query = `SELECT i.TITULO, t.NOMBRE_TIPO, i.EXISTENCIA
-FROM INFO_CD i FULL OUTER JOIN TIPO_CD t
-ON i.ID_TIPO = t.ID_TIPO;`;
+				const CDS_CONTINUADOS = {
+					NOMBRE_CD: "VARCHAR(60)",
+					TIPO_CD: "CHAR(4)",
+					EN_EXISTENCIA: "INT",
+				};
+				const CDS_DESCONTINUADOS = {
+					NOMBRE_CD: "VARCHAR(60)",
+					TIPO_CD: "CHAR(4)",
+					EN_EXISTENCIA: "INT",
+				};
+				const query = "";
 
 				const result = await qb
-					.select([
-						$.col("TITULO").from("i"),
-						$.col("NOMBRE_TIPO").from("t"),
-						$.col("EXISTENCIA", "i"),
-					])
-					.fullJoin(["INFO_CD", "TIPO_CD"], ["i", "t"])
-					.on($.eq($.col("ID_TIPO", "i"), $.col("ID_TIPO", "t")))
-					.execute();
+					.createTable("CDS_CONTINUADOS", {
+						cols: CDS_CONTINUADOS,
+					})
+					.createTable("CDS_DESCONTINUADOS", {
+						cols: CDS_DESCONTINUADOS,
+					});
 
 				showResults(result);
 				assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);

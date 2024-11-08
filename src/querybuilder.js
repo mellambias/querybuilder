@@ -337,7 +337,12 @@ class QueryBuilder {
 				this.commandStack.push(join);
 				this.checkFrom(tables, alias);
 				if (this.selectCommand?.length > 0) {
-					this.selectStack.push(this.language[join](tables, alias));
+					const result = this.language[join](tables, alias);
+					if (result instanceof Error) {
+						this.error = result;
+					} else {
+						this.selectStack.push(result);
+					}
 				} else {
 					this.error = "No es posible aplicar, falta el comando 'select'";
 				}
@@ -740,6 +745,9 @@ class QueryBuilder {
 
 		if (this.query.length > 0) {
 			const send = this.query.join(";\n").concat(";").replace(";;", ";");
+			if (this.error) {
+				throw new Error(`${send}\n> ${this.error}`, { cause: this.error });
+			}
 			return `${send}`;
 		}
 		return null;
@@ -748,9 +756,6 @@ class QueryBuilder {
 		let joinQuery = this.queryJoin(options);
 		if (/^(subselect)$/i.test(options?.as)) {
 			joinQuery = joinQuery.replace(/;$/, "");
-		}
-		if (this.error) {
-			throw new Error(`${joinQuery}\n> ${this.error}`, { cause: this.error });
 		}
 		this.dropQuery();
 		return joinQuery;

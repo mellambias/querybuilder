@@ -180,8 +180,7 @@ class MySQL extends Core {
 		return new Expresion(command);
 	}
 	fullJoin(tables, alias) {
-		this.error = "MySQL no soporta de forma nativa 'FULL OUTER JOIN";
-		throw new Error(this.error);
+		return new Error("MySQL no soporta de forma nativa 'FULL OUTER JOIN'");
 	}
 }
 export default MySQL;
