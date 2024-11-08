@@ -4,6 +4,7 @@
 import QueryBuilder from "./querybuilder.js";
 import sql2006 from "./comandos/sql2006.js";
 import Expresion from "./expresion.js";
+import Column from "./column.js";
 
 class Core {
 	constructor() {
@@ -262,24 +263,24 @@ class Core {
 		const joinTypes = {
 			crossJoin: "CROSS JOIN",
 			naturalJoin: "NATURAL JOIN",
-			colJoin: "JOIN",
 			innerJoin: "INNER JOIN",
 			join: "JOIN",
 			leftJoin: "LEFT OUTER JOIN",
-			rightJoin: "RIGTH OUTER JOIN",
+			rightJoin: "RIGHT OUTER JOIN",
 			fullJoin: "FULL OUTER JOIN",
 		};
 		for (const join in joinTypes) {
-			this[join] = (tables, alias, using) => {
+			if (typeof this[join] === "function") {
+				continue;
+			}
+			this[join] = (tables, alias) => {
 				if (typeof tables === "string" && typeof alias === "string") {
 					return `${joinTypes[join]} ${tables} ${alias}`;
 				}
 				if (Array.isArray(tables) && Array.isArray(alias)) {
 					return `FROM ${tables
 						.map((table, index) => `${table} ${alias[index]}`)
-						.join(
-							` ${joinTypes[join]} `,
-						)}${Array.isArray(using) ? `\nUSING (${using.join(", ")})` : ""}`;
+						.join(` ${joinTypes[join]} `)}`;
 				}
 				if (join !== "join") {
 					return `FROM ${tables.join(` ${joinTypes[join]} `)}`;
@@ -289,6 +290,13 @@ class Core {
 				);
 			};
 		}
+	}
+
+	using(columnsInCommon) {
+		if (Array.isArray(columnsInCommon)) {
+			return `USING (${columnsInCommon.join(", ")})`;
+		}
+		return `USING (${columnsInCommon})`;
 	}
 
 	union(prev, next, option) {
@@ -329,6 +337,9 @@ class Core {
 			isNotNull: "IS NOT NULL",
 		};
 		for (const oper in operadores) {
+			if (typeof this[oper] === "function") {
+				continue;
+			}
 			this[oper] = (a, b) => {
 				if (b !== undefined) {
 					if (b instanceof QueryBuilder) {
@@ -458,7 +469,7 @@ class Core {
 			}
 			return `${sql} ${colStack.join(", ")}`;
 		}
-		if (typeof columns === "string") {
+		if (typeof columns === "string" || columns instanceof Column) {
 			return `${sql} ${columns}`;
 		}
 		if (typeof columns === "object") {
@@ -541,6 +552,9 @@ class Core {
 	functionOneParam() {
 		const names = ["count", "max", "min", "sum", "avg", "upper", "lower"];
 		for (const name of names) {
+			if (typeof this[name] === "function") {
+				continue;
+			}
 			/**
 			 * @argument {string|column} column - Nombre de la columna sobre la funcion
 			 * @argument {string} alias - alias de la columna AS
@@ -638,6 +652,9 @@ class Core {
 		const directions = ["NEXT", "PRIOR", "FIRST", "LAST"];
 		const directionsWithValue = ["ABSOLUTE", "RELATIVE"];
 		for (const comand of directions) {
+			if (typeof this[comand] === "function") {
+				continue;
+			}
 			const comandName = `fetch${comand.toCapital()}`;
 			this[comandName] = (cursorName, direction, hostVars) => {
 				return `FETCH ${direction.toUpperCase()} FROM ${cursorName}\nINTO ${Array.isArray(hostVars) ? hostVars.map((col) => `:${col}`).join(", ") : hostVars}`;
@@ -645,6 +662,9 @@ class Core {
 		}
 		for (const comand of directionsWithValue) {
 			const comandName = `fetch${comand.toCapital()}`;
+			if (typeof this[comandName] === "function") {
+				continue;
+			}
 			this[comandName] = (cursorName, direction, filas, hostVars) => {
 				return `FETCH ${direction.toUpperCase()} ${filas} FROM ${cursorName}\nINTO ${Array.isArray(hostVars) ? hostVars.map((col) => `:${col}`).join(", ") : hostVars}`;
 			};

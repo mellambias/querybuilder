@@ -179,5 +179,9 @@ class MySQL extends Core {
 		command += `${Array.isArray(column) ? "END" : `END AS ${column}`}`;
 		return new Expresion(command);
 	}
+	fullJoin(tables, alias) {
+		this.error = "MySQL no soporta de forma nativa 'FULL OUTER JOIN";
+		throw new Error(this.error);
+	}
 }
 export default MySQL;

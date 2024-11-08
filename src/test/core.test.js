@@ -1157,11 +1157,8 @@ WHERE s.INVENTARIO > 15;`,
 		test("Join de columna nombrada", () => {
 			const result = sql
 				.select(["TITULO_CD", sql.col("TIPO_CD", "s"), sql.col("MENUDEO", "c")])
-				.colJoin(
-					["TITULOS_EN_EXISTENCIA", "COSTOS_TITULO"],
-					["s", "c"],
-					["TITULO_CD"],
-				)
+				.join(["TITULOS_EN_EXISTENCIA", "COSTOS_TITULO"], ["s", "c"])
+				.using("TITULO_CD")
 				.where(sql.gt(sql.col("INVENTARIO", "s"), 15));
 
 			assert.equal(
@@ -1208,7 +1205,7 @@ FROM INFO_CD i LEFT OUTER JOIN TIPO_CD t
 ON i.ID_TIPO = t.ID_TIPO;`,
 			);
 		});
-		test("RIGTH OUTER JOIN", () => {
+		test("RIGHT OUTER JOIN", () => {
 			const result = sql
 				.select([
 					sql.col("TITULO", "i"),
@@ -1221,7 +1218,7 @@ ON i.ID_TIPO = t.ID_TIPO;`,
 			assert.equal(
 				result.toString(),
 				`SELECT i.TITULO, t.NOMBRE_TIPO, i.EXISTENCIA
-FROM INFO_CD i RIGTH OUTER JOIN TIPO_CD t
+FROM INFO_CD i RIGHT OUTER JOIN TIPO_CD t
 ON i.ID_TIPO = t.ID_TIPO;`,
 			);
 		});

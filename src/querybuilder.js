@@ -2,6 +2,7 @@ import { Types, check } from "./utils/utils.js";
 import Column from "./column.js";
 import Cursor from "./cursor.js";
 import Expresion from "./expresion.js";
+import Value from "./value.js";
 class QueryBuilder {
 	constructor(language, options = {}) {
 		this.languageClass = language;
@@ -293,7 +294,7 @@ class QueryBuilder {
 	}
 
 	checkFrom(tables, alias) {
-		const error = check("checkFrom(tables:string|array, alias:array)", [
+		const error = check("From(tables:string|array, alias:string|array)", [
 			tables,
 			alias,
 		]);
@@ -325,7 +326,6 @@ class QueryBuilder {
 		const joinTypes = [
 			"crossJoin",
 			"naturalJoin",
-			"colJoin",
 			"innerJoin",
 			"join",
 			"leftJoin",
@@ -333,17 +333,37 @@ class QueryBuilder {
 			"fullJoin",
 		];
 		for (const join of joinTypes) {
-			this[join] = (tables, alias, using) => {
+			this[join] = (tables, alias) => {
 				this.commandStack.push(join);
 				this.checkFrom(tables, alias);
 				if (this.selectCommand?.length > 0) {
-					this.selectStack.push(this.language[join](tables, alias, using));
+					this.selectStack.push(this.language[join](tables, alias));
 				} else {
 					this.error = "No es posible aplicar, falta el comando 'select'";
 				}
 				return this;
 			};
 		}
+		//Sinonimos
+		const sinonimos = {
+			leftOuterJoin: this.leftJoin,
+			rightOuterJoin: this.rightJoin,
+			fullOuterJoin: this.fullJoin,
+		};
+		for (const otros in sinonimos) {
+			this[otros] = sinonimos[otros];
+		}
+	}
+
+	using(columnsInCommon) {
+		const currentJoin = this.commandStack[this.commandStack.length - 1];
+		this.commandStack.push("using");
+		if (["innerJoin", "join", "leftJoin", "rightJoin"].includes(currentJoin)) {
+			this.selectStack.push(this.language.using(columnsInCommon));
+		} else {
+			this.error = `No es posible aplicar 'USING' a un ${currentJoin}`;
+		}
+		return this;
 	}
 
 	union(option) {
@@ -499,16 +519,15 @@ class QueryBuilder {
 	/**
 	 *
 	 * @param {string} table - nombre de la tabla
-	 * @param {array} cols - columnas a insertar
-	 * @param {array} values - Array de Arrays con los valores
+	 * @param {array<Column>} cols - columnas a insertar
+	 * @param {array<array<Value>>} values - Array de Arrays con los valores
 	 * @returns
 	 */
 	insert(table, cols, values) {
-		const error = check("insert(table:string, cols:array, values:array)", [
-			table,
-			cols,
-			values,
-		]);
+		const error = check(
+			"insert(table:string, cols:array, values:array|QueryBuilder)",
+			[table, cols, values],
+		);
 		if (error) {
 			throw new Error(error);
 		}
@@ -729,6 +748,9 @@ class QueryBuilder {
 		let joinQuery = this.queryJoin(options);
 		if (/^(subselect)$/i.test(options?.as)) {
 			joinQuery = joinQuery.replace(/;$/, "");
+		}
+		if (this.error) {
+			throw new Error(`${joinQuery}\n> ${this.error}`, { cause: this.error });
 		}
 		this.dropQuery();
 		return joinQuery;

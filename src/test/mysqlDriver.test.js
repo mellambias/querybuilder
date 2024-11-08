@@ -2184,7 +2184,7 @@ AND c.EN_EXISTENCIA < 15);`;
 			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
-		test("crea tabla EMPLEADOS", { only: true }, async () => {
+		test("crea tabla EMPLEADOS", async () => {
 			const empleados = {
 				ID_EMP: "INT",
 				NOMBRE_EMP: "VARCHAR(60)",
@@ -2192,7 +2192,7 @@ AND c.EN_EXISTENCIA < 15);`;
 			};
 
 			const empleadosRows = [
-				[101, "Ms. Smith", qb.expresion("null")],
+				[101, "Ms. Smith", qb.exp("null")],
 				[102, "Mr. Jones", 101],
 				[103, "Mr. Roberts", 101],
 				[104, "Ms. Hanson", 103],
@@ -2206,7 +2206,7 @@ AND c.EN_EXISTENCIA < 15);`;
  ADMIN INT );
 INSERT INTO EMPLEADOS
 VALUES
-(101, 'Ms. Smith', 'null'),
+(101, 'Ms. Smith', null),
 (102, 'Mr. Jones', 101),
 (103, 'Mr. Roberts', 101),
 (104, 'Ms. Hanson', 103),
@@ -2223,30 +2223,508 @@ VALUES
 			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
-		test("operacion SELF JOIN", { only: false }, async () => {
+		test("operacion SELF JOIN", async () => {
 			const query = `SELECT a.ID_EMP, a.NOMBRE_EMP, b.NOMBRE_EMP AS ADMINISTRADOR
-FROM EMPLEADOS a, EMPLEADOS b
+FROM EMPLEADOS AS a, EMPLEADOS AS b
 WHERE a.ADMIN = b.ID_EMP
 ORDER BY a.ID_EMP;`;
 
 			const result = await qb
 				.select([
-					qb.coltn("c", "NOMBRE_CD"),
-					qb.coltn("p", "NOMBRE_INTER"),
-					qb.coltn("c", "EN_EXISTENCIA"),
+					qb.col("ID_EMP", "a"),
+					qb.col("NOMBRE_EMP").from("a"),
+					qb.col("NOMBRE_EMP").from("b").as("ADMINISTRADOR"),
 				])
-				.crossJoin(["INVENTARIO_CD", "INTERPRETES"], ["c", "p"])
-				.where(
-					qb.and(
-						qb.eq(qb.col("ID_INTER", "c"), qb.col("ID_INTER", "p")),
-						qb.lt(qb.col("EN_EXISTENCIA", "c"), 15),
-					),
-				)
+				.from(["EMPLEADOS", "EMPLEADOS"], ["a", "b"])
+				.where(qb.eq(qb.col("ADMIN", "a"), qb.col("ID_EMP", "b")))
+				.orderBy(qb.col("ID_EMP", "a"))
 				.execute();
 
 			showResults(result);
 			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
 		});
+		//fin test
+		test("Crea tablas TITULOS_EN_EXISTENCIA y COSTOS_TITULOS", async () => {
+			const TITULOS_EN_EXISTENCIA = {
+				TITULO_CD: "VARCHAR(60)",
+				TIPO_CD: "CHAR(20)",
+				INVENTARIO: "INT",
+			};
+			const COSTOS_TITULO = {
+				TITULO_CD: "VARCHAR(60)",
+				TIPO_CD: "CHAR(20)",
+				MENUDEO: "NUMERIC(5,2)",
+			};
+
+			const query = `CREATE TABLE IF NOT EXISTS TITULOS_EN_EXISTENCIA
+( TITULO_CD VARCHAR(60),
+ TIPO_CD CHAR(20),
+ INVENTARIO INT );
+CREATE TABLE IF NOT EXISTS COSTOS_TITULO
+( TITULO_CD VARCHAR(60),
+ TIPO_CD CHAR(20),
+ MENUDEO DECIMAL(5,2) );`;
+
+			const result = await qb
+				.createTable("TITULOS_EN_EXISTENCIA", {
+					secure: true,
+					cols: TITULOS_EN_EXISTENCIA,
+				})
+				.createTable("COSTOS_TITULO", {
+					secure: true,
+					cols: COSTOS_TITULO,
+				})
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		test("añade registros a las tablas TITULOS_EN_EXISTENCIA y COSTOS_TITULO", async () => {
+			const TITULOS_EN_EXISTENCIA = [
+				["Famous Blue Raincoat", "Folk", 12],
+				["Blue", "Popular", 24],
+				["Past Light", "New Age", 9],
+				["Luck of the Draw", "Popular", 19],
+				["Deuces Wild", "Blues", 25],
+				["Nick of Time", "Popular", 17],
+				["Blues on the Bayou", "Blues", 11],
+				["Both Sides Now", "Popular", 13],
+			];
+
+			const COSTOS_TITULO = [
+				["Famous Blue Raincoat", "Folk", 16.99],
+				["Blue", "Popular", 15.99],
+				["Court and Spark", "Popular", 15.99],
+				["Past Light", "New Age", 14.99],
+				["Fundamental", "Popular", 16.99],
+				["Blues on the Bayou", "Blues", 15.99],
+				["Longing in their Hearts", "Popular", 15.99],
+				["Deuces Wild", "Blues", 14.99],
+				["Nick of Time", "Popular", 14.99],
+			];
+			const query = `INSERT INTO TITULOS_EN_EXISTENCIA
+VALUES
+('Famous Blue Raincoat','Folk',12),
+('Blue','Popular',24),
+('Past Light','New Age',9),
+('Luck of the Draw','Popular',19),
+('Deuces Wild','Blues',25),
+('Nick of Time','Popular',17),
+('Blues on the Bayou','Blues',11),
+('Both Sides Now','Popular',13),
+;
+INSERT INTO COSTOS_TITULO
+VALUES
+('Famous Blue Raincoat', 'Folk', 16.99),
+('Blue', 'Popular', 15.99),
+('Court and Spark', 'Popular', 15.99),
+('Past Light', 'New Age', 14.99),
+('Fundamental', 'Popular', 16.99),
+('Blues on the Bayou', 'Blues', 15.99),
+('Longing in their Hearts', 'Popular', 15.99),
+('Deuces Wild', 'Blues', 14.99),
+('Nick of Time', 'Popular', 14.99);`;
+
+			const result = await qb
+				.insert("TITULOS_EN_EXISTENCIA", [], TITULOS_EN_EXISTENCIA)
+				.insert("COSTOS_TITULO", [], COSTOS_TITULO)
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("join natural hace coincidir automáticamente las filas de aquellas columnas con el mismo nombre", async () => {
+			const query = `SELECT TITULO_CD, TIPO_CD, c.MENUDEO
+FROM TITULOS_EN_EXISTENCIA s NATURAL JOIN COSTOS_TITULO c
+WHERE s.INVENTARIO > 15;`;
+
+			const result = await qb
+				.select(["TITULO_CD", "TIPO_CD", qb.col("MENUDEO").from("c")])
+				.naturalJoin(["TITULOS_EN_EXISTENCIA", "COSTOS_TITULO"], ["s", "c"])
+				.where(qb.gt(qb.col("INVENTARIO").from("s"), 15))
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("join natural de columna nombrada permite especificar las columnas coincidentes", async () => {
+			//las columnas identificadas en la cláusula USING están sin cualificar el resto debe hacerlo
+			const query = `SELECT TITULO_CD, s.TIPO_CD, c.MENUDEO
+FROM TITULOS_EN_EXISTENCIA s JOIN COSTOS_TITULO c
+USING (TITULO_CD)
+WHERE s.INVENTARIO > 15;`;
+
+			const result = await qb
+				.select([
+					"TITULO_CD",
+					qb.col("TIPO_CD", "s"),
+					qb.col("MENUDEO").from("c"),
+				])
+				.join(["TITULOS_EN_EXISTENCIA", "COSTOS_TITULO"], ["s", "c"])
+				.using("TITULO_CD")
+				.where(qb.gt(qb.col("INVENTARIO").from("s"), 15))
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		/*
+		El join de condición realiza un método diferente a cualquiera
+		la condición equi-join está definida en la cláusula 'ON'
+		que funciona de manera muy similar a la cláusula 'WHERE'
+
+		tipos de uniones: 'inner joins' y 'outer joins'.
+        */
+		test("tablas TITULO_CDS, ARTISTAS_TITULOS y ARTISTAS_CD", async () => {
+			const TITULO_CDS = {
+				ID_TITULO: "INT",
+				TITULO: "VARCHAR(60)",
+			};
+			const ARTISTAS_TITULOS = {
+				ID_TITULO: "INT",
+				ID_ARTISTA: "INT",
+			};
+			const ARTISTAS_CD = {
+				ID_ARTISTA: "INT",
+				ARTISTA: "VARCHAR(60)",
+			};
+			const query = `CREATE TABLE TITULO_CDS
+( ID_TITULO INT,
+ TITULO VARCHAR(60) );
+CREATE TABLE ARTISTAS_TITULOS
+( TITLE_ID INT,
+ ID_ARTISTA INT );
+CREATE TABLE ARTISTAS_CD
+( ID_ARTISTA INT,
+ ARTISTA VARCHAR(60) );`;
+
+			const result = await qb
+				.createTable("TITULO_CDS", {
+					cols: TITULO_CDS,
+				})
+				.createTable("ARTISTAS_TITULOS", { cols: ARTISTAS_TITULOS })
+				.createTable("ARTISTAS_CD", { cols: ARTISTAS_CD })
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("añadir registros a TITULO_CD", async () => {
+			const TITULO_CDS = [
+				[101, "Famous Blue Raincoat"],
+				[102, "Blue"],
+				[103, "Court and Spark"],
+				[104, "Past Light"],
+				[105, "Kojiki"],
+				[106, "That Christmas Feeling"],
+				[107, "Patsy Cline: 12 Greatest Hits"],
+				[108, "Carreras Domingo Pavarotti in Concert"],
+				[109, "Out of Africa"],
+				[110, "Leonard Cohen The Best of"],
+				[111, "Fundamental"],
+				[112, "Blues on the Bayou"],
+				[113, "Orlando"],
+			];
+			const query = `INSERT INTO TITULO_CDS
+VALUES
+(101, 'Famous Blue Raincoat'),
+(102, 'Blue'),
+(103, 'Court and Spark'),
+(104, 'Past Light'),
+(105, 'Kojiki'),
+(106, 'That Christmas Feeling'),
+(107, 'Patsy Cline: 12 Greatest Hits'),
+(108, 'Carreras Domingo Pavarotti in Concert'),
+(109, 'Out of Africa'),
+(110, 'Leonard Cohen The Best of'),
+(111, 'Fundamental'),
+(112, 'Blues on the Bayou'),
+(113, 'Orlando');`;
+
+			const result = await qb.insert("TITULO_CDS", [], TITULO_CDS).execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("añadir registros a ARTISTAS_TITULOS", async () => {
+			const ARTISTAS_TITULOS = [
+				[101, 2001],
+				[102, 2002],
+				[103, 2002],
+				[104, 2003],
+				[105, 2004],
+				[106, 2005],
+				[107, 2006],
+				[108, 2007],
+				[108, 2008],
+				[108, 2009],
+				[109, 2010],
+				[110, 2011],
+				[11, 2012],
+				[112, 2013],
+				[113, 2014],
+				[113, 2015],
+			];
+			const query = `INSERT INTO ARTISTAS_TITULOS
+VALUES
+(101, 2001),
+(102, 2002),
+(103, 2002),
+(104, 2003),
+(105, 2004),
+(106, 2005),
+(107, 2006),
+(108, 2007),
+(108, 2008),
+(108, 2009),
+(109, 2010),
+(110, 2011),
+(11, 2012),
+(112, 2013),
+(113, 2014),
+(113, 2015);`;
+
+			const result = await qb
+				.insert("ARTISTAS_TITULOS", [], ARTISTAS_TITULOS)
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("añadir registros a ARTISTAS_CD", async () => {
+			const ARTISTAS_CD = [
+				[2001, "Jennifer Warnes"],
+				[2002, "Joni Mitchell"],
+				[2003, "William Ackerman"],
+				[2004, "Kitaro"],
+				[2005, "Bing Crosby"],
+				[2006, "Patsy Cline"],
+				[2007, "Jose Carreras"],
+				[2008, "Luciano Pavarotti"],
+				[2009, "Placido Domingo"],
+				[2010, "John Barry"],
+				[2011, "Leonard Cohen"],
+				[2012, "Bonnie Raitt"],
+				[2013, "B.B. King"],
+				[2014, "David Motion"],
+				[2015, "Sally Potter"],
+			];
+			const query = `INSERT INTO ARTISTAS_CD
+VALUES
+(2001, 'Jennifer Warnes'),
+(2002, 'Joni Mitchell'),
+(2003, 'William Ackerman'),
+(2004, 'Kitaro'),
+(2005, 'Bing Crosby'),
+(2006, 'Patsy Cline'),
+(2007, 'Jose Carreras'),
+(2008, 'Luciano Pavarotti'),
+(2009, 'Placido Domingo'),
+(2010, 'John Barry'),
+(2011, 'Leonard Cohen'),
+(2012, 'Bonnie Raitt'),
+(2013, 'B.B. King'),
+(2014, 'David Motion'),
+(2015, 'Sally Potter');`;
+
+			const result = await qb.insert("ARTISTAS_CD", [], ARTISTAS_CD).execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("unir las tablas TITULO_CDS, ARTISTAS_TITULOS y ARTISTAS_CD usando dos INNER JOIN", async () => {
+			const query = `SELECT t.TITULO, a.ARTISTA
+FROM TITULO_CDS t INNER JOIN ARTISTAS_TITULOS ta
+ON t.ID_TITULO = ta.ID_TITULO
+INNER JOIN ARTISTAS_CD a
+ON ta.ID_ARTISTA = a.ID_ARTISTA
+WHERE t.TITULO LIKE ('%Blue%');`;
+
+			const result = await qb
+				.select(["t.TITULO", "a.ARTISTA"])
+				.innerJoin(["TITULO_CDS", "ARTISTAS_TITULOS"], ["t", "ta"])
+				.on(qb.eq(qb.col("ID_TITULO", "t"), qb.col("ID_TITULO", "ta")))
+				.innerJoin("ARTISTAS_CD", "a")
+				.on(
+					qb.eq(
+						qb.col("ID_ARTISTA").from("ta"),
+						qb.col("ID_ARTISTA").from("a"),
+					),
+				)
+				.where(qb.like(qb.col("TITULO").from("t"), "%Blue%"))
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("crea tablas INFO_CD y TIPO_CD", async () => {
+			const INFO_CD = {
+				TITULO: "VARCHAR(60)",
+				ID_TIPO: "CHAR(4)",
+				EXISTENCIA: "INT",
+			};
+			const TIPO_CD = {
+				ID_TIPO: "CHAR(4)",
+				NOMBRE_TIPO: "CHAR(20)",
+			};
+			const query = `CREATE TABLE INFO_CD
+( TITULO VARCHAR(60),
+ ID_TIPO CHAR(4),
+ EXISTENCIA INT );
+CREATE TABLE TIPO_CD
+( ID_TIPO CHAR(4),
+ NOMBRE_TIPO CHAR(20) );`;
+
+			const result = await qb
+				.createTable("INFO_CD", { cols: INFO_CD })
+				.createTable("TIPO_CD", { cols: TIPO_CD })
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("añadir registros a INFO_CD", async () => {
+			const INFO_CD = [
+				["Famous Blue Raincoat", "FROK", 19],
+				["Blue", "CPOP", 28],
+				["Past Light", "NEWA", 6],
+				["Out of Africa", "STRK", 8],
+				["Fundamental", "NPOP", 10],
+				["Blues on the Bayou", "BLUS", 11],
+			];
+			const query = `INSERT INTO INFO_CD
+VALUES
+('Famous Blue Raincoat', 'FROK', 19),
+('Blue', 'CPOP', 28),
+('Past Light', 'NEWA', 6),
+('Out of Africa', 'STRK', 8),
+('Fundamental', 'NPOP', 10),
+('Blues on the Bayou', 'BLUS', 11);`;
+
+			const result = await qb.insert("INFO_CD", [], INFO_CD).execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("añadir registros a TIPO_CD", async () => {
+			const TIPO_CD = [
+				["FROK", "Folk Rock"],
+				["CPOP", "Classic Pop"],
+				["NEWA", "New Age"],
+				["CTRY", "Country"],
+				["STRK", "Soundtrack"],
+				["BLUS", "Blues"],
+				["JAZZ", "Jazz"],
+			];
+			const query = `INSERT INTO TIPO_CD
+VALUES
+('FROK', 'Folk Rock'),
+('CPOP', 'Classic Pop'),
+('NEWA', 'New Age'),
+('CTRY', 'Country'),
+('STRK', 'Soundtrack'),
+('BLUS', 'Blues'),
+('JAZZ', 'Jazz');`;
+
+			const result = await qb.insert("TIPO_CD", [], TIPO_CD).execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("operación join sobre dos tablas", async () => {
+			const $ = qb;
+			const query = `SELECT i.TITULO, t.NOMBRE_TIPO, i.EXISTENCIA
+FROM INFO_CD i JOIN TIPO_CD t
+ON i.ID_TIPO = t.ID_TIPO;`;
+
+			const result = await qb
+				.select([
+					$.col("TITULO").from("i"),
+					$.col("NOMBRE_TIPO").from("t"),
+					$.col("EXISTENCIA", "i"),
+				])
+				.join(["INFO_CD", "TIPO_CD"], ["i", "t"])
+				.on($.eq($.col("ID_TIPO", "i"), $.col("ID_TIPO", "t")))
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("incluir las filas no coincidentes de la tabla INFO_CD usando LEFT OUTER JOIN", async () => {
+			const $ = qb;
+			const query = `SELECT i.TITULO, t.NOMBRE_TIPO, i.EXISTENCIA
+FROM INFO_CD i LEFT OUTER JOIN TIPO_CD t
+ON i.ID_TIPO = t.ID_TIPO;`;
+
+			const result = await qb
+				.select([
+					$.col("TITULO").from("i"),
+					$.col("NOMBRE_TIPO").from("t"),
+					$.col("EXISTENCIA", "i"),
+				])
+				.leftJoin(["INFO_CD", "TIPO_CD"], ["i", "t"])
+				.on($.eq($.col("ID_TIPO", "i"), $.col("ID_TIPO", "t")))
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("incluir las filas no coincidentes de la tabla TIPO_CD usando RIGHT OUTER JOIN", async () => {
+			const $ = qb;
+			const query = `SELECT i.TITULO, t.NOMBRE_TIPO, i.EXISTENCIA
+FROM INFO_CD i RIGHT OUTER JOIN TIPO_CD t
+ON i.ID_TIPO = t.ID_TIPO;`;
+
+			const result = await qb
+				.select([
+					$.col("TITULO").from("i"),
+					$.col("NOMBRE_TIPO").from("t"),
+					$.col("EXISTENCIA", "i"),
+				])
+				.rightJoin(["INFO_CD", "TIPO_CD"], ["i", "t"])
+				.on($.eq($.col("ID_TIPO", "i"), $.col("ID_TIPO", "t")))
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test(
+			"todas las filas no coincidentes usando full outer join",
+			{ only: true },
+			async () => {
+				const $ = qb;
+				const query = `SELECT i.TITULO, t.NOMBRE_TIPO, i.EXISTENCIA
+FROM INFO_CD i FULL OUTER JOIN TIPO_CD t
+ON i.ID_TIPO = t.ID_TIPO;`;
+
+				const result = await qb
+					.select([
+						$.col("TITULO").from("i"),
+						$.col("NOMBRE_TIPO").from("t"),
+						$.col("EXISTENCIA", "i"),
+					])
+					.fullJoin(["INFO_CD", "TIPO_CD"], ["i", "t"])
+					.on($.eq($.col("ID_TIPO", "i"), $.col("ID_TIPO", "t")))
+					.execute();
+
+				showResults(result);
+				assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			},
+		);
 		//fin test
 	});
 });
