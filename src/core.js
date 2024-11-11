@@ -299,8 +299,23 @@ class Core {
 		return `USING (${columnsInCommon})`;
 	}
 
-	union(prev, next, option) {
-		next.selectCommand = `${prev.toString().replace(";", "")}\nUNION${typeof option === "string" && /^(ALL)$/i.test(option) ? ` ${option.toUpperCase()}` : ""}\n`;
+	union(...selects) {
+		let union = "\nUNION\n";
+		const sql = [];
+		for (const select of selects) {
+			if (select instanceof QueryBuilder) {
+				sql.push(select.queryJoin({ as: "subselect" }));
+			}
+			if (typeof select === "string") {
+				sql.push(select);
+			}
+			if (typeof select === "object") {
+				if (select?.all) {
+					union = "\nUNION ALL\n";
+				}
+			}
+		}
+		return `${sql.join(union).replaceAll(";", "")}`;
 	}
 	where(predicados) {
 		const sql = "WHERE";

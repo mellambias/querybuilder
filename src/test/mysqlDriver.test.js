@@ -2724,29 +2724,226 @@ ON i.ID_TIPO = t.ID_TIPO;`;
 		// 			},
 		// 		);
 		//fin test
+		test("crea tablas CDS_CONTINUADOS y CDS_DESCONTINUADOS", async () => {
+			const CDS_CONTINUADOS = {
+				NOMBRE_CD: "VARCHAR(60)",
+				TIPO_CD: "CHAR(4)",
+				EN_EXISTENCIA: "INT",
+			};
+			const CDS_DESCONTINUADOS = {
+				NOMBRE_CD: "VARCHAR(60)",
+				TIPO_CD: "CHAR(4)",
+				EN_EXISTENCIA: "INT",
+			};
+			const query = `CREATE TABLE CDS_CONTINUADOS
+( NOMBRE_CD VARCHAR(60),
+ TIPO_CD CHAR(4),
+ EN_EXISTENCIA INT );
+CREATE TABLE CDS_DESCONTINUADOS
+( NOMBRE_CD VARCHAR(60),
+ TIPO_CD CHAR(4),
+ EN_EXISTENCIA INT );`;
+
+			const result = await qb
+				.createTable("CDS_CONTINUADOS", {
+					cols: CDS_CONTINUADOS,
+				})
+				.createTable("CDS_DESCONTINUADOS", {
+					cols: CDS_DESCONTINUADOS,
+				})
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("añade registros a CDS_CONTINUADOS", async () => {
+			const CDS_CONTINUADOS = [
+				["Famous Blue Raincoat", "FROK", 19],
+				["Blue", "CPOP", 28],
+				["Past Light", "NEWA", 6],
+				["Out of Africa", "STRK", 8],
+				["Fundamental", "NPOP", 10],
+				["Blues on the Bayou", "BLUS", 11],
+			];
+			const query = `INSERT INTO CDS_CONTINUADOS
+VALUES
+('Famous Blue Raincoat', 'FROK', 19),
+('Blue', 'CPOP', 28),
+('Past Light', 'NEWA', 6),
+('Out of Africa', 'STRK', 8),
+('Fundamental', 'NPOP', 10),
+('Blues on the Bayou', 'BLUS', 11);`;
+
+			const result = await qb
+				.insert("CDS_CONTINUADOS", [], CDS_CONTINUADOS)
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("añade registros a CDS_DESCONTINUADOS", async () => {
+			const CDS_DESCONTINUADOS = [
+				["Court and Spark", "FROK", 3],
+				["Kojiki", "NEWA", 2],
+				["That Christmas Feeling", "XMAS", 2],
+				["Patsy Cline: 12 Greatest Hits", "CTRY", 4],
+				["Leonard Cohen The Best of", "FROK", 3],
+				["Orlando", "STRK", 1],
+			];
+			const query = `INSERT INTO CDS_DESCONTINUADOS
+VALUES
+('Court and Spark', 'FROK', 3),
+('Kojiki', 'NEWA', 2),
+('That Christmas Feeling', 'XMAS', 2),
+('Patsy Cline: 12 Greatest Hits', 'CTRY', 4),
+('Leonard Cohen The Best of', 'FROK', 3),
+('Orlando', 'STRK', 1);`;
+
+			const result = await qb
+				.insert("CDS_DESCONTINUADOS", [], CDS_DESCONTINUADOS)
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("combinar instrucciones 'SELECT' en una sola que combine la información", async () => {
+			const query = `SELECT *
+FROM CDS_CONTINUADOS
+UNION ALL
+SELECT *
+FROM CDS_DESCONTINUADOS;`;
+
+			const result = await qb
+				.unionAll(
+					qb.select("*").from("CDS_CONTINUADOS"),
+					qb.select("*").from("CDS_DESCONTINUADOS"),
+				)
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		/**
+		 * Usar subconsultas para acceder y moficiar datos capitulo 12
+		 */
+		test("crea tabla EXISTENCIA_CD", async () => {
+			const EXISTENCIA_CD = {
+				TITULO_CD: "VARCHAR(60)",
+				EXISTENCIA: "INT",
+			};
+			const existenciaCdRows = [
+				["Famous Blue Raincoat", 13],
+				["Blue", 42],
+				["Court and Spark", 22],
+				["Past Light", 17],
+				["Kojiki", 6],
+				["That Christmas Feeling", 8],
+				["Out of Africa", 29],
+				["Blues on the Bayou", 27],
+				["Orlando", 5],
+			];
+			const query = `DROP TABLE IF EXISTS EXISTENCIA_CD;
+CREATE TABLE EXISTENCIA_CD
+( TITULO_CD VARCHAR(60),
+ EXISTENCIA INT );
+INSERT INTO EXISTENCIA_CD
+VALUES
+('Famous Blue Raincoat', 13),
+('Blue', 42),
+('Court and Spark', 22),
+('Past Light', 17),
+('Kojiki', 6),
+('That Christmas Feeling', 8),
+('Out of Africa', 29),
+('Blues on the Bayou', 27),
+('Orlando', 5);`;
+
+			const result = await qb
+				.dropTable("EXISTENCIA_CD", { secure: true })
+				.createTable("EXISTENCIA_CD", { cols: EXISTENCIA_CD })
+				.insert("EXISTENCIA_CD", [], existenciaCdRows)
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("crea tabla ARTISTAS_CD", async () => {
+			const ARTISTAS_CD = {
+				TITULO: "VARCHAR(60)",
+				ARTIST_NAME: "VARCHAR(60)",
+			};
+			const artistasCdRows = [
+				["Famous Blue Raincoat", "Jennifer Warnes"],
+				["Blue", "Joni Mitchell"],
+				["Court and Spark", "Joni Mitchell"],
+				["Past Light", "William Ackerman"],
+				["Kojiki", "Kitaro"],
+				["That Christmas Feeling", "Bing Crosby"],
+				["Patsy Cline: 12 Greatest Hits", "Patsy Cline"],
+				["After the Rain: The Soft Sounds of Erik Satie", "Pascal Roge"],
+				["Out of Africa", "John Barry"],
+				["Leonard Cohen The Best of", "Leonard Cohen"],
+				["Fundamental", "Bonnie Raitt"],
+				["Blues on the Bayou", "B.B. King"],
+				["Orlando", "David Motion"],
+			];
+			const query = `DROP TABLE IF EXISTS ARTISTAS_CD;
+CREATE TABLE ARTISTAS_CD
+( TITULO VARCHAR(60),
+ ARTIST_NAME VARCHAR(60) );
+INSERT INTO ARTISTAS_CD
+VALUES
+('Famous Blue Raincoat', 'Jennifer Warnes'),
+('Blue', 'Joni Mitchell'),
+('Court and Spark', 'Joni Mitchell'),
+('Past Light', 'William Ackerman'),
+('Kojiki', 'Kitaro'),
+('That Christmas Feeling', 'Bing Crosby'),
+('Patsy Cline: 12 Greatest Hits', 'Patsy Cline'),
+('After the Rain: The Soft Sounds of Erik Satie', 'Pascal Roge'),
+('Out of Africa', 'John Barry'),
+('Leonard Cohen The Best of', 'Leonard Cohen'),
+('Fundamental', 'Bonnie Raitt'),
+('Blues on the Bayou', 'B.B. King'),
+('Orlando', 'David Motion');`;
+
+			const result = await qb
+				.dropTable("ARTISTAS_CD", { secure: true })
+				.createTable("ARTISTAS_CD", { cols: ARTISTAS_CD })
+				.insert("ARTISTAS_CD", [], artistasCdRows)
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
 		test(
-			"crea tablas CDS_CONTINUADOS y CDS_DESCONTINUADOS",
+			"el predicado IN compara valores de una columna en la tabla primaria con valores arrojados por la subconsulta",
 			{ only: true },
 			async () => {
-				const CDS_CONTINUADOS = {
-					NOMBRE_CD: "VARCHAR(60)",
-					TIPO_CD: "CHAR(4)",
-					EN_EXISTENCIA: "INT",
-				};
-				const CDS_DESCONTINUADOS = {
-					NOMBRE_CD: "VARCHAR(60)",
-					TIPO_CD: "CHAR(4)",
-					EN_EXISTENCIA: "INT",
-				};
-				const query = "";
+				const query = `SELECT *
+FROM EXISTENCIA_CD
+WHERE TITULO_CD IN ( SELECT TITULO
+FROM ARTISTAS_CD
+WHERE NOMBRE_ARTISTA = 'Joni Mitchell' );`;
 
 				const result = await qb
-					.createTable("CDS_CONTINUADOS", {
-						cols: CDS_CONTINUADOS,
-					})
-					.createTable("CDS_DESCONTINUADOS", {
-						cols: CDS_DESCONTINUADOS,
-					});
+					.select("*")
+					.from("EXISTENCIA_CD")
+					.where(
+						qb.in(
+							"TITULO_CD",
+							qb
+								.select("TITULO")
+								.from("ARTISTAS_CD")
+								.where(qb.eq("NOMBRE_ARTISTA", "Joni Mitchell")),
+						),
+					);
 
 				showResults(result);
 				assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
@@ -2758,7 +2955,7 @@ ON i.ID_TIPO = t.ID_TIPO;`;
 
 /**
  * test("",{only:true}, async () => {
-			const query = "";
+			const query = ``;
 
 			const result = await qb;
 

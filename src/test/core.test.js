@@ -1240,12 +1240,10 @@ ON i.ID_TIPO = t.ID_TIPO;`,
 			);
 		});
 		test("UNION", () => {
-			const result = sql
-				.select("TIPO_CD")
-				.from("CDS_CONTINUADOS")
-				.union("All")
-				.select("TIPO_CD")
-				.from("CDS_DESCONTINUADOS");
+			const result = sql.unionAll(
+				sql.select("TIPO_CD").from("CDS_CONTINUADOS"),
+				sql.select("TIPO_CD").from("CDS_DESCONTINUADOS"),
+			);
 
 			assert.equal(
 				result.toString(),

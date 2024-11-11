@@ -277,11 +277,12 @@ class QueryBuilder {
 	// SELECT [ DISTINCT | ALL ] { * | < selección de lista > }
 	select(columns, options) {
 		try {
-			if (/^(union)$/i.test(this.commandStack[0])) {
-				this.selectCommand += this.language.select(columns, options);
-				this.commandStack.push("select");
-				return this;
-			}
+			// if (/^(union)$/i.test(this.commandStack[0])) {
+			// 	console.log("selectCommand:", this.selectCommand);
+			// 	this.selectCommand += this.language.select(columns, options);
+			// 	this.commandStack.push("select");
+			// 	return this;
+			// }
 			const nuevoSelect = new QueryBuilder(this.languageClass, this.options);
 			nuevoSelect.selectCommand = nuevoSelect.language.select(columns, options);
 			nuevoSelect.commandStack.push("select");
@@ -371,11 +372,23 @@ class QueryBuilder {
 		return this;
 	}
 
-	union(option) {
-		const next = new QueryBuilder(this.languageClass, this.options);
-		next.commandStack.push("union");
-		this.language.union(this, next, option);
-		return next;
+	union(...selects) {
+		if (selects.length < 2) {
+			this.error = new Error("UNION necesita mínimo dos instrucciones SELECT");
+		}
+		this.commandStack.push("union");
+		this.query.push(this.language.union(...selects));
+		return this;
+	}
+	unionAll(...selects) {
+		if (selects.length < 2) {
+			this.error = new Error(
+				"UNION ALL necesita mínimo dos instrucciones SELECT",
+			);
+		}
+		this.commandStack.push("union");
+		this.query.push(this.language.union(...selects, { all: true }));
+		return this;
 	}
 	where(predicados) {
 		this.commandStack.push("where");
@@ -450,6 +463,12 @@ class QueryBuilder {
 			this[oper] = (...predicados) => this.language[oper](...predicados);
 		}
 	}
+	/**
+	 *
+	 * @param {string|column} columna - nombre de la columna cuyo valor esta contenido el los valores
+	 * @param  {...any} values
+	 * @returns
+	 */
 
 	in(columna, ...values) {
 		this.commandStack.push("in");
