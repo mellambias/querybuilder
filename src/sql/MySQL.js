@@ -182,5 +182,11 @@ class MySQL extends Core {
 	fullJoin(tables, alias) {
 		return new Error("MySQL no soporta de forma nativa 'FULL OUTER JOIN'");
 	}
+	limit(limit) {
+		return `LIMIT ${limit}`;
+	}
+	offset(offset) {
+		return `OFFSET ${offset}`;
+	}
 }
 export default MySQL;

@@ -4,9 +4,13 @@
 class Expresion {
 	constructor(expresion) {
 		this.value = expresion;
+		this.alias = undefined;
 	}
 	toString() {
-		return this.value;
+		return `${this.value}${this.alias !== undefined ? ` AS ${this.alias}` : ""}`;
+	}
+	as(alias) {
+		this.alias = alias;
 	}
 }
 

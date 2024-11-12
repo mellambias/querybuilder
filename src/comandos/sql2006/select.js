@@ -1,5 +1,6 @@
 import Column from "../../column.js";
 import Expresion from "../../expresion.js";
+import QueryBuilder from "../../querybuilder.js";
 export const select = {
 	unique: (unique) => (unique === true ? "DISTINCT" : undefined),
 	all: (all) => (all === true ? "ALL" : undefined),
@@ -26,6 +27,9 @@ export const select = {
 					colStack.push(`${column.col}`);
 				}
 			}
+			// if(column instanceof QueryBuilder){
+			// 	colStack.push(`${column.toString( {as:"subquery"})} AS `)
+			// }
 		}
 		return colStack.join(", ");
 	},

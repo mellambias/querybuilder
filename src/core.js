@@ -250,12 +250,23 @@ class Core {
 	}
 	from(tables, alias) {
 		if (typeof tables === "string") {
+			if (typeof alias === "string") {
+				return `FROM ${tables} ${alias}`;
+			}
+			if (Array.isArray(alias) && alias.length === 1) {
+				return `FROM ${tables} ${alias[0]}`;
+			}
 			return `FROM ${tables}`;
 		}
 		if (Array.isArray(tables) && Array.isArray(alias)) {
 			return `FROM ${tables
 				.map((table, index) => `${table} AS ${alias[index]}`)
 				.join(", ")}`;
+		}
+		if (Array.isArray(tables) && typeof alias === "string") {
+			const [first, ...rest] = tables;
+			rest.unshift(`${first} ${alias}`);
+			return `FROM ${rest.join(", ")}`;
 		}
 		return `FROM ${tables.join(", ")}`;
 	}
@@ -497,6 +508,7 @@ class Core {
 			throw new Error(`Falta el atributo 'col'`);
 		}
 	}
+
 	// Mofificacion de Datos
 	insert(table, cols, values) {
 		let sql = "INSERT INTO";
@@ -520,16 +532,22 @@ class Core {
 									if (typeof item === "string") {
 										return `'${item}'`;
 									}
+									if (item instanceof QueryBuilder) {
+										return `( ${item.toString({ as: "subselect" }).replaceAll("\n", " ")} )`;
+									}
 									return item;
 								})
 								.join(", ")})`,
 					)
 					.join(",\n")}`;
 			}
-			sql = `${sql}\nVALUES ( ${values
+			sql = `${sql}\nVALUES\n( ${values
 				.map((value) => {
 					if (typeof value === "string") {
 						return `'${value}'`;
+					}
+					if (value instanceof QueryBuilder) {
+						return `( ${value.toString({ as: "subselect" }).replaceAll("\n", " ")} )`;
 					}
 					return value;
 				})

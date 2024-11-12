@@ -2922,33 +2922,448 @@ VALUES
 			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
-		test(
-			"el predicado IN compara valores de una columna en la tabla primaria con valores arrojados por la subconsulta",
-			{ only: true },
-			async () => {
-				const query = `SELECT *
+		test("el predicado IN compara valores de una columna en la tabla primaria con valores arrojados por la subconsulta", async () => {
+			const query = `SELECT *
 FROM EXISTENCIA_CD
 WHERE TITULO_CD IN ( SELECT TITULO
 FROM ARTISTAS_CD
-WHERE NOMBRE_ARTISTA = 'Joni Mitchell' );`;
+WHERE ARTIST_NAME = 'Joni Mitchell' );`;
 
-				const result = await qb
-					.select("*")
-					.from("EXISTENCIA_CD")
-					.where(
-						qb.in(
-							"TITULO_CD",
+			const result = await qb
+				.select("*")
+				.from("EXISTENCIA_CD")
+				.where(
+					qb.in(
+						"TITULO_CD",
+						qb
+							.select("TITULO")
+							.from("ARTISTAS_CD")
+							.where(qb.eq("ARTIST_NAME", "Joni Mitchell")),
+					),
+				)
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		/**
+		 * El predicado EXISTS se evalúa como verdadero si una o más filas son arrojadas por
+la subconsulta; de otra manera, se evalúa como falso.
+la subconsulta asociada deberá incluir una condición de búsqueda que haga coincidir los valores en las dos tablas que están siendo vinculadas
+a través de la subconsulta
+		 */
+		test("predicado EXISTS", async () => {
+			const query = `SELECT *
+FROM EXISTENCIA_CD s
+WHERE EXISTS ( SELECT TITULO
+FROM ARTISTAS_CD a
+WHERE (a.ARTIST_NAME = 'Joni Mitchell'
+AND s.TITULO_CD = a.TITULO) );`;
+
+			const result = await qb
+				.select("*")
+				.from("EXISTENCIA_CD", "s")
+				.where(
+					qb.exists(
+						qb
+							.select("TITULO")
+							.from("ARTISTAS_CD", "a")
+							.where(
+								qb.and(
+									qb.eq(qb.col("ARTIST_NAME", "a"), "Joni Mitchell"),
+									qb.eq(qb.col("TITULO_CD", "s"), qb.col("TITULO", "a")),
+								),
+							),
+					),
+				)
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		}); //fin test
+		/**
+		 * El predicado ALL comprueba si todos los valores arrojados cumplen con la condición
+de búsqueda.
+Cuando se utiliza un predicado de comparación cuantificado (SOME, ANY y ALL), los valores en una columna de
+la tabla primaria se comparan con los valores arrojados por la subconsulta.
+		 */
+		test("crea tabla PRECIOS_MENUDEO", async () => {
+			const PRECIOS_MENUDEO = {
+				NOMBRE_CD: "VARCHAR(60)",
+				P_MENUDEO: "NUMERIC(5, 2)",
+				CANTIDAD: "INT",
+			};
+			const preciosMenudeoRows = [
+				["Famous Blue Raincoat", 16.99, 5],
+				["Blue", 14.99, 10],
+				["Court and Spark", 14.99, 12],
+				["Past Light", 15.99, 11],
+				["Kojiki", 15.99, 4],
+				["That Christmas Feeling", 10.99, 8],
+				["Patsy Cline: 12 Greatest Hits", 16.99, 14],
+			];
+			const query = `DROP TABLE IF EXISTS PRECIOS_MENUDEO;
+CREATE TABLE PRECIOS_MENUDEO
+( NOMBRE_CD VARCHAR(60),
+ P_MENUDEO DECIMAL(5, 2),\n CANTIDAD INT );
+INSERT INTO PRECIOS_MENUDEO
+VALUES
+('Famous Blue Raincoat', 16.99, 5),
+('Blue', 14.99, 10),
+('Court and Spark', 14.99, 12),
+('Past Light', 15.99, 11),
+('Kojiki', 15.99, 4),
+('That Christmas Feeling', 10.99, 8),
+('Patsy Cline: 12 Greatest Hits', 16.99, 14);`;
+
+			const result = await qb
+				.dropTable("PRECIOS_MENUDEO", { secure: true })
+				.createTable("PRECIOS_MENUDEO", { cols: PRECIOS_MENUDEO })
+				.insert("PRECIOS_MENUDEO", [], preciosMenudeoRows)
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("crea tabla PRECIOS_VENTA", async () => {
+			const PRECIOS_VENTA = {
+				TITULO_CD: "VARCHAR(60)",
+				P_VENTA: "NUMERIC(5,2)",
+			};
+			const preciosVentaRows = [
+				["Famous Blue Raincoat", 14.99],
+				["Blue", 12.99],
+				["Court and Spark", 14.99],
+				["Past Light", 14.99],
+				["Kojiki", 13.99],
+				["That Christmas Feeling", 10.99],
+				["Patsy Cline: 12 Greatest Hits", 16.99],
+			];
+			const query = `DROP TABLE IF EXISTS PRECIOS_VENTA;
+CREATE TABLE PRECIOS_VENTA\n( TITULO_CD VARCHAR(60),\n P_VENTA DECIMAL(5,2) );
+INSERT INTO PRECIOS_VENTA\nVALUES
+('Famous Blue Raincoat', 14.99),
+('Blue', 12.99),
+('Court and Spark', 14.99),
+('Past Light', 14.99),
+('Kojiki', 13.99),
+('That Christmas Feeling', 10.99),
+('Patsy Cline: 12 Greatest Hits', 16.99);`;
+
+			const result = await qb
+				.dropTable("PRECIOS_VENTA", { secure: true })
+				.createTable("PRECIOS_VENTA", { cols: PRECIOS_VENTA })
+				.insert("PRECIOS_VENTA", [], preciosVentaRows)
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("predicado cuantificado", async () => {
+			const query = `SELECT NOMBRE_CD, P_MENUDEO
+FROM PRECIOS_MENUDEO
+WHERE P_MENUDEO > ALL ( SELECT P_VENTA
+FROM PRECIOS_VENTA
+WHERE P_VENTA < 15.99 );`;
+
+			const result = await qb
+				.select(["NOMBRE_CD", "P_MENUDEO"])
+				.from("PRECIOS_MENUDEO")
+				.where(
+					qb.gt(
+						"P_MENUDEO",
+						qb.all(
 							qb
-								.select("TITULO")
-								.from("ARTISTAS_CD")
-								.where(qb.eq("NOMBRE_ARTISTA", "Joni Mitchell")),
+								.select("P_VENTA")
+								.from("PRECIOS_VENTA")
+								.where(qb.lt("P_VENTA", 15.99)),
 						),
-					);
+					),
+				)
+				.execute();
 
-				showResults(result);
-				assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
-			},
-		);
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("incluir una subconsulta en la cláusula SELECT", async () => {
+			const query = `SELECT TITULO_CD, ( SELECT ARTIST_NAME
+FROM ARTISTAS_CD a
+WHERE s.TITULO_CD = a.TITULO ) AS ARTIST, EXISTENCIA
+FROM EXISTENCIA_CD s;`;
+
+			const result = await qb
+				.select([
+					"TITULO_CD",
+					qb
+						.col(
+							qb
+								.select("ARTIST_NAME")
+								.from("ARTISTAS_CD", "a")
+								.where(qb.eq(qb.col("TITULO_CD", "s"), qb.col("TITULO", "a"))),
+						)
+						.as("ARTIST"),
+					"EXISTENCIA",
+				])
+				.from("EXISTENCIA_CD", "s")
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("subconsultas que devuelve un solo valor", async () => {
+			const query = `SELECT NOMBRE_CD, P_MENUDEO
+FROM PRECIOS_MENUDEO
+WHERE P_MENUDEO = ( SELECT MAX(P_VENTA)
+FROM PRECIOS_VENTA );`;
+
+			const result = await qb
+				.select(["NOMBRE_CD", "P_MENUDEO"])
+				.from("PRECIOS_MENUDEO")
+				.where(
+					qb.eq(
+						"P_MENUDEO",
+						qb.select(qb.max("P_VENTA")).from("PRECIOS_VENTA"),
+					),
+				)
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		//Modificar datos
+		test("crea tabla INVENTARIO_TITULOS", async () => {
+			const INVENTARIO_TITULOS = {
+				ID_TITULO: "INT",
+				TITULO: "VARCHAR(60)",
+				EXISTENCIA: "INT",
+			};
+			const inventarioTituloRows = [
+				[101, "Famous Blue Raincoat", 12],
+				[102, "Blue", 24],
+				[103, "Past Light", 9],
+				[104, "Luck of the Draw", 19],
+				[105, "Deuces Wild", 25],
+				[106, "Nick of Time", 17],
+				[107, "Blues on the Bayou", 11],
+				[108, "Both Sides Now", 13],
+			];
+			const query = `DROP TABLE IF EXISTS INVENTARIO_TITULOS;
+CREATE TABLE INVENTARIO_TITULOS
+( ID_TITULO INT,
+ TITULO VARCHAR(60),
+ EXISTENCIA INT );
+INSERT INTO INVENTARIO_TITULOS
+VALUES
+(101, 'Famous Blue Raincoat', 12),
+(102, 'Blue', 24),
+(103, 'Past Light', 9),
+(104, 'Luck of the Draw', 19),
+(105, 'Deuces Wild', 25),
+(106, 'Nick of Time', 17),
+(107, 'Blues on the Bayou', 11),
+(108, 'Both Sides Now', 13);`;
+
+			const result = await qb
+				.dropTable("INVENTARIO_TITULOS", { secure: true })
+				.createTable("INVENTARIO_TITULOS", { cols: INVENTARIO_TITULOS })
+				.insert("INVENTARIO_TITULOS", [], inventarioTituloRows)
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("crea tabla TIPOS_TITULO", async () => {
+			const TIPOS_TITULO = {
+				TITULO_CD: "VARCHAR(60)",
+				TIPO_CD: "CHAR(20)",
+			};
+			const tiposTituloRows = [
+				["Famous Blue Raincoat", "Folk"],
+				["Blue", "Popular"],
+				["Court and Spark", "Popular"],
+				["Past Light", "New Age"],
+				["Fundamental", "Popular"],
+				["Blues on the Bayou", "Blues"],
+				["Longing in their Hearts", "Popular"],
+				["Deuces Wild", "Blues"],
+				["Nick of Time", "Popular"],
+			];
+			const query = `DROP TABLE IF EXISTS TIPOS_TITULO;
+CREATE TABLE TIPOS_TITULO\n( TITULO_CD VARCHAR(60),\n TIPO_CD CHAR(20) );
+INSERT INTO TIPOS_TITULO
+VALUES
+('Famous Blue Raincoat', 'Folk'),
+('Blue', 'Popular'),
+('Court and Spark', 'Popular'),
+('Past Light', 'New Age'),
+('Fundamental', 'Popular'),
+('Blues on the Bayou', 'Blues'),
+('Longing in their Hearts', 'Popular'),
+('Deuces Wild', 'Blues'),
+('Nick of Time', 'Popular');`;
+
+			const result = await qb
+				.dropTable("TIPOS_TITULO", { secure: true })
+				.createTable("TIPOS_TITULO", { cols: TIPOS_TITULO })
+				.insert("TIPOS_TITULO", [], tiposTituloRows)
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("insertar registros usando una subconsulta", async () => {
+			const query = `INSERT INTO TIPOS_TITULO
+VALUES
+( ( SELECT TITULO FROM INVENTARIO_TITULOS WHERE ID_TITULO = 108 ), 'Popular' );`;
+
+			const result = await qb
+				.insert(
+					"TIPOS_TITULO",
+					[],
+					[
+						qb
+							.select("TITULO")
+							.from("INVENTARIO_TITULOS")
+							.where(qb.eq("ID_TITULO", 108)),
+						"Popular",
+					],
+				)
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("actualizar el valor Both Sides Now", async () => {
+			const query = `UPDATE TIPOS_TITULO
+SET TIPO_CD = 'Folk'
+WHERE TITULO_CD IN ( SELECT TITULO
+FROM INVENTARIO_TITULOS
+WHERE ID_TITULO = 108 );`;
+
+			const result = await qb
+				.update("TIPOS_TITULO", {
+					TIPO_CD: "Folk",
+				})
+				.where(
+					qb.in(
+						"TITULO_CD",
+						qb
+							.select("TITULO")
+							.from("INVENTARIO_TITULOS")
+							.where(qb.eq("ID_TITULO", 108)),
+					),
+				)
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("subconsulta en la cláusula SET para proporcionar un valor para la columna identificada", async () => {
+			const query = `UPDATE TIPOS_TITULO
+SET TITULO_CD =
+( SELECT TITULO
+FROM INVENTARIO_TITULOS
+WHERE ID_TITULO = 108 )
+WHERE TITULO_CD = 'Both Sides Now';`;
+
+			const result = await qb
+				.update("TIPOS_TITULO", {
+					TITULO_CD: qb
+						.select("TITULO")
+						.from("INVENTARIO_TITULOS")
+						.where(qb.eq("ID_TITULO", 108)),
+				})
+				.where(qb.eq("TITULO_CD", "Both Sides Now"))
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("borra el valor Both Sides", async () => {
+			const query = `DELETE FROM TIPOS_TITULO
+WHERE TITULO_CD IN ( SELECT TITULO
+FROM INVENTARIO_TITULOS
+WHERE ID_TITULO = 108 );`;
+
+			const result = await qb
+				.delete("TIPOS_TITULO")
+				.where(
+					qb.in(
+						"TITULO_CD",
+						qb
+							.select("TITULO")
+							.from("INVENTARIO_TITULOS")
+							.where(qb.eq("ID_TITULO", 108)),
+					),
+				)
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("uso de limit y offset para MySQL, PostgreSQL, y SQLite ", async () => {
+			const query = `SELECT *
+FROM TIPOS_TITULO
+LIMIT 3
+OFFSET 3;`;
+
+			const result = await qb
+				.select("*")
+				.from("TIPOS_TITULO")
+				.limit(3)
+				.offset(3)
+				.execute();
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+	});
+	describe("Capitulo 15 Cursores", () => {
+		/**
+		 * DECLARE CURSOR Declara el cursor SQL al definir el nombre del cursor, sus características
+y una expresión de consulta que es invocada cuando se abre el cursor.
+OPEN Abre el cursor e invoca la expresión de consulta, haciendo que los resultados de consulta
+estén disponibles para las instrucciones FETCH.
+FETCH Recupera datos en las variables que pasan los datos al lenguaje de programación
+host o a otras instrucciones SQL incrustadas.
+CLOSE Cierra el cursor. Una vez que el cursor es cerrado, no pueden recuperarse datos de
+los resultados de la consulta del cursor.
+		 */
+		test("declarar un cursor", { only: true }, () => {
+			const options = {
+				changes: "ASENSITIVE",
+				cursor: "SCROLL",
+				hold: true,
+				return: false,
+				orderBy: "COLUMN",
+				readOnly: false,
+				update: ["COL1", "COL2"],
+			};
+			const result = qb.createCursor(
+				"name",
+				qb.select("*").from("TABLA"),
+				options,
+			);
+
+			assert.equal(
+				result.toString(),
+				`DECLARE name ASENSITIVE SCROLL WITH HOLD WITHOUT RETURN CURSOR FOR SELECT *
+FROM TABLA ORDER BY COLUMN FOR UPDATE OF COL1, COL2;`,
+			);
+		});
 		//fin test
 	});
 });

@@ -53,7 +53,7 @@ export const createView = {
 	cols: (cols) => `( ${cols.join(", ")} )`,
 	as: (vista) =>
 		vista instanceof QueryBuilder
-			? `AS ${vista.toString().replace(";", "")}`
+			? `AS ${vista.toString({ as: "subselect" })}`
 			: `AS ${vista}`,
 	check: (check) => (check === true ? "WITH CHECK OPTION" : undefined),
 	orden: ["name", "cols", "as", "check"],
@@ -74,7 +74,7 @@ export const createCursor = {
 			return `CURSOR FOR ${expresion}`;
 		}
 		if (expresion instanceof QueryBuilder) {
-			return `CURSOR FOR ${expresion.toString().replace(";", "")}`;
+			return `CURSOR FOR ${expresion.toString({ as: "subselect" })}`;
 		}
 		throw new Error("la expresion no es valida");
 	},

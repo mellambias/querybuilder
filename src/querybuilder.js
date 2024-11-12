@@ -273,16 +273,16 @@ class QueryBuilder {
 		}
 		return this;
 	}
+
 	//Consulta de datos SQL
-	// SELECT [ DISTINCT | ALL ] { * | < selección de lista > }
+	/**
+	 * SELECT [ DISTINCT | ALL ] { * | < selección de lista > }
+	 * @param {string|Column|Array<string>|Array<Column>} columns - Columnas seleccionadas
+	 * @param {{[unique:boolean],[ all:boolean]} options - opciones
+	 * @returns
+	 */
 	select(columns, options) {
 		try {
-			// if (/^(union)$/i.test(this.commandStack[0])) {
-			// 	console.log("selectCommand:", this.selectCommand);
-			// 	this.selectCommand += this.language.select(columns, options);
-			// 	this.commandStack.push("select");
-			// 	return this;
-			// }
 			const nuevoSelect = new QueryBuilder(this.languageClass, this.options);
 			nuevoSelect.selectCommand = nuevoSelect.language.select(columns, options);
 			nuevoSelect.commandStack.push("select");
@@ -466,7 +466,7 @@ class QueryBuilder {
 	/**
 	 *
 	 * @param {string|column} columna - nombre de la columna cuyo valor esta contenido el los valores
-	 * @param  {...any} values
+	 * @param  {Array<string|QueryBuilder>|...values} values - Puede ser un array o una lista de strings u objetos QueryBuilder
 	 * @returns
 	 */
 
@@ -486,7 +486,10 @@ class QueryBuilder {
 	 * @returns {Column}
 	 */
 	col(name, table) {
-		const error = check("col(name:string, table:string)", [name, table]);
+		const error = check("col(name:string|QueryBuilder, table:string)", [
+			name,
+			table,
+		]);
 		if (error) {
 			throw new Error(error);
 		}
@@ -500,7 +503,10 @@ class QueryBuilder {
 	 * @returns {Column}
 	 */
 	coltn(table, name) {
-		const error = check("col(name:string, table:string)", [name, table]);
+		const error = check("col(name:string|QueryBuilder, table:string)", [
+			name,
+			table,
+		]);
 		if (error) {
 			throw new Error(error);
 		}
@@ -539,11 +545,37 @@ class QueryBuilder {
 		}
 		return this;
 	}
+	//MySQL, PostgreSQL, y SQLite
+	limit(limit) {
+		this.commandStack.push("limit");
+		if (this.selectCommand?.length > 0) {
+			this.selectStack.push(this.language.limit(limit));
+		} else {
+			this.error = "No es posible aplicar, falta el comando 'select'";
+		}
+		return this;
+	}
+	offset(offset) {
+		if (!this.commandStack.lastIndexOf("limit")) {
+			this.error = "offset se utiliza con limit";
+		}
+		this.commandStack.push("offset");
+		if (this.selectCommand?.length > 0) {
+			this.selectStack.push(this.language.offset(offset));
+		} else {
+			this.error = "No es posible aplicar, falta el comando 'select'";
+		}
+		return this;
+	}
+	//SQL Server y Oracle
+	// FETCH FIRST n ROWS ONLY
+	//ROWNUM
+
 	// Mofificacion de Datos
 	/**
 	 *
 	 * @param {string} table - nombre de la tabla
-	 * @param {array<Column>} cols - columnas a insertar
+	 * @param {array<Column>} cols - columnas correspondientes al orden de los valores o vacio para el orden por defecto
 	 * @param {array<array<Value>>} values - Array de Arrays con los valores
 	 * @returns
 	 */
@@ -755,6 +787,12 @@ class QueryBuilder {
 		}
 		if (this.selectCommand?.length > 0) {
 			if (this.selectStack.length > 0) {
+				this.selectStack.sort((a, b) => {
+					if (/^(LIMIT)/i.test(a) && /^(OFFSET)/i.test(b)) return -1;
+					if (/^(OFFSET)/i.test(a) && /^(LIMIT)/i.test(b)) return 1;
+					if (/^(LIMIT|OFFSET)/i.test(b)) return -1;
+					return 0;
+				});
 				this.selectCommand += `\n${this.selectStack.join("\n")}`;
 			}
 			this.query.push(this.selectCommand);

@@ -656,7 +656,8 @@ ORDER BY PRECIO, A_LA_MANO DESC;`,
 			assert.equal(
 				result.toString(),
 				`INSERT INTO INVENTARIO_CD
-VALUES ( 'Patsy Cline: 12 Greatest Hits', 'Country', 'MCA Records', 32 );`,
+VALUES
+( 'Patsy Cline: 12 Greatest Hits', 'Country', 'MCA Records', 32 );`,
 			);
 		});
 		test("Insertar datos en una tabla especificando columnas", () => {
@@ -668,7 +669,8 @@ VALUES ( 'Patsy Cline: 12 Greatest Hits', 'Country', 'MCA Records', 32 );`,
 			assert.equal(
 				result.toString(),
 				`INSERT INTO INVENTARIO_CD\n( NOMBRE_CD, EDITOR, EN_EXISTENCIA )
-VALUES ( 'Fundamental', 'Capitol Records', 34 );`,
+VALUES
+( 'Fundamental', 'Capitol Records', 34 );`,
 			);
 		});
 		test("Insertar datos en una tabla usando SELECT", () => {
