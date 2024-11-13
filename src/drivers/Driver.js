@@ -18,7 +18,7 @@ class Driver {
 		console.log("Cambia de base de datos");
 		this.database = database;
 	}
-	async execute(query) {
+	async execute(query, options) {
 		console.log("envia la consulta a la base de datos");
 	}
 

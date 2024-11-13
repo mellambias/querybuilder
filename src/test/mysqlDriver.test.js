@@ -3331,38 +3331,26 @@ OFFSET 3;`;
 		});
 		//fin test
 	});
-	describe("Capitulo 15 Cursores", () => {
-		/**
-		 * DECLARE CURSOR Declara el cursor SQL al definir el nombre del cursor, sus características
-y una expresión de consulta que es invocada cuando se abre el cursor.
-OPEN Abre el cursor e invoca la expresión de consulta, haciendo que los resultados de consulta
-estén disponibles para las instrucciones FETCH.
-FETCH Recupera datos en las variables que pasan los datos al lenguaje de programación
-host o a otras instrucciones SQL incrustadas.
-CLOSE Cierra el cursor. Una vez que el cursor es cerrado, no pueden recuperarse datos de
-los resultados de la consulta del cursor.
-		 */
-		test("declarar un cursor", { only: true }, () => {
-			const options = {
-				changes: "ASENSITIVE",
-				cursor: "SCROLL",
-				hold: true,
-				return: false,
-				orderBy: "COLUMN",
-				readOnly: false,
-				update: ["COL1", "COL2"],
-			};
-			const result = qb.createCursor(
-				"name",
-				qb.select("*").from("TABLA"),
-				options,
-			);
+	describe("Capitulo 16 Transacciones", () => {
+		test("usar una transaccion para actualizar", { only: true }, async () => {
+			const query = `START TRANSACTION;
+USE INVENTARIO;
+UPDATE DISCOS_COMPACTOS
+SET EN_EXISTENCIA = EN_EXISTENCIA - 1;
+UPDATE COSTOS_TITULO\nSET MENUDEO = MENUDEO - 10;`;
 
-			assert.equal(
-				result.toString(),
-				`DECLARE name ASENSITIVE SCROLL WITH HOLD WITHOUT RETURN CURSOR FOR SELECT *
-FROM TABLA ORDER BY COLUMN FOR UPDATE OF COL1, COL2;`,
-			);
+			const result = await qb
+				.setTransaction({ isolation: "READ COMMITTED" })
+				.add(
+					qb.update("DISCOS_COMPACTOS", {
+						EN_EXISTENCIA: qb.exp("EN_EXISTENCIA - 1"),
+					}),
+				)
+				.add(qb.update("COSTOS_TITULO", { MENUDEO: qb.exp("MENUDEO - 10") }))
+				.start({ snapshot: true, access: "READ WRITE" });
+
+			showResults(result);
+			assert(result.toString(), `${query}`);
 		});
 		//fin test
 	});

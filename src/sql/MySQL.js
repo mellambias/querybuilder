@@ -188,5 +188,26 @@ class MySQL extends Core {
 	offset(offset) {
 		return `OFFSET ${offset}`;
 	}
+	// Transacciones
+	setTransaction(config) {
+		return this.getStatement(
+			"SET TRANSACTION",
+			Mysql84.setTransaction,
+			{
+				options: config,
+			},
+			", ",
+		);
+	}
+	startTransaction(config) {
+		return this.getStatement(
+			"START TRANSACTION",
+			Mysql84.startTransaction,
+			{
+				options: config,
+			},
+			", ",
+		);
+	}
 }
 export default MySQL;

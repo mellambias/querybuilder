@@ -1315,6 +1315,10 @@ WHERE NOMBRE_TIPO_DISCO = 'Blues' ) );`,
 			);
 		});
 	});
+	/** Los cursores solo funcionan dentro del SGBD dentro de los procesos y funciones */
+	/**
+	 * Los siguientes Test prueban la funcionalidad que puede ser añadida al SGBD
+	 */
 	describe("trabajo con cursores", () => {
 		test("declarar un cursor", () => {
 			const options = {

@@ -73,8 +73,8 @@ function justifica(valor, width, fill) {
 }
 
 export function showResults(datos) {
-	console.log("Comando:%o\n", datos.error ? datos.error : "OK");
-	if (datos.result) {
+	console.log("Comando:%o\n", datos?.error ? datos?.error : "OK");
+	if (datos?.result) {
 		const { response, columns, rows } = datos.result;
 		tableFormat(columns, rows, response, datos.queryJoin());
 	}

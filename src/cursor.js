@@ -74,5 +74,8 @@ class Cursor {
 	toString() {
 		return `${this.cursor};`;
 	}
+	execute() {
+		return this.builder.execute();
+	}
 }
 export default Cursor;

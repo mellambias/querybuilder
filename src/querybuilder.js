@@ -1,6 +1,7 @@
 import { Types, check } from "./utils/utils.js";
 import Column from "./column.js";
 import Cursor from "./cursor.js";
+import Transaction from "./transaction.js";
 import Expresion from "./expresion.js";
 import Value from "./value.js";
 class QueryBuilder {
@@ -705,64 +706,31 @@ class QueryBuilder {
 	}
 
 	// transacciones
-	setTransaction(config) {
-		this.commandStack.push("setTransaction");
-		try {
-			this.query.push(`${this.language.setTransaction(config)}`);
-		} catch (error) {
-			this.error = error.message;
-		}
-		return this;
+	// setTransaction(config) {
+	// 	this.commandStack.push("setTransaction");
+	// 	try {
+	// 		this.query.push(`${this.language.setTransaction(config)}`);
+	// 	} catch (error) {
+	// 		this.error = error.message;
+	// 	}
+	// 	return this;
+	// }
+	setTransaction(options) {
+		return new Transaction(this, options);
 	}
-	startTransaction(config) {
-		this.commandStack.push("startTransaction");
-		try {
-			this.query.push(`${this.language.startTransaction(config)}`);
-		} catch (error) {
-			this.error = error.message;
-		}
-		return this;
-	}
+	// startTransaction(config) {
+	// 	this.commandStack.push("startTransaction");
+	// 	try {
+	// 		this.query.push(`${this.language.startTransaction(config)}`);
+	// 	} catch (error) {
+	// 		this.error = error.message;
+	// 	}
+	// 	return this;
+	// }
 	setConstraints(restrictions, type) {
 		this.commandStack.push("setConstraints");
 		try {
 			this.query.push(`${this.language.setConstraints(restrictions, type)}`);
-		} catch (error) {
-			this.error = error.message;
-		}
-		return this;
-	}
-	setSavePoint(name) {
-		this.commandStack.push("setSavePoint");
-		try {
-			this.query.push(`${this.language.setSavePoint(name)}`);
-		} catch (error) {
-			this.error = error.message;
-		}
-		return this;
-	}
-	clearSavePoint(name) {
-		this.commandStack.push("clearSavePoint");
-		try {
-			this.query.push(`${this.language.clearSavePoint(name)}`);
-		} catch (error) {
-			this.error = error.message;
-		}
-		return this;
-	}
-	commit() {
-		this.commandStack.push("commit");
-		try {
-			this.query.push(`${this.language.commit()}`);
-		} catch (error) {
-			this.error = error.message;
-		}
-		return this;
-	}
-	rollback(savepoint) {
-		this.commandStack.push("rollback");
-		try {
-			this.query.push(`${this.language.rollback(savepoint)}`);
 		} catch (error) {
 			this.error = error.message;
 		}
