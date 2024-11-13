@@ -45,7 +45,7 @@ export function tableFormat(columns, rows, responses, query) {
 			i++;
 		}
 		// imprime en consola
-		console.log(`${textCenter("FILAS", maxTable, "* ")}\n\n`);
+		console.log(`${textCenter("FILAS", maxTable, " *")}\n\n`);
 		console.log(header.join(" | "));
 		console.log(header.map((col) => "-".repeat(col.length)).join(" | "));
 		for (const row of grid) {

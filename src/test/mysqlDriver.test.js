@@ -3333,11 +3333,13 @@ OFFSET 3;`;
 	});
 	describe("Capitulo 16 Transacciones", () => {
 		test("usar una transaccion para actualizar", async () => {
-			const query = `START TRANSACTION;
+			const query = `SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
+START TRANSACTION WITH CONSISTENT SNAPSHOT, READ WRITE;
 USE INVENTARIO;
 UPDATE DISCOS_COMPACTOS
 SET EN_EXISTENCIA = EN_EXISTENCIA - 1;
-UPDATE COSTOS_TITULO\nSET MENUDEO = MENUDEO - 10;`;
+UPDATE COSTOS_TITULO
+SET MENUDEO = MENUDEO - 10;`;
 
 			const result = await qb
 				.setTransaction({ isolation: "READ COMMITTED" })
@@ -3350,16 +3352,46 @@ UPDATE COSTOS_TITULO\nSET MENUDEO = MENUDEO - 10;`;
 				.start({ snapshot: true, access: "READ WRITE" });
 
 			showResults(result);
-			assert(result.toString(), `${query}`);
+			assert.equal(result.toString(), `${query}`);
 		});
 		//fin test
-		test("", { only: true }, async () => {
-			const query = ``;
+		test("punto de recuperación a la transacción", { only: true }, async () => {
+			const query = `SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+START TRANSACTION;
+USE INVENTARIO;
+SELECT TITULO_CD, EN_EXISTENCIA
+FROM DISCOS_COMPACTOS
+WHERE ID_DISQUERA = 832;
+SAVEPOINT SECCION_1;
+USE INVENTARIO;
+UPDATE DISCOS_COMPACTOS
+SET EN_EXISTENCIA = EN_EXISTENCIA + 2
+WHERE ID_DISQUERA = 832;
+ROLLBACK TO SAVEPOINT SECCION_1;`;
 
-			const result = await qb;
+			const $ = qb;
+
+			const result = await qb
+				.setTransaction({ isolation: "serializable" })
+				.add(
+					qb
+						.select(["TITULO_CD", "EN_EXISTENCIA"])
+						.from("DISCOS_COMPACTOS")
+						.where($.eq("ID_DISQUERA", 832)),
+				)
+				.setSavePoint("SECCION_1")
+				.add(
+					qb
+						.update("DISCOS_COMPACTOS", {
+							EN_EXISTENCIA: $.exp("EN_EXISTENCIA + 2"),
+						})
+						.where($.eq("ID_DISQUERA", 832)),
+				)
+				.rollback("SECCION_1") // Invierte la actualización de datos
+				.start();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), `${query}`);
 		});
 		//fin test
 	});

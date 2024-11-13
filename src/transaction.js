@@ -75,7 +75,7 @@ class Transaction {
 
 	clearSavePoint(name) {
 		try {
-			this.stack.push(`${this.builder.language.clearSavePoint(name)}`);
+			this.stack.push(`${this.builder.language.clearSavePoint(name)};`);
 		} catch (error) {
 			this.error = error.message;
 		}
@@ -84,7 +84,7 @@ class Transaction {
 
 	commit() {
 		try {
-			this.stack.push(`${this.builder.language.commit()}`);
+			this.stack.push(`${this.builder.language.commit()};`);
 		} catch (error) {
 			this.error = error.message;
 		}
@@ -93,7 +93,7 @@ class Transaction {
 
 	rollback(savepoint) {
 		try {
-			this.stack.push(`${this.builder.language.rollback(savepoint)}`);
+			this.stack.push(`${this.builder.language.rollback(savepoint)};`);
 		} catch (error) {
 			this.error = error.message;
 		}

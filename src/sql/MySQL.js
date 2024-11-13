@@ -197,7 +197,7 @@ class MySQL extends Core {
 				options: config,
 			},
 			", ",
-		);
+		).trim();
 	}
 	startTransaction(config) {
 		return this.getStatement(
@@ -207,7 +207,7 @@ class MySQL extends Core {
 				options: config,
 			},
 			", ",
-		);
+		).trim();
 	}
 }
 export default MySQL;

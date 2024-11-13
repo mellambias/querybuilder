@@ -62,18 +62,13 @@ class MySqlDriver extends Driver {
 	response() {
 		const response = [];
 		const rows = [];
-
-		if (typeof this.queyResult === "object") {
-			response.push(this.queyResult);
-		} else {
-			for (const element of this.queyResult) {
-				if (this.isResultSetHeader(element)) {
-					response.push(element);
-				} else {
-					rows.push(...element);
-				}
+		for (const element of this.queyResult) {
+			response.push(element);
+			if (!this.isResultSetHeader(element)) {
+				rows.push(...element);
 			}
 		}
+
 		const columns = this.fields();
 		return { response, rows, columns };
 	}
