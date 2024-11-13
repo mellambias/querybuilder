@@ -3332,7 +3332,7 @@ OFFSET 3;`;
 		//fin test
 	});
 	describe("Capitulo 16 Transacciones", () => {
-		test("usar una transaccion para actualizar", { only: true }, async () => {
+		test("usar una transaccion para actualizar", async () => {
 			const query = `START TRANSACTION;
 USE INVENTARIO;
 UPDATE DISCOS_COMPACTOS
@@ -3351,6 +3351,15 @@ UPDATE COSTOS_TITULO\nSET MENUDEO = MENUDEO - 10;`;
 
 			showResults(result);
 			assert(result.toString(), `${query}`);
+		});
+		//fin test
+		test("", { only: true }, async () => {
+			const query = ``;
+
+			const result = await qb;
+
+			showResults(result);
+			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 	});

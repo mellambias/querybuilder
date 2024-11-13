@@ -8,24 +8,6 @@ class Transaction {
 		this.stack = [];
 		this.error = undefined;
 		this.commandStack = [];
-		this.optionToText = {
-			snapshot: "WITH CONSISTENT SNAPSHOT",
-			readWrite: "READ WRITE",
-			readOnly: "READ ONLY",
-			isolation: {
-				text: "ISOLATION LEVEL",
-				values: [
-					"READ UNCOMMITTED",
-					"READ COMMITTED",
-					"REPEATABLE READ",
-					"SERIALIZABLE",
-				],
-			},
-			mode: {
-				text: "",
-				values: ["READ WRITE", "READ ONLY"],
-			},
-		};
 	}
 
 	async connect() {
@@ -68,10 +50,9 @@ class Transaction {
 				await this.driver.execute(this.commandStack.join("\n"), {
 					transaction: true,
 				});
-				await this.driver.execute("ROLLBACK;");
 				this.result = this.driver.response();
 				this.error = undefined;
-				// await this.driver.execute("COMMIT;");
+				await this.driver.execute("COMMIT;");
 				return this;
 			}
 		} catch (error) {
