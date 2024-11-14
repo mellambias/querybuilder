@@ -71,11 +71,20 @@ function justifica(valor, width, fill) {
 	}
 	return valor.padStart(width, fill);
 }
-
-export function showResults(datos) {
-	console.log("Comando:%o\n", datos?.error ? datos?.error : "OK");
+/**
+ *
+ * @param {QueryBuilder} datos - instancia de QueryBuilder
+ * @param {Bollean} query - true muestra la consulta si no existen resultados
+ */
+export function showResults(datos, debug) {
 	if (datos?.result) {
 		const { response, columns, rows } = datos.result;
 		tableFormat(columns, rows, response, datos.queryJoin());
+	} else if (debug) {
+		console.log(`> ${datos.queryJoin()}\n`);
 	}
+	console.log(
+		">%o\n",
+		`${datos?.error ? `Errores:${datos?.error}` : "No se han detectado errores"}`,
+	);
 }

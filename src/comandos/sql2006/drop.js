@@ -24,3 +24,8 @@ export const dropTable = {
 			: undefined,
 	orden: ["name", "option"],
 };
+
+export const dropType = {
+	name: (name) => name,
+	orden: ["name"],
+};

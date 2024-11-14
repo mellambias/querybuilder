@@ -16,8 +16,8 @@
 		"test:pg:only": "node --test --test-only **/postgres.test.js",
 		"test:driver:mysql": "node --test **/mysqlDriver.test.js",
 		"test:driver:mysql:only": "node --test --test-only **/mysqlDriver.test.js",
-		"test:driver:pg": "node --test **/postgreDriver.test.js",
-		"test:driver:pg:only": "node --test --test-only **/postgreDriver.test.js",
+		"test:driver:pg": "node --test **/postgresDriver.test.js",
+		"test:driver:pg:only": "node --test --test-only **/postgresDriver.test.js",
 		"test:inventario": "node --test **/inventario.test.js",
 		"test:inventario:only": "node --test --test-only **/inventario.test.js"
 	},

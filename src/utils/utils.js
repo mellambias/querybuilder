@@ -13,6 +13,11 @@ function splitCommand(value) {
 
 	return [commandToFind, length];
 }
+/**
+ * devuelve el tipo de dato correspondiente al lenguaje
+ * @param {string} target - nombre del lenguaje
+ * @returns
+ */
 String.prototype.toDataType = function (target) {
 	const [command] = splitCommand(this.toString());
 	const sqlKey = command.toUpperCase();
@@ -32,13 +37,15 @@ String.prototype.toDataType = function (target) {
 		);
 	}
 
-	if (dataTypes[sqlKey]) {
+	if (dataTypes[sqlKey][target.toLowerCase()] !== undefined) {
 		return this.toString().replace(
 			command,
 			dataTypes[sqlKey][target.toLowerCase()],
 		);
 	}
-	return `El dataType '${command}' no se corresponde a ningun tipo declarado de ${target}`;
+	return new Error(
+		`El dataType '${command}' no se corresponde a ningun tipo declarado de ${target}`,
+	);
 };
 
 String.prototype.isReserved = function () {

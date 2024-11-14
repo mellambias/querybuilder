@@ -9,7 +9,7 @@ import {
 	createView,
 	createCursor,
 } from "./sql2006/create.js";
-import { dropSchema, dropColumn, dropTable } from "./sql2006/drop.js";
+import { dropSchema, dropColumn, dropTable, dropType } from "./sql2006/drop.js";
 import { column } from "./sql2006/column.js";
 import { constraint } from "./sql2006/constraint.js";
 import { select } from "./sql2006/select.js";
@@ -31,6 +31,7 @@ const sql2006 = {
 	dropSchema,
 	dropColumn,
 	dropTable,
+	dropType,
 	column,
 	constraint,
 	select,

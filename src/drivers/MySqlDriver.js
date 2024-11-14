@@ -6,7 +6,6 @@ class MySqlDriver extends Driver {
 		this.connection = null;
 		this.queyResult = null;
 		this.queryFields = null;
-		this.transaction = null;
 	}
 	async connect() {
 		this.connection = await this.library.createConnection({
@@ -86,8 +85,8 @@ class MySqlDriver extends Driver {
 			if (this.connection !== null) {
 				await this.connection.close();
 				this.connection = null;
-				return this;
 			}
+			return this;
 		} catch (error) {
 			throw new Error(error.message);
 		}

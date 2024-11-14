@@ -167,6 +167,15 @@ class QueryBuilder {
 		}
 		return this;
 	}
+	dropType(name, options) {
+		this.commandStack.push("dropType");
+		try {
+			this.query.push(`${this.language.dropType(name, options)}`);
+		} catch (error) {
+			this.error = error.message;
+		}
+		return this;
+	}
 
 	createAssertion(name, assertion) {
 		this.commandStack.push("createAssertion");
@@ -705,28 +714,10 @@ class QueryBuilder {
 		}
 	}
 
-	// transacciones
-	// setTransaction(config) {
-	// 	this.commandStack.push("setTransaction");
-	// 	try {
-	// 		this.query.push(`${this.language.setTransaction(config)}`);
-	// 	} catch (error) {
-	// 		this.error = error.message;
-	// 	}
-	// 	return this;
-	// }
 	setTransaction(options) {
 		return new Transaction(this, options);
 	}
-	// startTransaction(config) {
-	// 	this.commandStack.push("startTransaction");
-	// 	try {
-	// 		this.query.push(`${this.language.startTransaction(config)}`);
-	// 	} catch (error) {
-	// 		this.error = error.message;
-	// 	}
-	// 	return this;
-	// }
+
 	setConstraints(restrictions, type) {
 		this.commandStack.push("setConstraints");
 		try {
@@ -793,7 +784,16 @@ class QueryBuilder {
 		this.alterTableStack = [];
 		return this;
 	}
-	async execute() {
+	/**
+	 *
+	 * @param {Boolean} testOnly - Si es true no llama al driver
+	 * @returns
+	 */
+	async execute(testOnly = false) {
+		if (testOnly) {
+			console.log(">[QueryBuilder] [execute] en modo 'solo-test'\n");
+			return this;
+		}
 		if (!this.driverDB) {
 			throw new Error("No ha establecido un driver.");
 		}

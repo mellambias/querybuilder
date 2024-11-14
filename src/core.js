@@ -157,6 +157,14 @@ class Core {
 			" ",
 		);
 	}
+	dropType(name, options) {
+		return this.getStatement(
+			"DROP TYPE",
+			sql2006.dropType,
+			{ name, options },
+			" ",
+		);
+	}
 	createAssertion(name, assertion) {
 		return `CREATE ASSERTION ${name} CHECK ( ${assertion} )`;
 	}

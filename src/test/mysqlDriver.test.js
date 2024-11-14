@@ -3355,7 +3355,7 @@ SET MENUDEO = MENUDEO - 10;`;
 			assert.equal(result.toString(), `${query}`);
 		});
 		//fin test
-		test("punto de recuperación a la transacción", { only: true }, async () => {
+		test("punto de recuperación a la transacción", async () => {
 			const query = `SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
 START TRANSACTION;
 USE INVENTARIO;

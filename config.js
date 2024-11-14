@@ -3,7 +3,7 @@
  */
 
 import MySqlDriver from "./src/drivers/MySqlDriver.js";
-import PostgresDriver from "./src/drivers/PostgresDriver.js";
+import PostgreSQLDriver from "./src/drivers/PostgreSQLDriver.js";
 
 const config = {
 	databases: {
@@ -13,7 +13,7 @@ const config = {
 			params: {
 				host: "localhost",
 				port: "3308",
-				xport:"33060",
+				xport: "33060",
 				username: "root",
 				password: "d4t55qpl",
 			},
@@ -28,9 +28,9 @@ const config = {
 				password: "d4t55qpl",
 			},
 		},
-		PostgresSQL: {
+		PostgreSQL: {
 			version: "16",
-			driver: PostgresDriver,
+			driver: PostgreSQLDriver,
 			params: {
 				host: "localhost",
 				port: 5432,
