@@ -30,6 +30,7 @@ class PostgreSQLDriver extends Driver {
 			return this;
 		} catch (error) {
 			console.log("Error de conexion", error);
+			return new Error(`Error de conexion ${error.message} ${error.stack}`);
 		}
 	}
 
@@ -40,7 +41,7 @@ class PostgreSQLDriver extends Driver {
 	 */
 
 	async use(database) {
-		this.database = database;
+		this.database = database.toLowerCase();
 		await this.close();
 		return this;
 	}

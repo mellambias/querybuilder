@@ -85,6 +85,6 @@ export function showResults(datos, debug) {
 	}
 	console.log(
 		">%o\n",
-		`${datos?.error ? `Errores:${datos?.error}` : "No se han detectado errores"}`,
+		`${datos?.error ? `Errores:${datos?.error}` : "No se han recibido errores"}`,
 	);
 }

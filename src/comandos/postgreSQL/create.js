@@ -35,8 +35,7 @@ export const createType = {
 	[, ... ]
 ] )
 [ INHERITS ( parent_table [, ... ] ) ]
-[ PARTITION BY { RANGE | LIST | HASH } ( { column_name |
-( expression ) } [ COLLATE collation ] [ opclass ] [, ... ] ) ]
+[ PARTITION BY { RANGE | LIST | HASH } ( { column_name | ( expression ) } [ COLLATE collation ] [ opclass ] [, ... ] ) ]
 [ USING method ]
 [ WITH ( storage_parameter [= value] [, ... ] ) | WITHOUT OIDS ]
 [ ON COMMIT { PRESERVE ROWS | DELETE ROWS | DROP } ]
@@ -91,7 +90,53 @@ export const createTable = {
 		}
 		return `\n( ${self.columns.join(",\n ")} )`;
 	},
-	orden: ["temporary", "unlogged", "table", "secure", "name", "cols"],
+	inherits: (parentTables) => {
+		//[ INHERITS ( parent_table [, ... ] ) ]
+		//Parent tables can be plain tables or foreign tables
+		if (Array.isArray(parentTables)) {
+			return `INHERITS ( ${parentTables.join(", ")} )`;
+		}
+		return `INHERITS ( ${parentTables} )`;
+	},
+	partition: (data) => {
+		// [ PARTITION BY { RANGE | LIST | HASH } ( { column_name | ( expression ) } [ COLLATE collation ] [ opclass ] [, ... ] ) ]
+		const { type, cols } = data;
+		if (/^(RANGE|LIST|HASH)/i.test(type)) {
+			return `PARTITION BY ${type} ( ${cols.join(", ")} )`;
+		}
+	},
+	using: (metodo) => {
+		//[ USING method ]
+		return `USING ${metodo}`;
+	},
+	with: (value) => {
+		//[ WITH ( storage_parameter [= value] [, ... ] ) | WITHOUT OIDS ]
+		return `WITH ( ${value} )`;
+	},
+	onCommit: (value) => {
+		//[ ON COMMIT { PRESERVE ROWS | DELETE ROWS | DROP } ]
+		if (/^(PRESERVE ROWS|DELETE ROWS|DROP)/i.test(value)) {
+			return `ON COMMIT ${value.toUpperCase()}`;
+		}
+	},
+	tablespace: (name) => {
+		//[ TABLESPACE tablespace_name ]
+		return `TABLESPACE ${name}`;
+	},
+	orden: [
+		"temporary",
+		"unlogged",
+		"table",
+		"secure",
+		"name",
+		"cols",
+		"inherits",
+		"partition",
+		"using",
+		"with",
+		"onCommit",
+		"tablespace",
+	],
 };
 
 /**

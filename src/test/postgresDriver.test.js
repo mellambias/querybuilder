@@ -28,7 +28,7 @@ describe("Driver postgreSQL", async () => {
 			.createTable("TABLE_TEST", { cols: { ID: "INT" } })
 			.execute();
 		showResults(result);
-		assert.equal(result.toString(), "CREATE TABLE TABLE_TEST\n( ID INT );");
+		assert.equal(result.toString(), "CREATE TABLE TABLE_TEST\n( ID INTEGER );");
 	});
 
 	test("Crear una tabla temporal global", async () => {
@@ -44,7 +44,7 @@ describe("Driver postgreSQL", async () => {
 		if (!result.error) {
 			assert.equal(
 				result.toString(),
-				"CREATE TEMPORARY TABLE table_test_temp ( ID INT );",
+				"CREATE TEMPORARY TABLE table_test_temp ( ID INTEGER );",
 			);
 			assert.ok(result.queryResult);
 		} else {
@@ -69,7 +69,7 @@ describe("Driver postgreSQL", async () => {
 		assert.equal(
 			result.toString(),
 			`CREATE TABLE IF NOT EXISTS table_test2
-( ID_ARTISTA INT,
+( ID_ARTISTA INTEGER ,
  NOMBRE_ARTISTA CHAR(60) DEFAULT 'artista',
  FDN_ARTISTA DATE,
  POSTER_EN_EXISTENCIA TINYINT );`,
@@ -151,7 +151,10 @@ codigo_postal CHAR(5)
 
 const TIPOS_MUSICA = {
 	ID_TIPO: "INT",
-	NOMBRE_TIPO: { type: "VARCHAR(20)", values: ["not null"] },
+	NOMBRE_TIPO: {
+		type: "VARCHAR(20)",
+		values: ["not null"],
+	},
 };
 const ARTISTAS = {
 	ID_ARTISTA: "INT",
@@ -210,8 +213,14 @@ describe("Trabaja con INVENTARIO", () => {
 	});
 	//
 	describe("Crea las tablas", () => {
-		test("crear tabla TIPOS_MUSICA", { only: true }, async () => {
-			const debug = true;
+		test("crear tabla TIPOS_MUSICA", async () => {
+			const debug = false;
+			const query = `CREATE TABLE IF NOT EXISTS TIPOS_MUSICA
+( ID_TIPO INTEGER,
+ NOMBRE_TIPO VARCHAR(20) NOT NULL,
+ CONSTRAINT UN_NOMBRE_TIPO UNIQUE (NOMBRE_TIPO),
+ CONSTRAINT PK_TIPOS_MUSICA PRIMARY KEY (ID_TIPO) );`;
+
 			const result = await qb
 				.createTable("TIPOS_MUSICA", {
 					secure: true,
@@ -233,17 +242,16 @@ describe("Trabaja con INVENTARIO", () => {
 
 			showResults(result, debug);
 
-			assert(
-				result.toString(),
-				`CREATE TABLE IF NOT EXISTS TIPOS_MUSICA
-( ID_TIPO INT,
- NOMBRE_TIPO VARCHAR(20) NOT NULL,
- CONSTRAINT UN_NOMBRE_TIPO UNIQUE (NOMBRE_TIPO),
- CONSTRAINT PK_TIPOS_MUSICA PRIMARY KEY (ID_TIPO) );`,
-			);
+			assert.equal(result.toString(), query);
 		});
 
 		test("crear tabla DISQUERAS_CD", async () => {
+			const debug = false;
+			const query = `CREATE TABLE IF NOT EXISTS DISQUERAS_CD
+( ID_DISQUERA INTEGER,
+ NOMBRE_DISCOGRAFICA VARCHAR(60) NOT NULL DEFAULT 'Independiente',
+ CONSTRAINT PK_DISQUERAS_CD PRIMARY KEY (ID_DISQUERA) );`;
+
 			const result = await qb
 				.createTable("DISQUERAS_CD", {
 					secure: true,
@@ -256,23 +264,21 @@ describe("Trabaja con INVENTARIO", () => {
 						},
 					],
 				})
-				.execute();
+				.execute(debug);
 
-			if (!result.error) {
-				assert.equal(
-					result.toString(),
-					`USE INVENTARIO;
-CREATE TABLE IF NOT EXISTS DISQUERAS_CD
-( ID_DISQUERA INT,
- NOMBRE_DISCOGRAFICA VARCHAR(60) NOT NULL DEFAULT 'Independiente',
- CONSTRAINT PK_DISQUERAS_CD PRIMARY KEY (ID_DISQUERA) );`,
-				);
-			} else {
-				assert.equal(result.error, "Table 'disqueras_cd' already exists");
-			}
+			showResults(result, debug);
+			assert.equal(result.toString(), query);
 		});
 
-		test("crear la tabla DISCOS_COMPACTOS", async () => {
+		test("crear la tabla DISCOS_COMPACTOS", { only: true }, async () => {
+			const debug = false;
+			const query = `CREATE TABLE IF NOT EXISTS DISCOS_COMPACTOS
+( ID_DISCO_COMPACTO INTEGER,
+ TITULO_CD VARCHAR(60) NOT NULL,
+ ID_DISQUERA INTEGER NOT NULL,
+ CONSTRAINT PK_DISCOS_COMPACTOS PRIMARY KEY (ID_DISCO_COMPACTO),
+ CONSTRAINT FK_ID_DISQUERA FOREIGN KEY (ID_DISQUERA) REFERENCES DISQUERAS_CD (ID_DISQUERA) MATCH FULL );`;
+
 			const result = await qb
 				.createTable("DISCOS_COMPACTOS", {
 					secure: true,
@@ -295,25 +301,20 @@ CREATE TABLE IF NOT EXISTS DISQUERAS_CD
 						},
 					],
 				})
-				.execute();
-
-			if (!result.error) {
-				assert.equal(
-					result.toString(),
-					`USE INVENTARIO;
-CREATE TABLE IF NOT EXISTS DISCOS_COMPACTOS
-( ID_DISCO_COMPACTO INT,
- TITULO_CD VARCHAR(60) NOT NULL,
- ID_DISQUERA INT NOT NULL,
- CONSTRAINT PK_DISCOS_COMPACTOS PRIMARY KEY (ID_DISCO_COMPACTO),
- CONSTRAINT FK_ID_DISQUERA FOREIGN KEY (ID_DISQUERA) REFERENCES DISQUERAS_CD (ID_DISQUERA) MATCH FULL );`,
-				);
-			} else {
-				assert.equal(result.error, "Table 'discos_compactos' already exists");
-			}
+				.execute(debug);
+			showResults(result, debug);
+			assert.equal(result.toString(), query);
 		});
 
 		test("crear tabla TIPOS_DISCO_COMPACTO", async () => {
+			const debug = true;
+			const query = `CREATE TABLE IF NOT EXISTS TIPOS_DISCO_COMPACTO
+( ID_DISCO_COMPACTO INTEGER,
+ ID_TIPO_MUSICA INTEGER,
+ CONSTRAINT PK_TIPOS_DISCO_COMPACTO PRIMARY KEY (ID_DISCO_COMPACTO, ID_TIPO_MUSICA),
+ CONSTRAINT FK_ID_DISCO_COMPACTO_01 FOREIGN KEY (ID_DISCO_COMPACTO) REFERENCES DISCOS_COMPACTOS (ID_DISCO_COMPACTO),
+ CONSTRAINT FK_ID_TIPO_MUSICA FOREIGN KEY (ID_TIPO_MUSICA) REFERENCES TIPOS_MUSICA (ID_TIPO) );`;
+
 			const result = await qb
 				.createTable("TIPOS_DISCO_COMPACTO", {
 					secure: true,
@@ -344,25 +345,10 @@ CREATE TABLE IF NOT EXISTS DISCOS_COMPACTOS
 						},
 					],
 				})
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			if (!result.error) {
-				assert.equal(
-					result.toString(),
-					`USE INVENTARIO;
-CREATE TABLE IF NOT EXISTS TIPOS_DISCO_COMPACTO
-( ID_DISCO_COMPACTO INT,
- ID_TIPO_MUSICA INT,
- CONSTRAINT PK_TIPOS_DISCO_COMPACTO PRIMARY KEY (ID_DISCO_COMPACTO, ID_TIPO_MUSICA),
- CONSTRAINT FK_ID_DISCO_COMPACTO_01 FOREIGN KEY (ID_DISCO_COMPACTO) REFERENCES DISCOS_COMPACTOS (ID_DISCO_COMPACTO),
- CONSTRAINT FK_ID_TIPO_MUSICA FOREIGN KEY (ID_TIPO_MUSICA) REFERENCES TIPOS_MUSICA (ID_TIPO) );`,
-				);
-			} else {
-				assert.equal(
-					result.cause,
-					"Table 'tipos_disco_compacto' already exists",
-				);
-			}
+			assert.equal(result.toString(), query);
 		});
 		test("crear tabla ARTISTAS", async () => {
 			const result = await qb
@@ -384,7 +370,7 @@ CREATE TABLE IF NOT EXISTS TIPOS_DISCO_COMPACTO
 					result.toString(),
 					`USE INVENTARIO;
 CREATE TABLE IF NOT EXISTS ARTISTAS
-( ID_ARTISTA INT,
+( ID_ARTISTA INTEGER,
  NOMBRE_ARTISTA VARCHAR(60) NOT NULL,
  LUGAR_DE_NACIMIENTO VARCHAR(60) NOT NULL DEFAULT 'Desconocido',
  CONSTRAINT PK_ARTISTAS PRIMARY KEY (ID_ARTISTA) );`,
@@ -432,8 +418,8 @@ CREATE TABLE IF NOT EXISTS ARTISTAS
 					result.toString(),
 					`USE INVENTARIO;
 CREATE TABLE IF NOT EXISTS CDS_ARTISTA
-( ID_ARTISTA INT,
- ID_DISCO_COMPACTO INT,
+( ID_ARTISTA INTEGER,
+ ID_DISCO_COMPACTO INTEGER,
  CONSTRAINT PK_CDS_ARTISTA PRIMARY KEY (ID_ARTISTA, ID_DISCO_COMPACTO),
  CONSTRAINT FK_ID_ARTISTA FOREIGN KEY (ID_ARTISTA) REFERENCES ARTISTAS (ID_ARTISTA),
  CONSTRAINT FK_ID_DISCO_COMPACTO_02 FOREIGN KEY (ID_DISCO_COMPACTO) REFERENCES DISCOS_COMPACTOS (ID_DISCO_COMPACTO) );`,
@@ -456,9 +442,9 @@ CREATE TABLE IF NOT EXISTS CDS_ARTISTA
 					result.toString(),
 					`USE INVENTARIO;
 CREATE TABLE IF NOT EXISTS TITULOS_CD
-( ID_DISCO_COMPACTO INT,
+( ID_DISCO_COMPACTO INTEGER,
  TITULO_CD VARCHAR(60) NOT NULL,
- EN_EXISTENCIA INT NOT NULL );`,
+ EN_EXISTENCIA INTEGER NOT NULL );`,
 				);
 			} else {
 				assert.equal(result.error, "table 'titulos_cd' already exists");
@@ -478,7 +464,7 @@ CREATE TABLE IF NOT EXISTS TITULOS_CD
 					result.toString(),
 					`USE INVENTARIO;
 ALTER TABLE DISCOS_COMPACTOS
-ADD COLUMN EN_EXISTENCIA INT NOT NULL;`,
+ADD COLUMN EN_EXISTENCIA INTEGER NOT NULL;`,
 				);
 			} else {
 				assert.equal(result.error, "Duplicate column name 'EN_EXISTENCIA'");
@@ -909,7 +895,7 @@ CREATE TABLE IF NOT EXISTS INVENTARIO_CD
 ( NOMBRE_CD VARCHAR(60) NOT NULL,
  TIPO_MUSICA VARCHAR(15),
  EDITOR VARCHAR(50) NOT NULL DEFAULT 'Independiente',
- EN_EXISTENCIA INT NOT NULL );`,
+ EN_EXISTENCIA INTEGER NOT NULL );`,
 			);
 		});
 		test("inserta un registro o row", async () => {
@@ -971,7 +957,7 @@ VALUES ( 'Fundamental', 'Capitol Records', 34 );`,
 				`USE INVENTARIO;
 CREATE TABLE INVENTARIO_CD_2
 ( NOMBRE_CD_2 VARCHAR(60) NOT NULL,
- EN_EXISTENCIA_2 INT NOT NULL );
+ EN_EXISTENCIA_2 INTEGER NOT NULL );
 INSERT INTO INVENTARIO_CD_2
 SELECT NOMBRE_CD, EN_EXISTENCIA
 FROM INVENTARIO_CD;`,
@@ -1211,9 +1197,9 @@ AND TITULO_CD LIKE ('%Blue%'));`,
 				result.toString(),
 				`USE INVENTARIO;
 CREATE TABLE CDS_A_LA_MANO\n( TITULO_CD VARCHAR(60),
- DERECHOSDEAUTOR INT,
+ DERECHOSDEAUTOR INTEGER ,
  PRECIO_MENUDEO DECIMAL(5,2),
- INVENTARIO INT );
+ INVENTARIO INTEGER );
 INSERT INTO CDS_A_LA_MANO
 VALUES
 ('Famous Blue Raincoat', 1991, 16.99, 6),
@@ -1442,7 +1428,7 @@ AND TITULO_CD LIKE ('%Blue%'));`;
 			const query = `CREATE TABLE IF NOT EXISTS MENUDEO_CD
 ( NOMBRE_CD VARCHAR(60),
  MENUDEO DECIMAL(5,2),
- EN_EXISTENCIA INT );
+ EN_EXISTENCIA INTEGER );
 CREATE TABLE IF NOT EXISTS REBAJA_CD
 ( TITULO VARCHAR(60),
  VENTA DECIMAL(5,2) );
@@ -1594,7 +1580,7 @@ WHERE EN_EXISTENCIA > 9 );`;
 			const query = `CREATE TABLE IF NOT EXISTS CDS_VENDIDOS
 ( NOMBRE_ARTISTA VARCHAR(60),
  NOMBRE_CD VARCHAR(60),
- VENDIDOS INT );
+ VENDIDOS INTEGER );
 INSERT INTO CDS_VENDIDOS
 VALUES
 ('Jennifer Warnes', 'Famous Blue Raincoat', 23),
@@ -1844,9 +1830,9 @@ WHERE SUBSTRING(DISCO_COMPACTO FROM 1 FOR 4) = 'Blue';`;
 			const query = `CREATE TABLE IF NOT EXISTS RASTREO_CD
 ( NOMBRE_CD VARCHAR(60),
  CATEGORIA_CD CHAR(4),
- EN_EXISTENCIA INT,
- EN_PEDIDO INT,
- VENDIDOS INT );
+ EN_EXISTENCIA INTEGER ,
+ EN_PEDIDO INTEGER ,
+ VENDIDOS INTEGER );
 INSERT INTO RASTREO_CD
 VALUES
 ('Famous Blue Raincoat', 'FROK', 19, 16, 34),
@@ -1988,8 +1974,8 @@ WHERE DISCO_COMPACTO LIKE ('%Blue%');`;
 			];
 			const query = `CREATE TABLE INVENTARIO_CD
 ( NOMBRE_CD VARCHAR(60),
- ID_INTER INT,
- EN_EXISTENCIA INT );
+ ID_INTER INTEGER ,
+ EN_EXISTENCIA INTEGER );
 INSERT INTO INVENTARIO_CD
 VALUES
 ('Famous Blue Raincoat', 102, 12),
@@ -2031,9 +2017,9 @@ VALUES
 				[109, "Leonard Cohen", 12],
 			];
 			const query = `CREATE TABLE INTERPRETES
-( ID_INTER INT,
+( ID_INTER INTEGER ,
  NOMBRE_INTER VARCHAR(60),
- ID_TIPO INT );
+ ID_TIPO INTEGER );
 INSERT INTO INTERPRETES
 VALUES
 (101, 'Joni Mitchell', 10),
@@ -2072,7 +2058,7 @@ VALUES
 				[18, "Soundtrack"],
 			];
 			const query = `CREATE TABLE TIPO_INTER
-( ID_TIPO INT,
+( ID_TIPO INTEGER ,
  NOMBRE_TIPO CHAR(20) );
 INSERT INTO TIPO_INTER
 VALUES
@@ -2217,9 +2203,9 @@ AND c.EN_EXISTENCIA < 15);`;
 				[107, "Mr. Carver", 103],
 			];
 			const query = `CREATE TABLE IF NOT EXISTS EMPLEADOS
-( ID_EMP INT,
+( ID_EMP INTEGER ,
  NOMBRE_EMP VARCHAR(60),
- ADMIN INT );
+ ADMIN INTEGER );
 INSERT INTO EMPLEADOS
 VALUES
 (101, 'Ms. Smith', null),
@@ -2275,7 +2261,7 @@ ORDER BY a.ID_EMP;`;
 			const query = `CREATE TABLE IF NOT EXISTS TITULOS_EN_EXISTENCIA
 ( TITULO_CD VARCHAR(60),
  TIPO_CD CHAR(20),
- INVENTARIO INT );
+ INVENTARIO INTEGER );
 CREATE TABLE IF NOT EXISTS COSTOS_TITULO
 ( TITULO_CD VARCHAR(60),
  TIPO_CD CHAR(20),
@@ -2408,13 +2394,13 @@ WHERE s.INVENTARIO > 15;`;
 				ARTISTA: "VARCHAR(60)",
 			};
 			const query = `CREATE TABLE TITULO_CDS
-( ID_TITULO INT,
+( ID_TITULO INTEGER ,
  TITULO VARCHAR(60) );
 CREATE TABLE ARTISTAS_TITULOS
-( TITLE_ID INT,
- ID_ARTISTA INT );
+( TITLE_ID INTEGER ,
+ ID_ARTISTA INTEGER );
 CREATE TABLE ARTISTAS_CD
-( ID_ARTISTA INT,
+( ID_ARTISTA INTEGER ,
  ARTISTA VARCHAR(60) );`;
 
 			const result = await qb
@@ -2594,7 +2580,7 @@ WHERE t.TITULO LIKE ('%Blue%');`;
 			const query = `CREATE TABLE INFO_CD
 ( TITULO VARCHAR(60),
  ID_TIPO CHAR(4),
- EXISTENCIA INT );
+ EXISTENCIA INTEGER );
 CREATE TABLE TIPO_CD
 ( ID_TIPO CHAR(4),
  NOMBRE_TIPO CHAR(20) );`;
@@ -2754,11 +2740,11 @@ ON i.ID_TIPO = t.ID_TIPO;`;
 			const query = `CREATE TABLE CDS_CONTINUADOS
 ( NOMBRE_CD VARCHAR(60),
  TIPO_CD CHAR(4),
- EN_EXISTENCIA INT );
+ EN_EXISTENCIA INTEGER );
 CREATE TABLE CDS_DESCONTINUADOS
 ( NOMBRE_CD VARCHAR(60),
  TIPO_CD CHAR(4),
- EN_EXISTENCIA INT );`;
+ EN_EXISTENCIA INTEGER );`;
 
 			const result = await qb
 				.createTable("CDS_CONTINUADOS", {
@@ -2865,7 +2851,7 @@ FROM CDS_DESCONTINUADOS;`;
 			const query = `DROP TABLE IF EXISTS EXISTENCIA_CD;
 CREATE TABLE EXISTENCIA_CD
 ( TITULO_CD VARCHAR(60),
- EXISTENCIA INT );
+ EXISTENCIA INTEGER );
 INSERT INTO EXISTENCIA_CD
 VALUES
 ('Famous Blue Raincoat', 13),
@@ -3022,7 +3008,7 @@ la tabla primaria se comparan con los valores arrojados por la subconsulta.
 			const query = `DROP TABLE IF EXISTS PRECIOS_MENUDEO;
 CREATE TABLE PRECIOS_MENUDEO
 ( NOMBRE_CD VARCHAR(60),
- P_MENUDEO DECIMAL(5, 2),\n CANTIDAD INT );
+ P_MENUDEO DECIMAL(5, 2),\n CANTIDAD INTEGER );
 INSERT INTO PRECIOS_MENUDEO
 VALUES
 ('Famous Blue Raincoat', 16.99, 5),
@@ -3171,9 +3157,9 @@ FROM PRECIOS_VENTA );`;
 			];
 			const query = `DROP TABLE IF EXISTS INVENTARIO_TITULOS;
 CREATE TABLE INVENTARIO_TITULOS
-( ID_TITULO INT,
+( ID_TITULO INTEGER ,
  TITULO VARCHAR(60),
- EXISTENCIA INT );
+ EXISTENCIA INTEGER );
 INSERT INTO INVENTARIO_TITULOS
 VALUES
 (101, 'Famous Blue Raincoat', 12),
