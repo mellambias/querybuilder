@@ -47,6 +47,15 @@ class Core {
 		return `${command ? `${command} ` : ""}${commandArray}`;
 	}
 
+	getAccount(userOrRole, host = "%") {
+		if (typeof userOrRole === "string") {
+			return `'${userOrRole}'${host !== undefined ? `@'${host}'` : ""}`;
+		}
+		if (typeof userOrRole === "object") {
+			return `'${userOrRole?.name}'${userOrRole?.host !== undefined ? `@'${userOrRole.host}'` : `@'${host}'`}`;
+		}
+	}
+
 	// DDL
 	createDatabase(name, options) {
 		let query = `CREATE DATABASE ${name}`;

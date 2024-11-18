@@ -11,15 +11,6 @@ class MySQL extends Core {
 		this.dataType = "mysql";
 	}
 
-	getAccount(userOrRole, host = "%") {
-		if (typeof userOrRole === "string") {
-			return `'${userOrRole}'${host !== undefined ? `@'${host}'` : ""}`;
-		}
-		if (typeof userOrRole === "object") {
-			return `'${userOrRole?.name}'${userOrRole?.host !== undefined ? `@'${userOrRole.host}'` : `@'${host}'`}`;
-		}
-	}
-
 	createType(name, options) {
 		throw new Error("No soportado utilice SET o ENUM");
 	}

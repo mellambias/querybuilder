@@ -16,22 +16,28 @@ beforeEach(() => {
 });
 
 describe("Driver postgreSQL", async () => {
+	const debug = false;
 	test("crea una base de datos", async () => {
-		const result = await qb.createDatabase("testing").execute();
-		showResults(result);
+		const debug = false;
+		const result = await qb.createDatabase("testing").execute(debug);
+		showResults(result, debug);
+
 		assert.equal(result.toString(), "CREATE DATABASE testing;");
 	});
 	//fin test
 	test("Crear una tabla en la base de datos testing", async () => {
+		const debug = false;
 		const result = await qb
 			.use("testing")
 			.createTable("TABLE_TEST", { cols: { ID: "INT" } })
-			.execute();
-		showResults(result);
+			.execute(debug);
+		showResults(result, debug);
+
 		assert.equal(result.toString(), "CREATE TABLE TABLE_TEST\n( ID INTEGER );");
 	});
 
 	test("Crear una tabla temporal global", async () => {
+		const debug = false;
 		const result = await qb
 			.use("testing")
 			.createTable("table_test_temp", {
@@ -39,7 +45,8 @@ describe("Driver postgreSQL", async () => {
 				onCommit: "delete",
 				cols: { ID: "INT" },
 			})
-			.execute();
+			.execute(debug);
+		showResults(result, debug);
 
 		if (!result.error) {
 			assert.equal(
@@ -53,6 +60,7 @@ describe("Driver postgreSQL", async () => {
 	});
 	//fin test
 	test("Crear una tabla con varias columnas", async () => {
+		const debug = false;
 		const cols = {
 			ID_ARTISTA: "INTEGER",
 			NOMBRE_ARTISTA: { type: "CHARACTER(60)", default: "artista" },
@@ -62,9 +70,8 @@ describe("Driver postgreSQL", async () => {
 		const result = await qb
 			.use("testing")
 			.createTable("table_test2", { cols, secure: true })
-			.execute();
-
-		showResults(result);
+			.execute(debug);
+		showResults(result, debug);
 
 		assert.equal(
 			result.toString(),
@@ -77,6 +84,7 @@ describe("Driver postgreSQL", async () => {
 	});
 
 	test("Crear un tipo complejo", async () => {
+		const debug = false;
 		const query = `CREATE TYPE direccion AS (
 calle VARCHAR(50),
 ciudad VARCHAR(50),
@@ -94,7 +102,8 @@ codigo_postal CHAR(5)
 			.createType("frutas", {
 				enum: ["Manzana", "Pera", "Platano"],
 			})
-			.execute();
+			.execute(debug);
+		showResults(result, debug);
 
 		showResults(result, true);
 
@@ -102,6 +111,7 @@ codigo_postal CHAR(5)
 	});
 	// fin test
 	test("Crear un tipo enumerado", async () => {
+		const debug = false;
 		const query = `CREATE TYPE direccion AS ENUM (
 "Manzana", "Pera", "Platano");`;
 		const result = await qb
@@ -109,7 +119,8 @@ codigo_postal CHAR(5)
 			.createType("frutas", {
 				enum: ["Manzana", "Pera", "Platano"],
 			})
-			.execute();
+			.execute(debug);
+		showResults(result, debug);
 
 		showResults(result, true);
 
@@ -117,11 +128,13 @@ codigo_postal CHAR(5)
 	});
 	//fin test
 	test("Elimina un tipo definido por el usuario", async () => {
+		const debug = false;
 		const query = "DROP TYPE IF EXISTS direccion, frutas CASCADE;";
 		const result = await qb
 			.use("testing")
 			.dropType(["direccion", "frutas"], { secure: true, cascade: true })
-			.execute();
+			.execute(debug);
+		showResults(result, debug);
 
 		showResults(result, true);
 
@@ -129,10 +142,12 @@ codigo_postal CHAR(5)
 	});
 	//fin test
 	test("elimina una tabla", async () => {
+		const debug = false;
 		const result = await qb
 			.use("testing")
 			.dropTable("TABLE_TEST_2", { secure: true, option: "cascade" })
-			.execute();
+			.execute(debug);
+		showResults(result, debug);
 
 		showResults(result, true);
 
@@ -143,7 +158,9 @@ codigo_postal CHAR(5)
 	});
 	//fin test
 	after(async () => {
-		qb.use("testing").dropDatabase("testing").execute();
+		const debug = false;
+		qb.use("testing").dropDatabase("testing").execute(debug);
+		showResults(result, debug);
 	});
 });
 
@@ -209,6 +226,7 @@ describe("Trabaja con INVENTARIO", () => {
 	// Antes de cada prueba
 
 	beforeEach(async () => {
+		const debug = false;
 		qb = qb.use("INVENTARIO");
 	});
 	//
@@ -270,7 +288,7 @@ describe("Trabaja con INVENTARIO", () => {
 			assert.equal(result.toString(), query);
 		});
 
-		test("crear la tabla DISCOS_COMPACTOS", { only: true }, async () => {
+		test("crear la tabla DISCOS_COMPACTOS", async () => {
 			const debug = false;
 			const query = `CREATE TABLE IF NOT EXISTS DISCOS_COMPACTOS
 ( ID_DISCO_COMPACTO INTEGER,
@@ -307,7 +325,7 @@ describe("Trabaja con INVENTARIO", () => {
 		});
 
 		test("crear tabla TIPOS_DISCO_COMPACTO", async () => {
-			const debug = true;
+			const debug = false;
 			const query = `CREATE TABLE IF NOT EXISTS TIPOS_DISCO_COMPACTO
 ( ID_DISCO_COMPACTO INTEGER,
  ID_TIPO_MUSICA INTEGER,
@@ -351,6 +369,12 @@ describe("Trabaja con INVENTARIO", () => {
 			assert.equal(result.toString(), query);
 		});
 		test("crear tabla ARTISTAS", async () => {
+			const debug = false;
+			const query = `CREATE TABLE IF NOT EXISTS ARTISTAS
+( ID_ARTISTA INTEGER,
+ NOMBRE_ARTISTA VARCHAR(60) NOT NULL,
+ LUGAR_DE_NACIMIENTO VARCHAR(60) NOT NULL DEFAULT 'Desconocido',
+ CONSTRAINT PK_ARTISTAS PRIMARY KEY (ID_ARTISTA) );`;
 			const result = await qb
 				.createTable("ARTISTAS", {
 					secure: true,
@@ -363,24 +387,19 @@ describe("Trabaja con INVENTARIO", () => {
 						},
 					],
 				})
-				.execute();
-
-			if (!result.error) {
-				assert.equal(
-					result.toString(),
-					`USE INVENTARIO;
-CREATE TABLE IF NOT EXISTS ARTISTAS
-( ID_ARTISTA INTEGER,
- NOMBRE_ARTISTA VARCHAR(60) NOT NULL,
- LUGAR_DE_NACIMIENTO VARCHAR(60) NOT NULL DEFAULT 'Desconocido',
- CONSTRAINT PK_ARTISTAS PRIMARY KEY (ID_ARTISTA) );`,
-				);
-			} else {
-				assert.equal(result.error, "Table 'artistas' already exists");
-			}
+				.execute(debug);
+			showResults(result, debug);
+			assert.equal(result.toString(), query);
 		});
-
+		//fin test
 		test("crear tabla CDS_ARTISTA", async () => {
+			const debug = false;
+			const query = `CREATE TABLE IF NOT EXISTS CDS_ARTISTA
+( ID_ARTISTA INTEGER,
+ ID_DISCO_COMPACTO INTEGER,
+ CONSTRAINT PK_CDS_ARTISTA PRIMARY KEY (ID_ARTISTA, ID_DISCO_COMPACTO),
+ CONSTRAINT FK_ID_ARTISTA FOREIGN KEY (ID_ARTISTA) REFERENCES ARTISTAS (ID_ARTISTA),
+ CONSTRAINT FK_ID_DISCO_COMPACTO_02 FOREIGN KEY (ID_DISCO_COMPACTO) REFERENCES DISCOS_COMPACTOS (ID_DISCO_COMPACTO) );`;
 			const result = await qb
 				.createTable("CDS_ARTISTA", {
 					secure: true,
@@ -411,41 +430,28 @@ CREATE TABLE IF NOT EXISTS ARTISTAS
 						},
 					],
 				})
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			if (!result.error) {
-				assert.equal(
-					result.toString(),
-					`USE INVENTARIO;
-CREATE TABLE IF NOT EXISTS CDS_ARTISTA
-( ID_ARTISTA INTEGER,
- ID_DISCO_COMPACTO INTEGER,
- CONSTRAINT PK_CDS_ARTISTA PRIMARY KEY (ID_ARTISTA, ID_DISCO_COMPACTO),
- CONSTRAINT FK_ID_ARTISTA FOREIGN KEY (ID_ARTISTA) REFERENCES ARTISTAS (ID_ARTISTA),
- CONSTRAINT FK_ID_DISCO_COMPACTO_02 FOREIGN KEY (ID_DISCO_COMPACTO) REFERENCES DISCOS_COMPACTOS (ID_DISCO_COMPACTO) );`,
-				);
-			} else {
-				assert.equal(result.error, "Table 'cds_artista' already exists");
-			}
+			assert.equal(result.toString(), query);
 		});
 
 		test("Crea tabla TITULOS_CD", async () => {
+			const debug = false;
+			const query = `CREATE TABLE IF NOT EXISTS TITULOS_CD
+( ID_DISCO_COMPACTO INTEGER,
+ TITULO_CD VARCHAR(60) NOT NULL,
+ EN_EXISTENCIA INTEGER NOT NULL );`;
 			const result = await qb
 				.createTable("TITULOS_CD", {
 					secure: true,
 					cols: TITULOS_CD,
 				})
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
 			if (!result.error) {
-				assert.equal(
-					result.toString(),
-					`USE INVENTARIO;
-CREATE TABLE IF NOT EXISTS TITULOS_CD
-( ID_DISCO_COMPACTO INTEGER,
- TITULO_CD VARCHAR(60) NOT NULL,
- EN_EXISTENCIA INTEGER NOT NULL );`,
-				);
+				assert.equal(result.toString(), query);
 			} else {
 				assert.equal(result.error, "table 'titulos_cd' already exists");
 			}
@@ -454,73 +460,66 @@ CREATE TABLE IF NOT EXISTS TITULOS_CD
 
 	describe("Alterar las tablas", () => {
 		test("Añadir una columna a la tabla DISCOS_COMPACTOS", async () => {
+			const debug = false;
+			const query = `ALTER TABLE DISCOS_COMPACTOS
+ADD COLUMN EN_EXISTENCIA INTEGER NOT NULL;`;
 			const result = await qb
 				.alterTable("DISCOS_COMPACTOS")
 				.addColumn("EN_EXISTENCIA", { type: "INT", values: ["not null"] })
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			if (!result.error) {
-				assert.equal(
-					result.toString(),
-					`USE INVENTARIO;
-ALTER TABLE DISCOS_COMPACTOS
-ADD COLUMN EN_EXISTENCIA INTEGER NOT NULL;`,
-				);
-			} else {
-				assert.equal(result.error, "Duplicate column name 'EN_EXISTENCIA'");
-			}
+			assert.equal(result.toString(), query);
 		});
 
 		test("añade una constraint de tipo CHECK al campo EN_EXISTENCIA", async () => {
+			const debug = false;
+			const query = `ALTER TABLE DISCOS_COMPACTOS
+ADD CONSTRAINT CK_EN_EXISTENCIA CHECK ( (EN_EXISTENCIA > 0
+AND EN_EXISTENCIA < 50) );`;
 			const result = await qb
 				.alterTable("DISCOS_COMPACTOS")
 				.addConstraint("CK_EN_EXISTENCIA", {
 					check: qb.and(qb.gt("EN_EXISTENCIA", 0), qb.lt("EN_EXISTENCIA", 50)),
 				})
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			if (!result.error) {
-				assert.equal(
-					result.toString(),
-					`USE INVENTARIO;
-ALTER TABLE DISCOS_COMPACTOS
-ADD CONSTRAINT CK_EN_EXISTENCIA CHECK ( (EN_EXISTENCIA > 0
-AND EN_EXISTENCIA < 50) );`,
-				);
-			} else {
-				assert.equal(
-					result.error,
-					"Duplicate check constraint name 'CK_EN_EXISTENCIA'.",
-				);
-			}
+			assert.equal(result.toString(), query);
 		});
 	});
 
 	describe("Crear vistas", () => {
 		test("crea la vista CDS_EN_EXISTENCIA", async () => {
-			const result = await qb.createView("CDS_EN_EXISTENCIA", {
-				as: qb
-					.select(["TITULO_CD", "EN_EXISTENCIA"])
-					.from("DISCOS_COMPACTOS")
-					.where(qb.gt("EN_EXISTENCIA", 10)),
-				check: true,
-			});
-
-			if (!result.error) {
-				assert.equal(
-					result.toString(),
-					`USE INVENTARIO;
-CREATE VIEW CDS_EN_EXISTENCIA
+			const debug = false;
+			const query = `CREATE VIEW CDS_EN_EXISTENCIA
 AS SELECT TITULO_CD, EN_EXISTENCIA
 FROM DISCOS_COMPACTOS
 WHERE EN_EXISTENCIA > 10
-WITH CHECK OPTION;`,
-				);
-			} else {
-				assert.equal(result.error, "Table 'CDS_EN_EXISTENCIA' already exists");
-			}
+WITH CHECK OPTION;`;
+			const result = await qb
+				.createView("CDS_EN_EXISTENCIA", {
+					as: qb
+						.select(["TITULO_CD", "EN_EXISTENCIA"])
+						.from("DISCOS_COMPACTOS")
+						.where(qb.gt("EN_EXISTENCIA", 10)),
+					check: true,
+				})
+				.execute(debug);
+			showResults(result, debug);
+
+			assert.equal(result.toString(), query);
 		});
+		//fin
 		test("añade la vista EDITORES_CD", async () => {
+			const debug = false;
+			const query = `CREATE VIEW EDITORES_CD
+( TITULO_CD, EDITOR )
+AS SELECT DISCOS_COMPACTOS.TITULO_CD, DISQUERAS_CD.NOMBRE_DISCOGRAFICA
+FROM DISCOS_COMPACTOS, DISQUERAS_CD
+WHERE (DISCOS_COMPACTOS.ID_DISQUERA = DISQUERAS_CD.ID_DISQUERA
+AND (DISQUERAS_CD.ID_DISQUERA = 5403
+OR DISQUERAS_CD.ID_DISQUERA = 5402));`;
 			const result = await qb
 				.createView("EDITORES_CD", {
 					cols: ["TITULO_CD", "EDITOR"],
@@ -543,28 +542,19 @@ WITH CHECK OPTION;`,
 							),
 						),
 				})
-				.execute();
-			if (!result.error) {
-				assert.equal(
-					result.toString(),
-					`USE INVENTARIO;
+				.execute(debug);
+			showResults(result, debug);
+			assert.equal(result.toString(), query);
+		});
+
+		test("volver a crear la vista EDITORES_CD ahora sin restricciones", async () => {
+			const debug = false;
+			const query = `DROP VIEW EDITORES_CD;
 CREATE VIEW EDITORES_CD
 ( TITULO_CD, EDITOR )
 AS SELECT DISCOS_COMPACTOS.TITULO_CD, DISQUERAS_CD.NOMBRE_DISCOGRAFICA
 FROM DISCOS_COMPACTOS, DISQUERAS_CD
-WHERE (DISCOS_COMPACTOS.ID_DISQUERA = DISQUERAS_CD.ID_DISQUERA
-AND (DISQUERAS_CD.ID_DISQUERA = 5403
-OR DISQUERAS_CD.ID_DISQUERA = 5402));`,
-				);
-			} else {
-				assert.equal(result.error, "Table 'EDITORES_CD' already exists");
-			}
-		});
-
-		test("volver a crear la vista EDITORES_CD ahora sin restricciones", async () => {
-			const query = `SELECT DISCOS_COMPACTOS.TITULO_CD, DISQUERAS_CD.NOMBRE_COMPAÑIA
-FROM DISCOS_COMPACTOS, DISQUERAS_CD
-WHERE DISCOS_COMPACTOS.ID_DISQUERA = DISQUERAS_CD.ID_DISQUERA`;
+WHERE DISCOS_COMPACTOS.ID_DISQUERA = DISQUERAS_CD.ID_DISQUERA;`;
 			const result = await qb
 				.dropView("EDITORES_CD")
 				.createView("EDITORES_CD", {
@@ -582,189 +572,153 @@ WHERE DISCOS_COMPACTOS.ID_DISQUERA = DISQUERAS_CD.ID_DISQUERA`;
 							),
 						),
 				})
-				.execute();
-			if (!result.error) {
-				assert.equal(
-					result.toString(),
-					`USE INVENTARIO;
-DROP VIEW EDITORES_CD;
-CREATE VIEW EDITORES_CD
-( TITULO_CD, EDITOR )
-AS SELECT DISCOS_COMPACTOS.TITULO_CD, DISQUERAS_CD.NOMBRE_DISCOGRAFICA
-FROM DISCOS_COMPACTOS, DISQUERAS_CD
-WHERE DISCOS_COMPACTOS.ID_DISQUERA = DISQUERAS_CD.ID_DISQUERA;`,
-				);
-			} else {
-				assert.equal(result.error, "");
-			}
+				.execute(debug);
+			showResults(result, debug);
+			assert.equal(result.toString(), query);
 		});
 	});
 
 	describe("Roles", () => {
 		test("crear un rol", async () => {
-			const result = await qb.createRoles(["ADMIN", "USER"], {
-				secure: true,
-				host: "localhost",
-			});
+			const debug = false;
+			const query = "CREATE ROLE ADMINISTRADORES;\nCREATE ROLE USUARIOS;";
+			const result = await qb
+				.createRoles(["ADMINISTRADORES", "USUARIOS"])
+				.execute(debug);
+			showResults(result, debug);
 
-			if (!result.error) {
-				assert.equal(
-					result.toString(),
-					"USE INVENTARIO;\nCREATE ROLE IF NOT EXISTS ADMIN@localhost, USER@localhost;",
-				);
-			} else {
-				assert.equal(result.error, "");
-			}
+			assert.equal(result.toString(), query);
 		});
 
-		test("Gestion de roles y privilegios", async () => {
-			let nuevoRol = await qb
-				.createRoles("MRKT", {
-					secure: true,
-					host: "localhost",
-				})
-				.execute();
+		test("crea ROL  MRKT", async () => {
+			const debug = false;
+			const query = "CREATE ROLE MRKT;";
+			const result = await qb.createRoles("MRKT").execute(debug);
+			showResults(result, debug);
+			assert.equal(result.toString(), query);
+		});
 
-			if (!nuevoRol.error) {
-				assert.equal(
-					nuevoRol.toString(),
-					"USE INVENTARIO;\nCREATE ROLE IF NOT EXISTS 'MRKT'@'localhost';",
-				);
-			} else {
-				assert.equal(nuevoRol.error, "");
-			}
-			nuevoRol = await qb
-				.createRoles("PERSONAL_VENTAS", { secure: true })
-				.execute();
+		test("crea el rol PERSONAL_VENTAS", async () => {
+			const debug = false;
+			const query = "CREATE ROLE PERSONAL_VENTAS;";
+			const result = await qb.createRoles("PERSONAL_VENTAS").execute(debug);
+			showResults(result, debug);
 
-			if (!nuevoRol.error) {
-				assert.equal(
-					nuevoRol.toString(),
-					"CREATE ROLE IF NOT EXISTS PERSONAL_VENTAS;",
-				);
-			} else {
-				assert.equal(nuevoRol.error, "");
-			}
+			assert.equal(result.toString(), query);
 		});
 
 		test("otorga el privilegio SELECT en la vista CDS_EN_EXISTENCIA a PERSONAL_VENTAS", async () => {
-			const otorga = await qb
+			const debug = false;
+			const query =
+				"GRANT SELECT\nON TABLE CDS_EN_EXISTENCIA\nTO PERSONAL_VENTAS;";
+			const result = await qb
 				.grant("select", "CDS_EN_EXISTENCIA", ["PERSONAL_VENTAS"])
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			assert.equal(
-				otorga.toString(),
-				"USE INVENTARIO;\nGRANT SELECT ON INVENTARIO.CDS_EN_EXISTENCIA TO 'PERSONAL_VENTAS'@'%';",
-			);
+			assert.equal(result.toString(), query);
 		});
 		test("al rol PERSONAL_VENTAS Se otorgan los privilegios SELECT, INSERT y UPDATE en la tabla DISCOS_COMPACTOS", async () => {
 			/* al rol PERSONAL_VENTAS Se otorgan los privilegios SELECT, INSERT y UPDATE en la tabla DISCOS_COMPACTOS.
     Para el privilegio UPDATE se especifica la columna TITULO_CD. PERSONAL_VENTAS puede otorgar estos privilegios a otros usuarios
     */
-			const otorga = await qb
+			const debug = false;
+			const query = `GRANT SELECT, INSERT, UPDATE(TITULO_CD)
+ON TABLE DISCOS_COMPACTOS
+TO PERSONAL_VENTAS;`;
+			const result = await qb
 				.grant(
 					["SELECT", "INSERT", "UPDATE(TITULO_CD)"],
 					"DISCOS_COMPACTOS",
 					"PERSONAL_VENTAS",
 				)
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			assert.equal(
-				otorga.toString(),
-				`USE INVENTARIO;\nGRANT SELECT, INSERT, UPDATE(TITULO_CD) ON INVENTARIO.DISCOS_COMPACTOS TO 'PERSONAL_VENTAS'@'%';`,
-			);
+			assert.equal(result.toString(), query);
 		});
 
 		test("se otorga el rol PERSONAL_VENTAS al rol MRKT", async () => {
-			const otorga = await qb
+			const debug = false;
+			const query = "GRANT PERSONAL_VENTAS TO MRKT;";
+			const result = await qb
 				.grantRoles("PERSONAL_VENTAS", "MRKT", {
 					host: "localhost",
 				})
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			assert.equal(
-				otorga.toString(),
-				"USE INVENTARIO;\nGRANT PERSONAL_VENTAS TO 'MRKT'@'localhost';",
-			);
+			assert.equal(result.toString(), query);
 		});
 		test("revocar el privilegio SELECT a PERSONAL_VENTAS de la tabla CDS_EN_EXISTENCIA", async () => {
+			const debug = false;
+			const query =
+				"REVOKE SELECT\nON TABLE CDS_EN_EXISTENCIA\nFROM PERSONAL_VENTAS\nCASCADE;";
 			const result = await qb
-				.revoke("SELECT", "CDS_EN_EXISTENCIA", "PERSONAL_VENTAS", {
-					secure: true,
-					ignoreUser: true,
-				})
-				.execute();
+				.revoke("SELECT", "CDS_EN_EXISTENCIA", "PERSONAL_VENTAS")
+				.execute(debug);
+			showResults(result, debug);
 
-			assert.equal(
-				result.toString(),
-				"USE INVENTARIO;\nREVOKE IF EXISTS SELECT ON INVENTARIO.CDS_EN_EXISTENCIA FROM 'PERSONAL_VENTAS'@'%';",
-			);
+			assert.equal(result.toString(), query);
 		});
 		test("revocan todos los privilegios al rol PERSONAL_VENTAS sobre DISCOS_COMPACTOS", async () => {
+			const debug = false;
+			const query =
+				"REVOKE ALL PRIVILEGES\nON TABLE DISCOS_COMPACTOS\nFROM PERSONAL_VENTAS\nCASCADE;";
 			const result = await qb
 				.revoke("all", "DISCOS_COMPACTOS", "PERSONAL_VENTAS", {
 					ignoreUser: true,
 				})
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			assert.equal(
-				result.toString(),
-				"USE INVENTARIO;\nREVOKE ALL ON INVENTARIO.DISCOS_COMPACTOS FROM 'PERSONAL_VENTAS'@'%' IGNORE UNKNOWN USER;",
-			);
+			assert.equal(result.toString(), query);
 		});
 
 		test("eliminar MRKT del PERSONAL_VENTAS", async () => {
+			const debug = false;
+			const query = "REVOKE PERSONAL_VENTAS FROM MRKT CASCADE;";
 			const result = await qb
-				.revokeRoles("PERSONAL_VENTAS", "MRKT", {
-					ignoreUser: true,
-					host: "localhost",
-				})
-				.execute();
+				.revokeRoles("PERSONAL_VENTAS", "MRKT")
+				.execute(debug);
+			showResults(result, debug);
 
-			assert.equal(
-				result.toString(),
-				"USE INVENTARIO;\nREVOKE PERSONAL_VENTAS FROM 'MRKT'@'localhost' IGNORE UNKNOWN USER;",
-			);
+			assert.equal(result.toString(), query);
 		});
 
 		test("eliminar el rol MRKT", async () => {
-			// Se puede usar un objeto {name,host} si el rol o usuario tiene un host distinto al host por defecto
-			// se puede utilizar la propiedad options.host como host por defecto distinto de '%'
-			const result = await qb
-				.dropRoles(
-					{ name: "MRKT", host: "localhost" },
-					{
-						secure: true,
-						host: "%",
-					},
-				)
-				.execute();
+			const debug = false;
+			const query = "DROP ROLE MRKT;";
+			const result = await qb.dropRoles("MRKT").execute(debug);
+			showResults(result, debug);
 
-			assert.equal(
-				result.toString(),
-				"USE INVENTARIO;\nDROP ROLE IF EXISTS 'MRKT'@'localhost';",
-			);
+			assert.equal(result.toString(), query);
 		});
 
 		test("eliminar el rol PERSONAL_VENTAS", async () => {
-			const result = await qb
-				.dropRoles(
-					{ name: "PERSONAL_VENTAS" },
-					{
-						secure: true,
-					},
-				)
-				.execute();
+			const debug = false;
+			const query = "DROP ROLE PERSONAL_VENTAS;";
+			const result = await qb.dropRoles("PERSONAL_VENTAS").execute(debug);
+			showResults(result, debug);
 
-			assert.equal(
-				result.toString(),
-				"USE INVENTARIO;\nDROP ROLE IF EXISTS 'PERSONAL_VENTAS'@'%';",
-			);
+			assert.equal(result.toString(), query);
 		});
 	});
 
 	describe("Manejo de datos", async () => {
+		const debug = false;
 		test("Insertar datos", async () => {
+			const debug = false;
+			const query = `INSERT INTO DISQUERAS_CD
+VALUES
+( 837, 'DRG Records' );
+INSERT INTO DISCOS_COMPACTOS
+VALUES
+( 116, 'Ann Hampton Callaway', 837, 14 );
+INSERT INTO DISCOS_COMPACTOS
+( ID_DISCO_COMPACTO, TITULO_CD, ID_DISQUERA, EN_EXISTENCIA )
+VALUES
+( 117, 'Rhythm Country and Blues', 837, 21 );`;
 			const result = await qb
 				.insert("DISQUERAS_CD", [], [837, "DRG Records"])
 				.insert("DISCOS_COMPACTOS", [], [116, "Ann Hampton Callaway", 837, 14])
@@ -773,24 +727,21 @@ WHERE DISCOS_COMPACTOS.ID_DISQUERA = DISQUERAS_CD.ID_DISQUERA;`,
 					["ID_DISCO_COMPACTO", "TITULO_CD", "ID_DISQUERA", "EN_EXISTENCIA"],
 					[117, "Rhythm Country and Blues", 837, 21],
 				)
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-
-			assert.equal(
-				result.toString(),
-				`USE INVENTARIO;
-INSERT INTO DISQUERAS_CD
-VALUES ( 837, 'DRG Records' );
-INSERT INTO DISCOS_COMPACTOS
-VALUES ( 116, 'Ann Hampton Callaway', 837, 14 );
-INSERT INTO DISCOS_COMPACTOS
-( ID_DISCO_COMPACTO, TITULO_CD, ID_DISQUERA, EN_EXISTENCIA )
-VALUES ( 117, 'Rhythm Country and Blues', 837, 21 );`,
-			);
+			assert.equal(result.toString(), query);
 		});
-
+		// fin
 		test("Actualiza datos", async () => {
+			const debug = false;
+			const query = `UPDATE DISCOS_COMPACTOS
+SET ID_DISQUERA =
+( SELECT ID_DISQUERA
+FROM DISQUERAS_CD
+WHERE NOMBRE_DISCOGRAFICA = 'DRG Records' )
+WHERE ID_DISCO_COMPACTO = 116;`;
+
 			const result = await qb
 				.update("DISCOS_COMPACTOS", {
 					ID_DISQUERA: qb
@@ -799,23 +750,18 @@ VALUES ( 117, 'Rhythm Country and Blues', 837, 21 );`,
 						.where(qb.eq("NOMBRE_DISCOGRAFICA", "DRG Records")),
 				})
 				.where("ID_DISCO_COMPACTO = 116")
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-
-			assert.equal(
-				result.toString(),
-				`USE INVENTARIO;
-UPDATE DISCOS_COMPACTOS
-SET ID_DISQUERA =
-( SELECT ID_DISQUERA
-FROM DISQUERAS_CD
-WHERE NOMBRE_DISCOGRAFICA = 'DRG Records' )
-WHERE ID_DISCO_COMPACTO = 116;`,
-			);
+			assert.equal(result.toString(), query);
 		});
 
 		test("leer datos de la tabla DISCOS_COMPACTO", async () => {
+			const debug = false;
+			const query = `SELECT *
+FROM DISCOS_COMPACTOS
+WHERE (ID_DISCO_COMPACTO = 116
+OR ID_DISCO_COMPACTO = 117);`;
 			const result = await qb
 				.select("*")
 				.from("DISCOS_COMPACTOS")
@@ -825,21 +771,20 @@ WHERE ID_DISCO_COMPACTO = 116;`,
 						qb.eq("ID_DISCO_COMPACTO", 117),
 					),
 				)
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-
-			assert.equal(
-				result.toString(),
-				`USE INVENTARIO;
-SELECT *
-FROM DISCOS_COMPACTOS
-WHERE (ID_DISCO_COMPACTO = 116
-OR ID_DISCO_COMPACTO = 117);`,
-			);
+			assert(result.toString(), query);
 		});
-
+		//fin
 		test("borrar registros", async () => {
+			const debug = false;
+			const query = `DELETE FROM DISCOS_COMPACTOS
+WHERE (ID_DISCO_COMPACTO = 116
+OR ID_DISCO_COMPACTO = 117);
+DELETE FROM DISQUERAS_CD
+WHERE ID_DISQUERA = 837;`;
+
 			const result = await qb
 				.delete("DISCOS_COMPACTOS")
 				.where(
@@ -850,24 +795,17 @@ OR ID_DISCO_COMPACTO = 117);`,
 				)
 				.delete("DISQUERAS_CD")
 				.where(qb.eq("ID_DISQUERA", 837))
-				.execute();
+				.execute(debug);
 
-			showResults(result);
-
-			assert.equal(
-				result.toString(),
-				`USE INVENTARIO;
-DELETE FROM DISCOS_COMPACTOS
-WHERE (ID_DISCO_COMPACTO = 116
-OR ID_DISCO_COMPACTO = 117);
-DELETE FROM DISQUERAS_CD
-WHERE ID_DISQUERA = 837;`,
-			);
+			showResults(result, debug);
+			assert.equal(result.toString(), query);
 		});
 	});
 
 	describe("capitulo 8", async () => {
+		const debug = false;
 		test("crea la tabla INVENTARIO_CD.", async () => {
+			const debug = false;
 			const inventario_cd = {
 				NOMBRE_CD: { type: "varchar(60)", values: ["NOT NULL"] },
 				TIPO_MUSICA: "VARCHAR(15)",
@@ -884,58 +822,59 @@ WHERE ID_DISQUERA = 837;`,
 					cols: inventario_cd,
 					secure: true,
 				})
-				.execute();
-
-			showResults(result);
+				.execute(debug);
+			showResults(result, debug);
 
 			assert.equal(
 				result.toString(),
-				`USE INVENTARIO;
-CREATE TABLE IF NOT EXISTS INVENTARIO_CD
+				`CREATE TABLE IF NOT EXISTS INVENTARIO_CD
 ( NOMBRE_CD VARCHAR(60) NOT NULL,
  TIPO_MUSICA VARCHAR(15),
  EDITOR VARCHAR(50) NOT NULL DEFAULT 'Independiente',
  EN_EXISTENCIA INTEGER NOT NULL );`,
 			);
 		});
+		//fin
 		test("inserta un registro o row", async () => {
+			const debug = false;
 			const result = await qb
 				.insert(
 					"INVENTARIO_CD",
 					[],
 					["Patsy Cline: 12 Greatest Hits", "Country", "MCA Records", 32],
 				)
-				.execute();
-
-			showResults(result);
+				.execute(debug);
+			showResults(result, debug);
 
 			assert.equal(
 				result.toString(),
-				`USE INVENTARIO;
-INSERT INTO INVENTARIO_CD
-VALUES ( 'Patsy Cline: 12 Greatest Hits', 'Country', 'MCA Records', 32 );`,
+				`INSERT INTO INVENTARIO_CD
+VALUES
+( 'Patsy Cline: 12 Greatest Hits', 'Country', 'MCA Records', 32 );`,
 			);
 		});
-
+		// fin
 		test("Insertar datos en una tabla especificando columnas", async () => {
+			const debug = false;
 			const result = await qb
 				.insert(
 					"INVENTARIO_CD",
 					["NOMBRE_CD", "EDITOR", "EN_EXISTENCIA"],
 					["Fundamental", "Capitol Records", 34],
 				)
-				.execute();
-
-			showResults(result);
+				.execute(debug);
+			showResults(result, debug);
 
 			assert.equal(
 				result.toString(),
 				`INSERT INTO INVENTARIO_CD\n( NOMBRE_CD, EDITOR, EN_EXISTENCIA )
-VALUES ( 'Fundamental', 'Capitol Records', 34 );`,
+VALUES
+( 'Fundamental', 'Capitol Records', 34 );`,
 			);
 		});
 
 		test("Insertar datos en una tabla usando datos de otra tabla", async () => {
+			const debug = false;
 			const result = await qb
 				.createTable("INVENTARIO_CD_2", {
 					cols: {
@@ -948,14 +887,12 @@ VALUES ( 'Fundamental', 'Capitol Records', 34 );`,
 					[],
 					qb.select(["NOMBRE_CD", "EN_EXISTENCIA"]).from("INVENTARIO_CD"),
 				)
-				.execute();
-
-			showResults(result);
+				.execute(debug);
+			showResults(result, debug);
 
 			assert.equal(
 				result.toString(),
-				`USE INVENTARIO;
-CREATE TABLE INVENTARIO_CD_2
+				`CREATE TABLE INVENTARIO_CD_2
 ( NOMBRE_CD_2 VARCHAR(60) NOT NULL,
  EN_EXISTENCIA_2 INTEGER NOT NULL );
 INSERT INTO INVENTARIO_CD_2
@@ -963,8 +900,9 @@ SELECT NOMBRE_CD, EN_EXISTENCIA
 FROM INVENTARIO_CD;`,
 			);
 		});
-
+		//fin
 		test("Insertar varias filas de datos en una tabla", async () => {
+			const debug = false;
 			const result = await qb
 				.insert(
 					"DISQUERAS_CD",
@@ -976,14 +914,12 @@ FROM INVENTARIO_CD;`,
 						[830, "Windham Hill Records"],
 					],
 				)
-				.execute();
-
-			showResults(result);
+				.execute(debug);
+			showResults(result, debug);
 
 			assert.equal(
 				result.toString(),
-				`USE INVENTARIO;
-INSERT INTO DISQUERAS_CD
+				`INSERT INTO DISQUERAS_CD
 VALUES
 (827, 'Private Music'),
 (828, 'Reprise Records'),
@@ -993,129 +929,132 @@ VALUES
 		});
 
 		test("Actualizar el valor de una columna", async () => {
+			const debug = false;
 			const result = await qb
 				.update("INVENTARIO_CD", { EN_EXISTENCIA: 27 })
-				.execute();
-			showResults(result);
+				.execute(debug);
+			showResults(result, debug);
+
 			assert.equal(
 				result.toString(),
-				`USE INVENTARIO;
-UPDATE INVENTARIO_CD
+				`UPDATE INVENTARIO_CD
 SET EN_EXISTENCIA = 27;`,
 			);
 		});
 
 		test("añadir columna cantidad a inventario_cd", async () => {
+			const debug = false;
 			const result = await qb
 				.alterTable("INVENTARIO_CD")
 				.addColumn("CANTIDAD", "INT")
-				.execute();
-			showResults(result);
+				.execute(debug);
+			showResults(result, debug);
+
 			assert.equal(
 				result.toString(),
-				`USE INVENTARIO;
-ALTER TABLE INVENTARIO_CD
-ADD COLUMN CANTIDAD INT;`,
+				`ALTER TABLE INVENTARIO_CD
+ADD COLUMN CANTIDAD INTEGER;`,
 			);
 		});
 
 		test("Actualizar el valor de varias columnas", async () => {
+			const debug = false;
 			const result = await qb
 				.update("INVENTARIO_CD", {
 					EN_EXISTENCIA: "27",
 					CANTIDAD: 10,
 				})
-				.execute();
-			showResults(result);
+				.execute(debug);
+			showResults(result, debug);
+
 			assert.equal(
 				result.toString(),
-				`USE INVENTARIO;
-UPDATE INVENTARIO_CD
+				`UPDATE INVENTARIO_CD
 SET EN_EXISTENCIA = '27',
 CANTIDAD = 10;`,
 			);
 		});
 
 		test("Actualizar el valor de una columna solo de algunas filas usando where", async () => {
+			const debug = false;
 			const result = await qb
 				.update("INVENTARIO_CD", { EN_EXISTENCIA: 37 })
-				.where([qb.eq("NOMBRE_CD", "Out of Africa")])
-				.execute();
-
-			showResults(result);
+				.where([qb.eq("NOMBRE_CD", "Fundamental")])
+				.execute(debug);
+			showResults(result, debug);
 
 			assert(
 				result.toString(),
-				`USE INVENTARIO;
-UPDATE INVENTARIO_CD
+				`UPDATE INVENTARIO_CD
 SET EN_EXISTENCIA = 37
-WHERE NOMBRE_CD = 'Out of Africa';`,
+WHERE NOMBRE_CD = 'Fundamental';`,
 			);
 		});
 
-		test("Actualizar una columna usando como valor el resultado devuelto por un select", async () => {
-			const result = await qb
-				.update("INVENTARIO_CD_2", {
-					EN_EXISTENCIA_2: qb
-						.select(qb.avg("EN_EXISTENCIA"))
-						.from("INVENTARIO_CD"),
-				})
-				.where([qb.eq("NOMBRE_CD_2", "Fundamental")])
-				.execute();
+		test(
+			"Actualizar una columna usando como valor el resultado devuelto por un select",
+			{ only: true },
+			async () => {
+				const debug = false;
+				const result = await qb
+					.update("INVENTARIO_CD_2", {
+						EN_EXISTENCIA_2: qb
+							.select(qb.avg("EN_EXISTENCIA"))
+							.from("INVENTARIO_CD"),
+					})
+					.where([qb.eq("NOMBRE_CD_2", "Fundamental")])
+					.execute(debug);
+				showResults(result, debug);
 
-			showResults(result);
-
-			assert.equal(
-				result.toString(),
-				`USE INVENTARIO;
-UPDATE INVENTARIO_CD_2
+				assert.equal(
+					result.toString(),
+					`UPDATE INVENTARIO_CD_2
 SET EN_EXISTENCIA_2 =
 ( SELECT AVG(EN_EXISTENCIA)
 FROM INVENTARIO_CD )
 WHERE NOMBRE_CD_2 = 'Fundamental';`,
-			);
-		});
+				);
+			},
+		);
 
 		test("Eliminar todas las filas de una tabla con DELETE FROM", async () => {
-			const result = await qb.delete("INVENTARIO_CD_2").execute();
+			const debug = false;
+			const result = await qb.delete("INVENTARIO_CD_2").execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(
-				result.toString(),
-				"USE INVENTARIO;\nDELETE FROM INVENTARIO_CD_2;",
-			);
+			assert.equal(result.toString(), "DELETE FROM INVENTARIO_CD_2;");
 		});
 
 		test("Eliminar algunas filas de una tabla con DELETE y where", async () => {
+			const debug = false;
 			const result = await qb
 				.delete("INVENTARIO_CD")
 				.where(qb.eq("TIPO_MUSICA", "Country"))
-				.execute();
-
-			showResults(result);
+				.execute(debug);
+			showResults(result, debug);
 
 			assert.equal(
 				result.toString(),
-				`USE INVENTARIO;
+				`
 DELETE FROM INVENTARIO_CD
 WHERE TIPO_MUSICA = 'Country';`,
 			);
 		});
 	});
 
-	describe("Uso de predicados capitulo 9", async () => {
+	describe("Uso de predicados capitulo 9", () => {
 		test("se consultará la tabla TIPOS_MUSICA para arrojar los nombres de aquellas filas cuyo valor ID_TIPO sea igual a 11 o 12", async () => {
+			const debug = false;
 			const result = await qb
 				.select(["ID_TIPO", "NOMBRE_TIPO"])
 				.from("TIPOS_MUSICA")
 				.where(qb.or(qb.eq("ID_TIPO", 11), qb.eq("ID_TIPO", 12)))
-				.execute();
-
-			showResults(result);
+				.execute(debug);
+			showResults(result, debug);
 
 			assert.equal(
 				result.toString(),
-				`USE INVENTARIO;
+				`
 SELECT ID_TIPO, NOMBRE_TIPO
 FROM TIPOS_MUSICA
 WHERE (ID_TIPO = 11
@@ -1123,6 +1062,7 @@ OR ID_TIPO = 12);`,
 			);
 		});
 		test("se consultará la tabla ARTISTAS para buscar artistas diferentes a Patsy Cline y Bing Crosby", async () => {
+			const debug = false;
 			const result = await qb
 				.select(["NOMBRE_ARTISTA", "LUGAR_DE_NACIMIENTO"])
 				.from("ARTISTAS")
@@ -1132,13 +1072,12 @@ OR ID_TIPO = 12);`,
 						qb.ne("NOMBRE_ARTISTA", "Bing Crosby"),
 					),
 				)
-				.execute();
-
-			showResults(result);
+				.execute(debug);
+			showResults(result, debug);
 
 			assert.equal(
 				result.toString(),
-				`USE INVENTARIO;
+				`
 SELECT NOMBRE_ARTISTA, LUGAR_DE_NACIMIENTO
 FROM ARTISTAS
 WHERE (NOMBRE_ARTISTA <> 'Patsy Cline'
@@ -1146,6 +1085,7 @@ AND NOMBRE_ARTISTA <> 'Bing Crosby');`,
 			);
 		});
 		test("combinar un predicado LIKE con otro predicado LIKE", async () => {
+			const debug = false;
 			const result = await qb
 				.select("*")
 				.from("DISCOS_COMPACTOS")
@@ -1155,13 +1095,12 @@ AND NOMBRE_ARTISTA <> 'Bing Crosby');`,
 						qb.like("TITULO_CD", "%Blue%"),
 					),
 				)
-				.execute();
-
-			showResults(result);
+				.execute(debug);
+			showResults(result, debug);
 
 			assert.equal(
 				result.toString(),
-				`USE INVENTARIO;
+				`
 SELECT *
 FROM DISCOS_COMPACTOS
 WHERE (TITULO_CD NOT LIKE ('%Christmas%')
@@ -1170,6 +1109,7 @@ AND TITULO_CD LIKE ('%Blue%'));`,
 		});
 
 		test("creamos la tabla CDS_A_LA_MANO y añadimos registros", async () => {
+			const debug = false;
 			const cds_a_la_mano = {
 				TITULO_CD: "varchar(60)",
 				DERECHOSDEAUTOR: "INT",
@@ -1189,13 +1129,12 @@ AND TITULO_CD LIKE ('%Blue%'));`,
 			const result = await qb
 				.createTable("CDS_A_LA_MANO", { cols: cds_a_la_mano })
 				.insert("CDS_A_LA_MANO", [], cd_rows)
-				.execute();
-
-			showResults(result);
+				.execute(debug);
+			showResults(result, debug);
 
 			assert.equal(
 				result.toString(),
-				`USE INVENTARIO;
+				`
 CREATE TABLE CDS_A_LA_MANO\n( TITULO_CD VARCHAR(60),
  DERECHOSDEAUTOR INTEGER ,
  PRECIO_MENUDEO DECIMAL(5,2),
@@ -1213,6 +1152,7 @@ VALUES
 		});
 
 		test("operador Igual a para comparar los valores en la columna TITULO_CD con uno de los títulos de CD", async () => {
+			const debug = false;
 			const query = `SELECT TITULO_CD, DERECHOSDEAUTOR
 FROM CDS_A_LA_MANO
 WHERE TITULO_CD = 'Past Light';`;
@@ -1221,13 +1161,13 @@ WHERE TITULO_CD = 'Past Light';`;
 				.select(["TITULO_CD", "DERECHOSDEAUTOR"])
 				.from("CDS_A_LA_MANO")
 				.where(qb.eq("TITULO_CD", "Past Light"))
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		test("operador distinto a para comparar los valores en la columna TITULO_CD con uno de los títulos de CD", async () => {
+			const debug = false;
 			const query = `SELECT TITULO_CD, DERECHOSDEAUTOR
 FROM CDS_A_LA_MANO
 WHERE TITULO_CD <> 'Past Light';`;
@@ -1236,13 +1176,13 @@ WHERE TITULO_CD <> 'Past Light';`;
 				.select(["TITULO_CD", "DERECHOSDEAUTOR"])
 				.from("CDS_A_LA_MANO")
 				.where(qb.ne("TITULO_CD", "Past Light"))
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		test("operador Menor que y al operador Mayor que", async () => {
+			const debug = false;
 			const query = `SELECT TITULO_CD, INVENTARIO
 FROM CDS_A_LA_MANO
 WHERE (INVENTARIO > 2
@@ -1259,13 +1199,13 @@ AND  PRECIO_MENUDEO <> 16.99);`;
 						qb.ne(" PRECIO_MENUDEO", 16.99),
 					),
 				)
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		test("Menor que o igual a y Mayor que o igual a.", async () => {
+			const debug = false;
 			const query = `SELECT TITULO_CD, DERECHOSDEAUTOR
 FROM CDS_A_LA_MANO
 WHERE (DERECHOSDEAUTOR >= 1971
@@ -1280,14 +1220,14 @@ AND DERECHOSDEAUTOR <= 1989);`;
 						qb.lte("DERECHOSDEAUTOR", 1989),
 					),
 				)
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 
 		test("combinar dos o más predicados para formar una condición de búsqueda", async () => {
+			const debug = false;
 			const query = `UPDATE CDS_A_LA_MANO
 SET INVENTARIO = 3
 WHERE (TITULO_CD = 'That Christmas Feeling'
@@ -1301,14 +1241,14 @@ AND DERECHOSDEAUTOR = 1993);`;
 						qb.eq("DERECHOSDEAUTOR", 1993),
 					),
 				)
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 
 		test("especifica un rango entre 14 y 16", async () => {
+			const debug = false;
 			const query = `SELECT TITULO_CD, PRECIO_MENUDEO
 FROM CDS_A_LA_MANO
 WHERE (PRECIO_MENUDEO BETWEEN 14 AND 16
@@ -1320,14 +1260,14 @@ AND INVENTARIO > 10);`;
 				.where(
 					qb.and(qb.between("PRECIO_MENUDEO", 14, 16), qb.gt("INVENTARIO", 10)),
 				)
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 
 		test("excluye un rango entre 14 y 16", async () => {
+			const debug = false;
 			const query = `SELECT TITULO_CD, PRECIO_MENUDEO
 FROM CDS_A_LA_MANO
 WHERE PRECIO_MENUDEO NOT BETWEEN 14 AND 16;`;
@@ -1336,14 +1276,14 @@ WHERE PRECIO_MENUDEO NOT BETWEEN 14 AND 16;`;
 				.select(["TITULO_CD", "PRECIO_MENUDEO"])
 				.from("CDS_A_LA_MANO")
 				.where(qb.notBetween("PRECIO_MENUDEO", 14, 16))
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 
 		test("arroja filas con un valor nulo", async () => {
+			const debug = false;
 			const query = `SELECT *
 FROM ARTISTAS
 WHERE LUGAR_DE_NACIMIENTO IS NULL;`;
@@ -1352,14 +1292,14 @@ WHERE LUGAR_DE_NACIMIENTO IS NULL;`;
 				.select("*")
 				.from("ARTISTAS")
 				.where(qb.isNull("LUGAR_DE_NACIMIENTO"))
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("arroja filas con un valor no nulo", async () => {
+			const debug = false;
 			const query = `SELECT *
 FROM ARTISTAS
 WHERE LUGAR_DE_NACIMIENTO IS NOT NULL;`;
@@ -1368,14 +1308,14 @@ WHERE LUGAR_DE_NACIMIENTO IS NOT NULL;`;
 				.select("*")
 				.from("ARTISTAS")
 				.where(qb.isNotNull("LUGAR_DE_NACIMIENTO"))
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("encontrar cualquier CD que no contenga la palabra Christmas y si la palabra Blue en el título", async () => {
+			const debug = false;
 			const query = `SELECT *
 FROM DISCOS_COMPACTOS
 WHERE (TITULO_CD NOT LIKE ('%Christmas%')
@@ -1390,11 +1330,10 @@ AND TITULO_CD LIKE ('%Blue%'));`;
 						qb.like("TITULO_CD", "%Blue%"),
 					),
 				)
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("Crea las tablas MENUDEO_CD y REBAJA_CD", async () => {
@@ -1425,6 +1364,7 @@ AND TITULO_CD LIKE ('%Blue%'));`;
 				["That Christmas Feeling", 10.99],
 				["Patsy Cline: 12 Greatest Hits", 16.99],
 			];
+			const debug = false;
 			const query = `CREATE TABLE IF NOT EXISTS MENUDEO_CD
 ( NOMBRE_CD VARCHAR(60),
  MENUDEO DECIMAL(5,2),
@@ -1456,11 +1396,10 @@ VALUES
 				.createTable("REBAJA_CD", { secure: true, cols: rebaja_cd })
 				.insert("MENUDEO_CD", [], menudeo_cd_rows)
 				.insert("REBAJA_CD", [], rebaja_cd_rows)
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		/**
@@ -1470,6 +1409,7 @@ sea menor que cualquier precio de lista (MENUDEO) en aquellos CD que haya una ex
 mayor a nueve.
 		 */
 		test("uso de ANY", async () => {
+			const debug = false;
 			const query = `SELECT TITULO, VENTA
 FROM REBAJA_CD
 WHERE VENTA < ANY ( SELECT MENUDEO
@@ -1490,13 +1430,14 @@ WHERE EN_EXISTENCIA > 9 );`;
 						),
 					),
 				)
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("uso de SOME", async () => {
+			const debug = false;
 			const query = `SELECT TITULO, VENTA
 FROM REBAJA_CD
 WHERE VENTA < SOME ( SELECT MENUDEO
@@ -1517,13 +1458,14 @@ WHERE EN_EXISTENCIA > 9 );`;
 						),
 					),
 				)
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("uso de ALL", async () => {
+			const debug = false;
 			const query = `SELECT TITULO, VENTA
 FROM REBAJA_CD
 WHERE VENTA < ALL ( SELECT MENUDEO
@@ -1544,21 +1486,23 @@ WHERE EN_EXISTENCIA > 9 );`;
 						),
 					),
 				)
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 	});
 
 	describe("uso de funciones SET capitulo 10", async () => {
+		const debug = false;
 		/**
 		 * Cada vez que se incluya una función set en una instrucción SQL, cada argumento en la lista
 		 * SELECT deberá ser una función set o estar incluido en un grupo
 		 */
 
 		test("crea tabla CDS_VENDIDOS", async () => {
+			const debug = false;
 			const cdsVendidos = {
 				NOMBRE_ARTISTA: "VARCHAR(60)",
 				NOMBRE_CD: "VARCHAR(60)",
@@ -1597,26 +1541,28 @@ VALUES
 			const result = await qb
 				.createTable("CDS_VENDIDOS", { cols: cdsVendidos, secure: true })
 				.insert("CDS_VENDIDOS", [], cdsVendidosRows)
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("contar registros", async () => {
+			const debug = false;
 			const query = `SELECT COUNT(*) AS FILAS_TOTALES
 FROM CDS_VENDIDOS;`;
 
 			const result = await qb
 				.select(qb.count("*", "FILAS_TOTALES"))
 				.from("CDS_VENDIDOS")
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("contar valores en una columna", async () => {
+			const debug = false;
 			const query = `SELECT COUNT(NOMBRE_ARTISTA) AS TOTAL_DE_ARTISTAS
 FROM CDS_VENDIDOS
 WHERE VENDIDOS > 20;`;
@@ -1625,13 +1571,14 @@ WHERE VENDIDOS > 20;`;
 				.select(qb.count("NOMBRE_ARTISTA", "TOTAL_DE_ARTISTAS"))
 				.from("CDS_VENDIDOS")
 				.where(qb.gt("VENDIDOS", 20))
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("contar valores unicos en una columna", async () => {
+			const debug = false;
 			const query = `SELECT COUNT(DISTINCT NOMBRE_ARTISTA) AS TOTAL_DE_ARTISTAS
 FROM CDS_VENDIDOS
 WHERE VENDIDOS > 20;`;
@@ -1640,14 +1587,15 @@ WHERE VENDIDOS > 20;`;
 				.select(qb.count(qb.distinct("NOMBRE_ARTISTA"), "TOTAL_DE_ARTISTAS"))
 				.from("CDS_VENDIDOS")
 				.where(qb.gt("VENDIDOS", 20))
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 
 		test("el valor mas alto para una columna", async () => {
+			const debug = false;
 			const query = `SELECT NOMBRE_ARTISTA, NOMBRE_CD, VENDIDOS
 FROM CDS_VENDIDOS
 WHERE VENDIDOS = ( SELECT MAX(VENDIDOS)
@@ -1659,13 +1607,14 @@ FROM CDS_VENDIDOS );`;
 				.where(
 					qb.eq("VENDIDOS", qb.select(qb.max("VENDIDOS")).from("CDS_VENDIDOS")),
 				)
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("el valor mas alto para una columna usando agrupacion", async () => {
+			const debug = false;
 			const query = `SELECT NOMBRE_ARTISTA, MAX(VENDIDOS) AS MAX_VENDIDOS
 FROM CDS_VENDIDOS
 WHERE VENDIDOS > 30
@@ -1676,13 +1625,14 @@ GROUP BY NOMBRE_ARTISTA;`;
 				.from("CDS_VENDIDOS")
 				.where(qb.gt("VENDIDOS", 30))
 				.groupBy("NOMBRE_ARTISTA")
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("suma de valores de una columna usando grupos", async () => {
+			const debug = false;
 			const query = `SELECT NOMBRE_ARTISTA, SUM(VENDIDOS) AS TOTAL_VENDIDOS
 FROM CDS_VENDIDOS
 WHERE VENDIDOS > 30
@@ -1693,13 +1643,14 @@ GROUP BY NOMBRE_ARTISTA;`;
 				.from("CDS_VENDIDOS")
 				.where(qb.gt("VENDIDOS", 30))
 				.groupBy("NOMBRE_ARTISTA")
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("promedio de valores de una columna usando grupos", async () => {
+			const debug = false;
 			const query = `SELECT NOMBRE_ARTISTA, AVG(VENDIDOS) AS PROM_VENDIDOS
 FROM CDS_VENDIDOS
 WHERE VENDIDOS > 30
@@ -1710,16 +1661,17 @@ GROUP BY NOMBRE_ARTISTA;`;
 				.from("CDS_VENDIDOS")
 				.where(qb.gt("VENDIDOS", 30))
 				.groupBy("NOMBRE_ARTISTA")
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 	});
 
 	describe("uso de funciones de valor capitulo 10", () => {
 		test("crea tabla FECHAS_VENTAS", async () => {
+			const debug = false;
 			const fechasVentas = {
 				DISCO_COMPACTO: "VARCHAR(60)",
 				FECHA_VENTA: "TIMESTAMP",
@@ -1756,26 +1708,28 @@ VALUES
 			const result = await qb
 				.createTable("FECHAS_VENTAS", { cols: fechasVentas, secure: true })
 				.insert("FECHAS_VENTAS", [], fechasVentasRows)
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("extrae un número definido de caracteres", async () => {
+			const debug = false;
 			const query = `SELECT SUBSTRING(DISCO_COMPACTO FROM 1 FOR 10) AS NOMBRE_ABREVIADO
 FROM FECHAS_VENTAS;`;
 
 			const result = await qb
 				.select([qb.substr("DISCO_COMPACTO", 1, 10, "NOMBRE_ABREVIADO")])
 				.from("FECHAS_VENTAS")
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("uso de substring en la clausula WHERE", async () => {
+			const debug = false;
 			const query = `SELECT DISCO_COMPACTO, FECHA_VENTA
 FROM FECHAS_VENTAS
 WHERE SUBSTRING(DISCO_COMPACTO FROM 1 FOR 4) = 'Blue';`;
@@ -1784,13 +1738,14 @@ WHERE SUBSTRING(DISCO_COMPACTO FROM 1 FOR 4) = 'Blue';`;
 				.select(["DISCO_COMPACTO", "FECHA_VENTA"])
 				.from("FECHAS_VENTAS")
 				.where(qb.eq(qb.substr("DISCO_COMPACTO", 1, 4), "Blue"))
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("uso de UPPER y LOWER", async () => {
+			const debug = false;
 			const query = `SELECT UPPER(DISCO_COMPACTO) AS TITULO, FECHA_VENTA
 FROM FECHAS_VENTAS
 WHERE SUBSTRING(DISCO_COMPACTO FROM 1 FOR 4) = 'Blue';`;
@@ -1799,15 +1754,16 @@ WHERE SUBSTRING(DISCO_COMPACTO FROM 1 FOR 4) = 'Blue';`;
 				.select([qb.upper("DISCO_COMPACTO", "TITULO"), "FECHA_VENTA"])
 				.from("FECHAS_VENTAS")
 				.where(qb.eq(qb.substr("DISCO_COMPACTO", 1, 4), "Blue"))
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 	});
 	describe("uso de funciones valor  numericas", () => {
 		test("crea la tabla RASTREO_CD", async () => {
+			const debug = false;
 			const rastreoCd = {
 				NOMBRE_CD: "VARCHAR(60)",
 				CATEGORIA_CD: "CHAR(4)",
@@ -1852,13 +1808,14 @@ VALUES
 					secure: true,
 				})
 				.insert("RASTREO_CD", [], rastreoCdRows)
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("expresion de valor numerico", async () => {
+			const debug = false;
 			const query = `SELECT NOMBRE_CD, EN_EXISTENCIA, EN_PEDIDO, (EN_EXISTENCIA + EN_PEDIDO) AS TOTAL
 FROM RASTREO_CD
 WHERE (EN_EXISTENCIA + EN_PEDIDO) > 25;`;
@@ -1872,13 +1829,14 @@ WHERE (EN_EXISTENCIA + EN_PEDIDO) > 25;`;
 				])
 				.from("RASTREO_CD")
 				.where(qb.gt("(EN_EXISTENCIA + EN_PEDIDO)", 25))
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("expresion de valor numerico case", async () => {
+			const debug = false;
 			const query = `SELECT NOMBRE_CD, EN_PEDIDO, CASE
 WHEN EN_PEDIDO < 6 THEN EN_PEDIDO + 4
 WHEN EN_PEDIDO BETWEEN 6 AND 8 THEN EN_PEDIDO + 2
@@ -1902,13 +1860,14 @@ WHERE EN_PEDIDO < 11;`;
 				])
 				.from("RASTREO_CD")
 				.where(qb.lt("EN_PEDIDO", 11))
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("expresion de valor numerico case en un SET", async () => {
+			const debug = false;
 			const query = `UPDATE RASTREO_CD
 SET EN_PEDIDO = CASE
 WHEN EN_PEDIDO < 6 THEN EN_PEDIDO + 4
@@ -1926,13 +1885,14 @@ END;`;
 						"EN_PEDIDO",
 					),
 				})
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("utilizar la expresión CAST en SELECT", async () => {
+			const debug = false;
 			const query = `SELECT DISCO_COMPACTO, FECHA_VENTA, CAST(FECHA_VENTA AS CHAR(25)) AS CHAR_FECHA
 FROM FECHAS_VENTAS
 WHERE DISCO_COMPACTO LIKE ('%Blue%');`;
@@ -1945,15 +1905,16 @@ WHERE DISCO_COMPACTO LIKE ('%Blue%');`;
 				])
 				.from("FECHAS_VENTAS")
 				.where(qb.like("DISCO_COMPACTO", "%Blue%"))
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 	});
 	describe("Capitulo 11 Acceso a multiples tablas", () => {
 		test("crea la tabla INVENTARIO_CD", async () => {
+			const debug = false;
 			const inventarioCD = {
 				NOMBRE_CD: "VARCHAR(60)",
 				ID_INTER: "INT",
@@ -1993,13 +1954,14 @@ VALUES
 			const result = await qb
 				.createTable("INVENTARIO_CD", { cols: inventarioCD })
 				.insert("INVENTARIO_CD", [], inventarioCDRows)
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("crea la tabla INTERPRETES", async () => {
+			const debug = false;
 			const interpretes = {
 				ID_INTER: "INT",
 				NOMBRE_INTER: "VARCHAR(60)",
@@ -2035,13 +1997,14 @@ VALUES
 			const result = await qb
 				.createTable("INTERPRETES", { cols: interpretes })
 				.insert("INTERPRETES", [], interpretesRows)
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("crea la tabla TIPO_INTER", async () => {
+			const debug = false;
 			const tipoInterprete = {
 				ID_TIPO: "INT",
 				NOMBRE_TIPO: "CHAR(20)",
@@ -2075,13 +2038,14 @@ VALUES
 			const result = await qb
 				.createTable("TIPO_INTER", { cols: tipoInterprete })
 				.insert("TIPO_INTER", [], tipoInterpreteRows)
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("operciones basicas JOIN", async () => {
+			const debug = false;
 			const query = `SELECT INVENTARIO_CD.NOMBRE_CD, INTERPRETES.NOMBRE_INTER, INVENTARIO_CD.EN_EXISTENCIA
 FROM INVENTARIO_CD, INTERPRETES
 WHERE (INVENTARIO_CD.ID_INTER = INTERPRETES.ID_INTER
@@ -2103,13 +2067,14 @@ AND INVENTARIO_CD.EN_EXISTENCIA < 15);`;
 						qb.lt(qb.col("EN_EXISTENCIA", "INVENTARIO_CD"), 15),
 					),
 				)
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("uso de nombres de correlacion", async () => {
+			const debug = false;
 			const query = `SELECT c.NOMBRE_CD, p.NOMBRE_INTER, c.EN_EXISTENCIA
 FROM INVENTARIO_CD AS c, INTERPRETES AS p
 WHERE (c.ID_INTER = p.ID_INTER
@@ -2128,13 +2093,14 @@ AND c.EN_EXISTENCIA < 15);`;
 						qb.lt(qb.col("EN_EXISTENCIA", "c"), 15),
 					),
 				)
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("JOIN con mas de dos tablas", async () => {
+			const debug = false;
 			const query = `SELECT c.NOMBRE_CD, p.NOMBRE_INTER, t.NOMBRE_TIPO
 FROM INVENTARIO_CD AS c, INTERPRETES AS p, TIPO_INTER AS t
 WHERE (c.ID_INTER = p.ID_INTER
@@ -2155,13 +2121,14 @@ AND NOMBRE_TIPO = 'Popular');`;
 						qb.eq("NOMBRE_TIPO", "Popular"),
 					),
 				)
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("operacion CROSS JOIN", async () => {
+			const debug = false;
 			const query = `SELECT c.NOMBRE_CD, p.NOMBRE_INTER, c.EN_EXISTENCIA
 FROM INVENTARIO_CD c CROSS JOIN INTERPRETES p
 WHERE (c.ID_INTER = p.ID_INTER
@@ -2180,13 +2147,14 @@ AND c.EN_EXISTENCIA < 15);`;
 						qb.lt(qb.col("EN_EXISTENCIA", "c"), 15),
 					),
 				)
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("crea tabla EMPLEADOS", async () => {
+			const debug = false;
 			const empleados = {
 				ID_EMP: "INT",
 				NOMBRE_EMP: "VARCHAR(60)",
@@ -2219,13 +2187,14 @@ VALUES
 			const result = await qb
 				.createTable("EMPLEADOS", { cols: empleados, secure: true })
 				.insert("EMPLEADOS", [], empleadosRows)
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("operacion SELF JOIN", async () => {
+			const debug = false;
 			const query = `SELECT a.ID_EMP, a.NOMBRE_EMP, b.NOMBRE_EMP AS ADMINISTRADOR
 FROM EMPLEADOS AS a, EMPLEADOS AS b
 WHERE a.ADMIN = b.ID_EMP
@@ -2240,13 +2209,14 @@ ORDER BY a.ID_EMP;`;
 				.from(["EMPLEADOS", "EMPLEADOS"], ["a", "b"])
 				.where(qb.eq(qb.col("ADMIN", "a"), qb.col("ID_EMP", "b")))
 				.orderBy(qb.col("ID_EMP", "a"))
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("Crea tablas TITULOS_EN_EXISTENCIA y COSTOS_TITULOS", async () => {
+			const debug = false;
 			const TITULOS_EN_EXISTENCIA = {
 				TITULO_CD: "VARCHAR(60)",
 				TIPO_CD: "CHAR(20)",
@@ -2276,12 +2246,13 @@ CREATE TABLE IF NOT EXISTS COSTOS_TITULO
 					secure: true,
 					cols: COSTOS_TITULO,
 				})
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		test("añade registros a las tablas TITULOS_EN_EXISTENCIA y COSTOS_TITULO", async () => {
+			const debug = false;
 			const TITULOS_EN_EXISTENCIA = [
 				["Famous Blue Raincoat", "Folk", 12],
 				["Blue", "Popular", 24],
@@ -2330,13 +2301,14 @@ VALUES
 			const result = await qb
 				.insert("TITULOS_EN_EXISTENCIA", [], TITULOS_EN_EXISTENCIA)
 				.insert("COSTOS_TITULO", [], COSTOS_TITULO)
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("join natural hace coincidir automáticamente las filas de aquellas columnas con el mismo nombre", async () => {
+			const debug = false;
 			const query = `SELECT TITULO_CD, TIPO_CD, c.MENUDEO
 FROM TITULOS_EN_EXISTENCIA s NATURAL JOIN COSTOS_TITULO c
 WHERE s.INVENTARIO > 15;`;
@@ -2345,13 +2317,14 @@ WHERE s.INVENTARIO > 15;`;
 				.select(["TITULO_CD", "TIPO_CD", qb.col("MENUDEO").from("c")])
 				.naturalJoin(["TITULOS_EN_EXISTENCIA", "COSTOS_TITULO"], ["s", "c"])
 				.where(qb.gt(qb.col("INVENTARIO").from("s"), 15))
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("join natural de columna nombrada permite especificar las columnas coincidentes", async () => {
+			const debug = false;
 			//las columnas identificadas en la cláusula USING están sin cualificar el resto debe hacerlo
 			const query = `SELECT TITULO_CD, s.TIPO_CD, c.MENUDEO
 FROM TITULOS_EN_EXISTENCIA s JOIN COSTOS_TITULO c
@@ -2367,10 +2340,10 @@ WHERE s.INVENTARIO > 15;`;
 				.join(["TITULOS_EN_EXISTENCIA", "COSTOS_TITULO"], ["s", "c"])
 				.using("TITULO_CD")
 				.where(qb.gt(qb.col("INVENTARIO").from("s"), 15))
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		/*
@@ -2381,6 +2354,7 @@ WHERE s.INVENTARIO > 15;`;
 		tipos de uniones: 'inner joins' y 'outer joins'.
         */
 		test("tablas TITULO_CDS, ARTISTAS_TITULOS y ARTISTAS_CD", async () => {
+			const debug = false;
 			const TITULO_CDS = {
 				ID_TITULO: "INT",
 				TITULO: "VARCHAR(60)",
@@ -2409,13 +2383,14 @@ CREATE TABLE ARTISTAS_CD
 				})
 				.createTable("ARTISTAS_TITULOS", { cols: ARTISTAS_TITULOS })
 				.createTable("ARTISTAS_CD", { cols: ARTISTAS_CD })
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("añadir registros a TITULO_CD", async () => {
+			const debug = false;
 			const TITULO_CDS = [
 				[101, "Famous Blue Raincoat"],
 				[102, "Blue"],
@@ -2447,13 +2422,16 @@ VALUES
 (112, 'Blues on the Bayou'),
 (113, 'Orlando');`;
 
-			const result = await qb.insert("TITULO_CDS", [], TITULO_CDS).execute();
+			const result = await qb
+				.insert("TITULO_CDS", [], TITULO_CDS)
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("añadir registros a ARTISTAS_TITULOS", async () => {
+			const debug = false;
 			const ARTISTAS_TITULOS = [
 				[101, 2001],
 				[102, 2002],
@@ -2493,13 +2471,14 @@ VALUES
 
 			const result = await qb
 				.insert("ARTISTAS_TITULOS", [], ARTISTAS_TITULOS)
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("añadir registros a ARTISTAS_CD", async () => {
+			const debug = false;
 			const ARTISTAS_CD = [
 				[2001, "Jennifer Warnes"],
 				[2002, "Joni Mitchell"],
@@ -2535,13 +2514,16 @@ VALUES
 (2014, 'David Motion'),
 (2015, 'Sally Potter');`;
 
-			const result = await qb.insert("ARTISTAS_CD", [], ARTISTAS_CD).execute();
+			const result = await qb
+				.insert("ARTISTAS_CD", [], ARTISTAS_CD)
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("unir las tablas TITULO_CDS, ARTISTAS_TITULOS y ARTISTAS_CD usando dos INNER JOIN", async () => {
+			const debug = false;
 			const query = `SELECT t.TITULO, a.ARTISTA
 FROM TITULO_CDS t INNER JOIN ARTISTAS_TITULOS ta
 ON t.ID_TITULO = ta.ID_TITULO
@@ -2561,13 +2543,14 @@ WHERE t.TITULO LIKE ('%Blue%');`;
 					),
 				)
 				.where(qb.like(qb.col("TITULO").from("t"), "%Blue%"))
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("crea tablas INFO_CD y TIPO_CD", async () => {
+			const debug = false;
 			const INFO_CD = {
 				TITULO: "VARCHAR(60)",
 				ID_TIPO: "CHAR(4)",
@@ -2588,13 +2571,14 @@ CREATE TABLE TIPO_CD
 			const result = await qb
 				.createTable("INFO_CD", { cols: INFO_CD })
 				.createTable("TIPO_CD", { cols: TIPO_CD })
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("añadir registros a INFO_CD", async () => {
+			const debug = false;
 			const INFO_CD = [
 				["Famous Blue Raincoat", "FROK", 19],
 				["Blue", "CPOP", 28],
@@ -2612,13 +2596,14 @@ VALUES
 ('Fundamental', 'NPOP', 10),
 ('Blues on the Bayou', 'BLUS', 11);`;
 
-			const result = await qb.insert("INFO_CD", [], INFO_CD).execute();
+			const result = await qb.insert("INFO_CD", [], INFO_CD).execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("añadir registros a TIPO_CD", async () => {
+			const debug = false;
 			const TIPO_CD = [
 				["FROK", "Folk Rock"],
 				["CPOP", "Classic Pop"],
@@ -2638,13 +2623,14 @@ VALUES
 ('BLUS', 'Blues'),
 ('JAZZ', 'Jazz');`;
 
-			const result = await qb.insert("TIPO_CD", [], TIPO_CD).execute();
+			const result = await qb.insert("TIPO_CD", [], TIPO_CD).execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("operación join sobre dos tablas", async () => {
+			const debug = false;
 			const $ = qb;
 			const query = `SELECT i.TITULO, t.NOMBRE_TIPO, i.EXISTENCIA
 FROM INFO_CD i JOIN TIPO_CD t
@@ -2658,13 +2644,14 @@ ON i.ID_TIPO = t.ID_TIPO;`;
 				])
 				.join(["INFO_CD", "TIPO_CD"], ["i", "t"])
 				.on($.eq($.col("ID_TIPO", "i"), $.col("ID_TIPO", "t")))
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("incluir las filas no coincidentes de la tabla INFO_CD usando LEFT OUTER JOIN", async () => {
+			const debug = false;
 			const $ = qb;
 			const query = `SELECT i.TITULO, t.NOMBRE_TIPO, i.EXISTENCIA
 FROM INFO_CD i LEFT OUTER JOIN TIPO_CD t
@@ -2678,13 +2665,14 @@ ON i.ID_TIPO = t.ID_TIPO;`;
 				])
 				.leftJoin(["INFO_CD", "TIPO_CD"], ["i", "t"])
 				.on($.eq($.col("ID_TIPO", "i"), $.col("ID_TIPO", "t")))
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("incluir las filas no coincidentes de la tabla TIPO_CD usando RIGHT OUTER JOIN", async () => {
+			const debug = false;
 			const $ = qb;
 			const query = `SELECT i.TITULO, t.NOMBRE_TIPO, i.EXISTENCIA
 FROM INFO_CD i RIGHT OUTER JOIN TIPO_CD t
@@ -2698,15 +2686,15 @@ ON i.ID_TIPO = t.ID_TIPO;`;
 				])
 				.rightJoin(["INFO_CD", "TIPO_CD"], ["i", "t"])
 				.on($.eq($.col("ID_TIPO", "i"), $.col("ID_TIPO", "t")))
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		// 		test(
 		// 			"todas las filas no coincidentes usando full outer join",
-		// 			async () => {
+		// 			async () => {const debug = false;
 		// 				const $ = qb;
 		// 				const query = `SELECT i.TITULO, t.NOMBRE_TIPO, i.EXISTENCIA
 		// FROM INFO_CD i FULL OUTER JOIN TIPO_CD t
@@ -2721,12 +2709,13 @@ ON i.ID_TIPO = t.ID_TIPO;`;
 		// 					.fullJoin(["INFO_CD", "TIPO_CD"], ["i", "t"])
 		// 					.on($.eq($.col("ID_TIPO", "i"), $.col("ID_TIPO", "t")));
 
-		// 				showResults(result);
-		// 				assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		//
+		// 				assert.equal(result.toString(), query);
 		// 			},
 		// 		);
 		//fin test
 		test("crea tablas CDS_CONTINUADOS y CDS_DESCONTINUADOS", async () => {
+			const debug = false;
 			const CDS_CONTINUADOS = {
 				NOMBRE_CD: "VARCHAR(60)",
 				TIPO_CD: "CHAR(4)",
@@ -2753,13 +2742,14 @@ CREATE TABLE CDS_DESCONTINUADOS
 				.createTable("CDS_DESCONTINUADOS", {
 					cols: CDS_DESCONTINUADOS,
 				})
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("añade registros a CDS_CONTINUADOS", async () => {
+			const debug = false;
 			const CDS_CONTINUADOS = [
 				["Famous Blue Raincoat", "FROK", 19],
 				["Blue", "CPOP", 28],
@@ -2779,13 +2769,14 @@ VALUES
 
 			const result = await qb
 				.insert("CDS_CONTINUADOS", [], CDS_CONTINUADOS)
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("añade registros a CDS_DESCONTINUADOS", async () => {
+			const debug = false;
 			const CDS_DESCONTINUADOS = [
 				["Court and Spark", "FROK", 3],
 				["Kojiki", "NEWA", 2],
@@ -2805,13 +2796,14 @@ VALUES
 
 			const result = await qb
 				.insert("CDS_DESCONTINUADOS", [], CDS_DESCONTINUADOS)
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("combinar instrucciones 'SELECT' en una sola que combine la información", async () => {
+			const debug = false;
 			const query = `SELECT *
 FROM CDS_CONTINUADOS
 UNION ALL
@@ -2823,16 +2815,17 @@ FROM CDS_DESCONTINUADOS;`;
 					qb.select("*").from("CDS_CONTINUADOS"),
 					qb.select("*").from("CDS_DESCONTINUADOS"),
 				)
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		/**
 		 * Usar subconsultas para acceder y moficiar datos capitulo 12
 		 */
 		test("crea tabla EXISTENCIA_CD", async () => {
+			const debug = false;
 			const EXISTENCIA_CD = {
 				TITULO_CD: "VARCHAR(60)",
 				EXISTENCIA: "INT",
@@ -2868,13 +2861,14 @@ VALUES
 				.dropTable("EXISTENCIA_CD", { secure: true })
 				.createTable("EXISTENCIA_CD", { cols: EXISTENCIA_CD })
 				.insert("EXISTENCIA_CD", [], existenciaCdRows)
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("crea tabla ARTISTAS_CD", async () => {
+			const debug = false;
 			const ARTISTAS_CD = {
 				TITULO: "VARCHAR(60)",
 				ARTIST_NAME: "VARCHAR(60)",
@@ -2918,13 +2912,14 @@ VALUES
 				.dropTable("ARTISTAS_CD", { secure: true })
 				.createTable("ARTISTAS_CD", { cols: ARTISTAS_CD })
 				.insert("ARTISTAS_CD", [], artistasCdRows)
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("el predicado IN compara valores de una columna en la tabla primaria con valores arrojados por la subconsulta", async () => {
+			const debug = false;
 			const query = `SELECT *
 FROM EXISTENCIA_CD
 WHERE TITULO_CD IN ( SELECT TITULO
@@ -2943,10 +2938,10 @@ WHERE ARTIST_NAME = 'Joni Mitchell' );`;
 							.where(qb.eq("ARTIST_NAME", "Joni Mitchell")),
 					),
 				)
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		/**
@@ -2956,6 +2951,7 @@ la subconsulta asociada deberá incluir una condición de búsqueda que haga coi
 a través de la subconsulta
 		 */
 		test("predicado EXISTS", async () => {
+			const debug = false;
 			const query = `SELECT *
 FROM EXISTENCIA_CD s
 WHERE EXISTS ( SELECT TITULO
@@ -2979,10 +2975,10 @@ AND s.TITULO_CD = a.TITULO) );`;
 							),
 					),
 				)
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		}); //fin test
 		/**
 		 * El predicado ALL comprueba si todos los valores arrojados cumplen con la condición
@@ -2991,6 +2987,7 @@ Cuando se utiliza un predicado de comparación cuantificado (SOME, ANY y ALL), l
 la tabla primaria se comparan con los valores arrojados por la subconsulta.
 		 */
 		test("crea tabla PRECIOS_MENUDEO", async () => {
+			const debug = false;
 			const PRECIOS_MENUDEO = {
 				NOMBRE_CD: "VARCHAR(60)",
 				P_MENUDEO: "NUMERIC(5, 2)",
@@ -3023,13 +3020,14 @@ VALUES
 				.dropTable("PRECIOS_MENUDEO", { secure: true })
 				.createTable("PRECIOS_MENUDEO", { cols: PRECIOS_MENUDEO })
 				.insert("PRECIOS_MENUDEO", [], preciosMenudeoRows)
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("crea tabla PRECIOS_VENTA", async () => {
+			const debug = false;
 			const PRECIOS_VENTA = {
 				TITULO_CD: "VARCHAR(60)",
 				P_VENTA: "NUMERIC(5,2)",
@@ -3058,13 +3056,14 @@ INSERT INTO PRECIOS_VENTA\nVALUES
 				.dropTable("PRECIOS_VENTA", { secure: true })
 				.createTable("PRECIOS_VENTA", { cols: PRECIOS_VENTA })
 				.insert("PRECIOS_VENTA", [], preciosVentaRows)
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("predicado cuantificado", async () => {
+			const debug = false;
 			const query = `SELECT NOMBRE_CD, P_MENUDEO
 FROM PRECIOS_MENUDEO
 WHERE P_MENUDEO > ALL ( SELECT P_VENTA
@@ -3085,13 +3084,14 @@ WHERE P_VENTA < 15.99 );`;
 						),
 					),
 				)
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("incluir una subconsulta en la cláusula SELECT", async () => {
+			const debug = false;
 			const query = `SELECT TITULO_CD, ( SELECT ARTIST_NAME
 FROM ARTISTAS_CD a
 WHERE s.TITULO_CD = a.TITULO ) AS ARTIST, EXISTENCIA
@@ -3111,13 +3111,14 @@ FROM EXISTENCIA_CD s;`;
 					"EXISTENCIA",
 				])
 				.from("EXISTENCIA_CD", "s")
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("subconsultas que devuelve un solo valor", async () => {
+			const debug = false;
 			const query = `SELECT NOMBRE_CD, P_MENUDEO
 FROM PRECIOS_MENUDEO
 WHERE P_MENUDEO = ( SELECT MAX(P_VENTA)
@@ -3132,14 +3133,15 @@ FROM PRECIOS_VENTA );`;
 						qb.select(qb.max("P_VENTA")).from("PRECIOS_VENTA"),
 					),
 				)
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		//Modificar datos
 		test("crea tabla INVENTARIO_TITULOS", async () => {
+			const debug = false;
 			const INVENTARIO_TITULOS = {
 				ID_TITULO: "INT",
 				TITULO: "VARCHAR(60)",
@@ -3175,13 +3177,14 @@ VALUES
 				.dropTable("INVENTARIO_TITULOS", { secure: true })
 				.createTable("INVENTARIO_TITULOS", { cols: INVENTARIO_TITULOS })
 				.insert("INVENTARIO_TITULOS", [], inventarioTituloRows)
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("crea tabla TIPOS_TITULO", async () => {
+			const debug = false;
 			const TIPOS_TITULO = {
 				TITULO_CD: "VARCHAR(60)",
 				TIPO_CD: "CHAR(20)",
@@ -3215,13 +3218,14 @@ VALUES
 				.dropTable("TIPOS_TITULO", { secure: true })
 				.createTable("TIPOS_TITULO", { cols: TIPOS_TITULO })
 				.insert("TIPOS_TITULO", [], tiposTituloRows)
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("insertar registros usando una subconsulta", async () => {
+			const debug = false;
 			const query = `INSERT INTO TIPOS_TITULO
 VALUES
 ( ( SELECT TITULO FROM INVENTARIO_TITULOS WHERE ID_TITULO = 108 ), 'Popular' );`;
@@ -3238,13 +3242,14 @@ VALUES
 						"Popular",
 					],
 				)
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("actualizar el valor Both Sides Now", async () => {
+			const debug = false;
 			const query = `UPDATE TIPOS_TITULO
 SET TIPO_CD = 'Folk'
 WHERE TITULO_CD IN ( SELECT TITULO
@@ -3264,13 +3269,14 @@ WHERE ID_TITULO = 108 );`;
 							.where(qb.eq("ID_TITULO", 108)),
 					),
 				)
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("subconsulta en la cláusula SET para proporcionar un valor para la columna identificada", async () => {
+			const debug = false;
 			const query = `UPDATE TIPOS_TITULO
 SET TITULO_CD =
 ( SELECT TITULO
@@ -3286,13 +3292,14 @@ WHERE TITULO_CD = 'Both Sides Now';`;
 						.where(qb.eq("ID_TITULO", 108)),
 				})
 				.where(qb.eq("TITULO_CD", "Both Sides Now"))
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("borra el valor Both Sides", async () => {
+			const debug = false;
 			const query = `DELETE FROM TIPOS_TITULO
 WHERE TITULO_CD IN ( SELECT TITULO
 FROM INVENTARIO_TITULOS
@@ -3309,13 +3316,14 @@ WHERE ID_TITULO = 108 );`;
 							.where(qb.eq("ID_TITULO", 108)),
 					),
 				)
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 		test("uso de limit y offset para MySQL, PostgreSQL, y SQLite ", async () => {
+			const debug = false;
 			const query = `SELECT *
 FROM TIPOS_TITULO
 LIMIT 3
@@ -3326,18 +3334,19 @@ OFFSET 3;`;
 				.from("TIPOS_TITULO")
 				.limit(3)
 				.offset(3)
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(result.toString(), query);
 		});
 		//fin test
 	});
 	describe("Capitulo 16 Transacciones", () => {
 		test("usar una transaccion para actualizar", async () => {
+			const debug = false;
 			const query = `SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
 START TRANSACTION WITH CONSISTENT SNAPSHOT, READ WRITE;
-USE INVENTARIO;
+
 UPDATE DISCOS_COMPACTOS
 SET EN_EXISTENCIA = EN_EXISTENCIA - 1;
 UPDATE COSTOS_TITULO
@@ -3353,19 +3362,19 @@ SET MENUDEO = MENUDEO - 10;`;
 				.add(qb.update("COSTOS_TITULO", { MENUDEO: qb.exp("MENUDEO - 10") }))
 				.start({ snapshot: true, access: "READ WRITE" });
 
-			showResults(result);
 			assert.equal(result.toString(), `${query}`);
 		});
 		//fin test
 		test("punto de recuperación a la transacción", async () => {
+			const debug = false;
 			const query = `SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
 START TRANSACTION;
-USE INVENTARIO;
+
 SELECT TITULO_CD, EN_EXISTENCIA
 FROM DISCOS_COMPACTOS
 WHERE ID_DISQUERA = 832;
 SAVEPOINT SECCION_1;
-USE INVENTARIO;
+
 UPDATE DISCOS_COMPACTOS
 SET EN_EXISTENCIA = EN_EXISTENCIA + 2
 WHERE ID_DISQUERA = 832;
@@ -3392,7 +3401,6 @@ ROLLBACK TO SAVEPOINT SECCION_1;`;
 				.rollback("SECCION_1") // Invierte la actualización de datos
 				.start();
 
-			showResults(result);
 			assert.equal(result.toString(), `${query}`);
 		});
 		//fin test
@@ -3400,13 +3408,13 @@ ROLLBACK TO SAVEPOINT SECCION_1;`;
 });
 
 /**
- * test("",{only:true}, async () => {
+ * test("",{only:true}, async () => {const debug = false;
 			const query = ``;
 
 			const result = await qb;
 
-			showResults(result);
-			assert.equal(result.toString(),`USE INVENTARIO;\n${query}`);
+			
+			assert.equal(result.toString(),query);
 		});
 		//fin test
  */

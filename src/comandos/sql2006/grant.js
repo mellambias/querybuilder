@@ -34,7 +34,7 @@ export const grant = {
 		typeof to === "string"
 			? /^(PUBLIC|ALL)$/i.test(to)
 				? "TO PUBLIC"
-				: undefined
+				: `TO ${to}`
 			: `TO ${to.join(", ")}`,
 	withGrant: (withGrant) =>
 		withGrant === true ? "WITH GRANT OPTION" : undefined,

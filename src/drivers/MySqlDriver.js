@@ -4,8 +4,8 @@ class MySqlDriver extends Driver {
 	constructor(params) {
 		super(mysql, params);
 		this.connection = null;
-		this.queyResult = null;
-		this.queryFields = null;
+		this.queyResult = [];
+		this.queryFields = [];
 	}
 	async connect() {
 		this.connection = await this.library.createConnection({
@@ -30,7 +30,12 @@ class MySqlDriver extends Driver {
 			 * - SELECT -> contains rows returned by server
 			 * this.queryFields contains extra meta data about the operation, if available
 			 */
-			[this.queyResult, this.queryFields] = await this.connection.query(query);
+			const querys = query.split(";").filter((q) => q.length > 0);
+			for (const query of querys) {
+				const [result, fields] = await this.connection.query(`${query};`);
+				this.queyResult.push(result);
+				this.fields(fields);
+			}
 			if (
 				options?.transaction === undefined ||
 				options?.transaction === false
@@ -64,19 +69,25 @@ class MySqlDriver extends Driver {
 		for (const element of this.queyResult) {
 			response.push(element);
 			if (!this.isResultSetHeader(element)) {
-				rows.push(...element);
+				rows.push(element);
+			} else {
+				rows.push([]);
 			}
 		}
-
-		const columns = this.fields();
-		return { response, rows, columns };
+		return { response, rows, columns: this.queryFields };
 	}
-	fields() {
-		if (Array.isArray(this.queryFields)) {
-			return this.queryFields
+	fields(queryFields) {
+		let campos = [];
+		if (Array.isArray(queryFields)) {
+			campos = queryFields
 				.filter((item) => item !== undefined)
-				.reduce((prev, item) => item, []);
+				.reduce((prev, item) => {
+					prev.push(item.name);
+					return prev;
+				}, []);
 		}
+		this.queryFields.push(campos);
+
 		return this.queryFields;
 	}
 

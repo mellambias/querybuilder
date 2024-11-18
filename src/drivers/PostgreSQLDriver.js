@@ -8,14 +8,14 @@ class PostgreSQLDriver extends Driver {
 	constructor(params) {
 		super(pg, params);
 		this.connection = null;
-		this.queyResult = null;
-		this.queryFields = null;
+		this.queyResult = [];
+		this.queryFields = [];
 	}
 
 	async connect() {
 		try {
 			console.log(
-				"[postgreSQL:pg] conecta con la base de datos '%s'",
+				"✔ [postgreSQL:pg] conecta con la base de datos '%s'",
 				this.database ? this.database : "postgreSQL",
 			);
 			// const { Client } = this.library;
@@ -30,7 +30,9 @@ class PostgreSQLDriver extends Driver {
 			return this;
 		} catch (error) {
 			console.log("Error de conexion", error);
-			return new Error(`Error de conexion ${error.message} ${error.stack}`);
+			return new Error(
+				`❌[PostgreSQLDriver] Error de conexion ${error.message} ${error.stack}`,
+			);
 		}
 	}
 
@@ -50,12 +52,16 @@ class PostgreSQLDriver extends Driver {
 			if (this.connection === null) {
 				await this.connect();
 			}
-			this.queyResult = await this.connection.query(query);
+			const querys = query.split(";").filter((q) => q.length > 0);
+			for (const query of querys) {
+				const result = await this.connection.query(query);
+				this.queyResult.push(result);
+			}
 			await this.close();
 			return this;
 		} catch (error) {
 			await this.close();
-			throw new Error(`[Driver execute] ${error.message}`);
+			throw new Error(`❌ [PostgreSQLDriver execute] ${error.message}`);
 		}
 	}
 
@@ -70,15 +76,63 @@ class PostgreSQLDriver extends Driver {
 	 */
 
 	response() {
-		console.log("devuelve la respuesta del servidor", this.queyResult);
-		const response = [];
-		const rows = this.queyResult.rows;
-		const columns = [];
-		if (this.queryResult?.fields) {
-			columns.push(...this.queryResult.fields);
+		try {
+			const rows = [];
+			const columns = [];
+			const response = [];
+			if (Array.isArray(this.queyResult)) {
+				for (const result of this.queyResult) {
+					const filtered = this.filterResult(result);
+					response.push({
+						...filtered,
+						rows: filtered.rows.length,
+						fields: filtered.fields.length,
+					});
+					rows.push(filtered.rows);
+					columns.push(this.fields(filtered.fields));
+				}
+				return { response, rows, columns };
+			}
+		} catch (error) {
+			return new Error(`❌[PostgreSQLDriver][response] ${error}`);
+		}
+	}
+
+	filterResult(queryResult) {
+		const keys = ["command", "rowCount", "oid", "rows", "fields", "RowCtor"];
+		return Object.keys(queryResult)
+			.filter(
+				(key) =>
+					keys.includes(key) &&
+					queryResult[key] !== undefined &&
+					queryResult[key] !== null,
+			)
+			.reduce((result, key) => {
+				if (Array.isArray(queryResult[key])) {
+					if (queryResult[key]?.length > 0) {
+						result[key] = queryResult[key];
+					} else {
+						result[key] = [];
+					}
+				} else {
+					result[key] = queryResult[key];
+				}
+				return result;
+			}, {});
+	}
+
+	fields(queryFields) {
+		let campos = [];
+		if (Array.isArray(queryFields)) {
+			campos = queryFields
+				.filter((item) => item !== undefined)
+				.reduce((prev, item) => {
+					prev.push(item.name);
+					return prev;
+				}, []);
 		}
 
-		return { response, rows, columns };
+		return campos;
 	}
 
 	async close() {

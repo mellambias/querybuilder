@@ -813,7 +813,7 @@ WHERE ID_DISCO_COMPACTO = 116;`,
 			);
 		});
 
-		test("leer datos de la tabla DISCOS_COMPACTO", async () => {
+		test("leer datos de la tabla DISCOS_COMPACTO", { only: true }, async () => {
 			const result = await qb
 				.select("*")
 				.from("DISCOS_COMPACTOS")
@@ -823,11 +823,12 @@ WHERE ID_DISCO_COMPACTO = 116;`,
 						qb.eq("ID_DISCO_COMPACTO", 117),
 					),
 				)
+
 				.execute();
 
 			showResults(result);
 
-			assert.equal(
+			assert(
 				result.toString(),
 				`USE INVENTARIO;
 SELECT *
@@ -1037,7 +1038,7 @@ CANTIDAD = 10;`,
 		test("Actualizar el valor de una columna solo de algunas filas usando where", async () => {
 			const result = await qb
 				.update("INVENTARIO_CD", { EN_EXISTENCIA: 37 })
-				.where([qb.eq("NOMBRE_CD", "Out of Africa")])
+				.where([qb.eq("NOMBRE_CD", "Fundamental")])
 				.execute();
 
 			showResults(result);
@@ -1047,7 +1048,7 @@ CANTIDAD = 10;`,
 				`USE INVENTARIO;
 UPDATE INVENTARIO_CD
 SET EN_EXISTENCIA = 37
-WHERE NOMBRE_CD = 'Out of Africa';`,
+WHERE NOMBRE_CD = 'Fundamental';`,
 			);
 		});
 

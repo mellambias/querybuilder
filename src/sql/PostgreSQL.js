@@ -3,6 +3,7 @@ Implementa las variaciones al SQL2006 propias del SGBD
 */
 import Core from "../core.js";
 import postgreSQL from "../comandos/postgreSQL.js";
+import Mysql84 from "../comandos/Mysql.js";
 import Expresion from "../expresion.js";
 class PostgreSQL extends Core {
 	constructor() {
@@ -82,6 +83,29 @@ class PostgreSQL extends Core {
 	*/
 		throw new Error(
 			"Este lenguaje no soporta los 'createAssertion' use 'TRIGGERS' o 'Constraints' ",
+		);
+	}
+	createRoles(names, options) {
+		const stack = [];
+		if (Array.isArray(names)) {
+			for (const name in names) {
+				if (Array.isArray(options)) {
+					if (options[name] !== undefined) {
+						stack.push(this.createRoles(names[name], options[name]));
+						continue;
+					}
+					stack.push(this.createRoles(names[name], {}));
+					continue;
+				}
+				stack.push(this.createRoles(names[name], options));
+			}
+			return stack.join(";\n");
+		}
+		return this.getStatement(
+			"CREATE ROLE",
+			postgreSQL.createRoles,
+			{ names, options },
+			" ",
 		);
 	}
 }
