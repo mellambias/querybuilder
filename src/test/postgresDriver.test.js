@@ -457,6 +457,165 @@ describe("Trabaja con INVENTARIO", () => {
 			}
 		});
 	});
+	describe("llena las tablas inventario", async () => {
+		test("TIPOS_MUSICA", async () => {
+			const table = "TIPOS_MUSICA";
+			const rows = [
+				[11, "Blues"],
+				[12, "Jazz"],
+				[13, "Pop"],
+				[14, "Rock"],
+				[15, "Classical"],
+				[16, "New Age"],
+				[17, "Country"],
+				[18, "Folk"],
+				[19, "International"],
+				[20, "Soundtracks"],
+				[21, "Christmas"],
+			];
+			const result = await qb.insert(table, [], rows).execute();
+			showResults(result);
+		});
+		//fin
+		test("DISQUERAS_CD", async () => {
+			const disqueras_cd = [
+				[827, "Private Music"],
+				[828, "Reprise Records"],
+				[829, "Asylum Records"],
+				[830, "Windham Hill Records"],
+				[831, "Geffen"],
+				[832, "MCA Records"],
+				[833, "Decca Record Company"],
+				[834, "CBS Records"],
+				[835, "Capitol Records"],
+				[836, "Sarabande Records"],
+			];
+			const result = await qb
+				.insert("DISQUERAS_CD", [], disqueras_cd)
+				.execute();
+			showResults(result);
+		});
+		//fin
+		test("DISCOS_COMPACTOS", async () => {
+			const discos_compactos = [
+				[101, "Famous Blue Raincoat", 827, 13],
+				[102, "Blue", 828, 42],
+				[103, "Court and Spark", 829, 22],
+				[104, "Past Light", 830, 17],
+				[105, "Kojiki", 831, 6],
+				[106, "That Christmas Feeling", 832, 8],
+				[107, "Patsy Cline: 12 Greatest Hits", 832, 32],
+				[108, "Carreras Domingo Pavarotti in Concert", 833, 27],
+				[109, "After the Rain: The Soft Sounds of Erik Satie", 833, 21],
+				[110, "Out of Africa", 832, 29],
+				[111, "Leonard Cohen The Best Of", 834, 12],
+				[112, "Fundamental", 835, 34],
+				[113, "Bob Seger and the Silver Bullet Band Greatest Hits", 835, 16],
+				[114, "Blues on the Bayou", 832, 27],
+				[115, "Orlando", 836, 5],
+			];
+			const result = await qb
+				.insert("DISCOS_COMPACTOS", [], discos_compactos)
+				.execute();
+			showResults(result);
+		});
+		//fin
+		test("TIPOS_DISCO_COMPACTO", async () => {
+			const table = "TIPOS_DISCO_COMPACTO";
+			const rows = [
+				[101, 18],
+				[101, 13],
+				[102, 11],
+				[102, 18],
+				[102, 13],
+				[103, 18],
+				[103, 13],
+				[104, 16],
+				[105, 16],
+				[106, 21],
+				[107, 13],
+				[107, 17],
+				[108, 13],
+				[108, 15],
+				[109, 15],
+				[110, 20],
+				[111, 13],
+				[111, 18],
+				[112, 11],
+				[112, 13],
+				[113, 13],
+				[113, 14],
+				[114, 11],
+				[115, 20],
+			];
+			const result = await qb.insert(table, [], rows).execute();
+			showResults(result);
+		});
+		test("ARTISTAS", async () => {
+			const table = "ARTISTAS";
+			const rows = [
+				[2001, "Jennifer Warnes", "Seattle, Washington, Estados Unidos"],
+				[2002, "Joni Mitchell", "Fort MacLeod, Alberta, Canadá"],
+				[2003, "William Ackerman", "Alemania"],
+				[2004, "Kitaro", "Toyohashi, Japón"],
+				[2005, "Bing Crosby", "Tacoma, Washington, Estados Unidos"],
+				[2006, "Patsy Cline", "Winchester, Virginia, Estados Unidos"],
+				[2007, "Jose Carreras", "Barcelona, España"],
+				[2008, "Luciano Pavarotti", "Modena, Italia"],
+				[2009, "Placido Domingo", "Madrid, España"],
+				[2010, "Pascal Roge", "Desconocido"],
+				[2011, "John Barry", "Desconocido"],
+				[2012, "Leonard Cohen", "Montreal, Quebec, Canadá"],
+				[2013, "Bonnie Raitt", "Burbank, California, Estados Unidos"],
+				[2014, "Bob Seger", "Dearborn, Michigan, Estados Unidos"],
+				[2015, "Silver Bullet Band", "No aplica"],
+				[2016, "B.B. King", "Indianola, Mississippi, Estados Unidos"],
+				[2017, "David Motion", "Desconocido"],
+				[2018, "Sally Potter", "Desconocido"],
+			];
+			const result = await qb.insert(table, [], rows).execute();
+			showResults(result);
+		});
+		//fin
+		test("CDS_ARTISTA", async () => {
+			const table = "CDS_ARTISTA";
+			const rows = [
+				[2001, 101],
+				[2002, 102],
+				[2002, 103],
+				[2003, 104],
+				[2004, 105],
+				[2005, 106],
+				[2006, 107],
+				[2007, 108],
+				[2008, 108],
+				[2009, 108],
+				[2010, 109],
+				[2011, 110],
+				[2012, 111],
+				[2013, 112],
+				[2014, 113],
+				[2015, 113],
+				[2016, 114],
+				[2017, 115],
+				[2018, 115],
+			];
+			const result = await qb.insert(table, [], rows).execute();
+			showResults(result);
+		});
+		//fin
+
+		//fin
+
+		//fin
+		// test("", async () => {
+		// 	const table = "";
+		// 	const rows = [];
+		// 	const result = await qb.insert(table, [], rows).execute();
+		// 	showResults(result);
+		// });
+		//fin
+	});
 
 	describe("Alterar las tablas", () => {
 		test("Añadir una columna a la tabla DISCOS_COMPACTOS", async () => {
@@ -774,7 +933,7 @@ OR ID_DISCO_COMPACTO = 117);`;
 				.execute(debug);
 			showResults(result, debug);
 
-			assert(result.toString(), query);
+			assert.equal(result.toString(), query);
 		});
 		//fin
 		test("borrar registros", async () => {
@@ -983,7 +1142,7 @@ CANTIDAD = 10;`,
 				.execute(debug);
 			showResults(result, debug);
 
-			assert(
+			assert.equal(
 				result.toString(),
 				`UPDATE INVENTARIO_CD
 SET EN_EXISTENCIA = 37
@@ -991,31 +1150,27 @@ WHERE NOMBRE_CD = 'Fundamental';`,
 			);
 		});
 
-		test(
-			"Actualizar una columna usando como valor el resultado devuelto por un select",
-			{ only: true },
-			async () => {
-				const debug = false;
-				const result = await qb
-					.update("INVENTARIO_CD_2", {
-						EN_EXISTENCIA_2: qb
-							.select(qb.avg("EN_EXISTENCIA"))
-							.from("INVENTARIO_CD"),
-					})
-					.where([qb.eq("NOMBRE_CD_2", "Fundamental")])
-					.execute(debug);
-				showResults(result, debug);
+		test("Actualizar una columna usando como valor el resultado devuelto por un select", async () => {
+			const debug = false;
+			const result = await qb
+				.update("INVENTARIO_CD_2", {
+					EN_EXISTENCIA_2: qb
+						.select(qb.avg("EN_EXISTENCIA"))
+						.from("INVENTARIO_CD"),
+				})
+				.where([qb.eq("NOMBRE_CD_2", "Fundamental")])
+				.execute(debug);
+			showResults(result, debug);
 
-				assert.equal(
-					result.toString(),
-					`UPDATE INVENTARIO_CD_2
+			assert.equal(
+				result.toString(),
+				`UPDATE INVENTARIO_CD_2
 SET EN_EXISTENCIA_2 =
 ( SELECT AVG(EN_EXISTENCIA)
 FROM INVENTARIO_CD )
 WHERE NOMBRE_CD_2 = 'Fundamental';`,
-				);
-			},
-		);
+			);
+		});
 
 		test("Eliminar todas las filas de una tabla con DELETE FROM", async () => {
 			const debug = false;
@@ -1035,8 +1190,7 @@ WHERE NOMBRE_CD_2 = 'Fundamental';`,
 
 			assert.equal(
 				result.toString(),
-				`
-DELETE FROM INVENTARIO_CD
+				`DELETE FROM INVENTARIO_CD
 WHERE TIPO_MUSICA = 'Country';`,
 			);
 		});
@@ -1054,8 +1208,7 @@ WHERE TIPO_MUSICA = 'Country';`,
 
 			assert.equal(
 				result.toString(),
-				`
-SELECT ID_TIPO, NOMBRE_TIPO
+				`SELECT ID_TIPO, NOMBRE_TIPO
 FROM TIPOS_MUSICA
 WHERE (ID_TIPO = 11
 OR ID_TIPO = 12);`,
@@ -1077,8 +1230,7 @@ OR ID_TIPO = 12);`,
 
 			assert.equal(
 				result.toString(),
-				`
-SELECT NOMBRE_ARTISTA, LUGAR_DE_NACIMIENTO
+				`SELECT NOMBRE_ARTISTA, LUGAR_DE_NACIMIENTO
 FROM ARTISTAS
 WHERE (NOMBRE_ARTISTA <> 'Patsy Cline'
 AND NOMBRE_ARTISTA <> 'Bing Crosby');`,
@@ -1100,8 +1252,7 @@ AND NOMBRE_ARTISTA <> 'Bing Crosby');`,
 
 			assert.equal(
 				result.toString(),
-				`
-SELECT *
+				`SELECT *
 FROM DISCOS_COMPACTOS
 WHERE (TITULO_CD NOT LIKE ('%Christmas%')
 AND TITULO_CD LIKE ('%Blue%'));`,
@@ -1134,10 +1285,10 @@ AND TITULO_CD LIKE ('%Blue%'));`,
 
 			assert.equal(
 				result.toString(),
-				`
-CREATE TABLE CDS_A_LA_MANO\n( TITULO_CD VARCHAR(60),
- DERECHOSDEAUTOR INTEGER ,
- PRECIO_MENUDEO DECIMAL(5,2),
+				`CREATE TABLE CDS_A_LA_MANO
+( TITULO_CD VARCHAR(60),
+ DERECHOSDEAUTOR INTEGER,
+ PRECIO_MENUDEO NUMERIC(5,2),
  INVENTARIO INTEGER );
 INSERT INTO CDS_A_LA_MANO
 VALUES
@@ -1166,6 +1317,7 @@ WHERE TITULO_CD = 'Past Light';`;
 
 			assert.equal(result.toString(), query);
 		});
+
 		test("operador distinto a para comparar los valores en la columna TITULO_CD con uno de los títulos de CD", async () => {
 			const debug = false;
 			const query = `SELECT TITULO_CD, DERECHOSDEAUTOR
@@ -1181,29 +1333,34 @@ WHERE TITULO_CD <> 'Past Light';`;
 
 			assert.equal(result.toString(), query);
 		});
-		test("operador Menor que y al operador Mayor que", async () => {
-			const debug = false;
-			const query = `SELECT TITULO_CD, INVENTARIO
+
+		test(
+			"operador Menor que y al operador Mayor que",
+			{ only: true },
+			async () => {
+				const debug = false;
+				const query = `SELECT TITULO_CD, INVENTARIO
 FROM CDS_A_LA_MANO
 WHERE (INVENTARIO > 2
 AND INVENTARIO < 25
 AND  PRECIO_MENUDEO <> 16.99);`;
 
-			const result = await qb
-				.select(["TITULO_CD", "INVENTARIO"])
-				.from("CDS_A_LA_MANO")
-				.where(
-					qb.and(
-						qb.gt("INVENTARIO", 2),
-						qb.lt("INVENTARIO", 25),
-						qb.ne(" PRECIO_MENUDEO", 16.99),
-					),
-				)
-				.execute(debug);
-			showResults(result, debug);
+				const result = await qb
+					.select(["TITULO_CD", "INVENTARIO"])
+					.from("CDS_A_LA_MANO")
+					.where(
+						qb.and(
+							qb.gt("INVENTARIO", 2),
+							qb.lt("INVENTARIO", 25),
+							qb.ne(" PRECIO_MENUDEO", 16.99),
+						),
+					)
+					.execute(debug);
+				showResults(result, debug);
 
-			assert.equal(result.toString(), query);
-		});
+				assert.equal(result.toString(), query);
+			},
+		);
 		test("Menor que o igual a y Mayor que o igual a.", async () => {
 			const debug = false;
 			const query = `SELECT TITULO_CD, DERECHOSDEAUTOR
