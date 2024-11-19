@@ -11,6 +11,7 @@ class Expresion {
 	}
 	as(alias) {
 		this.alias = alias;
+		return this;
 	}
 }
 

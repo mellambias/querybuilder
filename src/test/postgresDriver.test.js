@@ -1334,33 +1334,29 @@ WHERE TITULO_CD <> 'Past Light';`;
 			assert.equal(result.toString(), query);
 		});
 
-		test(
-			"operador Menor que y al operador Mayor que",
-			{ only: true },
-			async () => {
-				const debug = false;
-				const query = `SELECT TITULO_CD, INVENTARIO
+		test("operador Menor que y al operador Mayor que", async () => {
+			const debug = false;
+			const query = `SELECT TITULO_CD, INVENTARIO
 FROM CDS_A_LA_MANO
 WHERE (INVENTARIO > 2
 AND INVENTARIO < 25
 AND  PRECIO_MENUDEO <> 16.99);`;
 
-				const result = await qb
-					.select(["TITULO_CD", "INVENTARIO"])
-					.from("CDS_A_LA_MANO")
-					.where(
-						qb.and(
-							qb.gt("INVENTARIO", 2),
-							qb.lt("INVENTARIO", 25),
-							qb.ne(" PRECIO_MENUDEO", 16.99),
-						),
-					)
-					.execute(debug);
-				showResults(result, debug);
+			const result = await qb
+				.select(["TITULO_CD", "INVENTARIO"])
+				.from("CDS_A_LA_MANO")
+				.where(
+					qb.and(
+						qb.gt("INVENTARIO", 2),
+						qb.lt("INVENTARIO", 25),
+						qb.ne(" PRECIO_MENUDEO", 16.99),
+					),
+				)
+				.execute(debug);
+			showResults(result, debug);
 
-				assert.equal(result.toString(), query);
-			},
-		);
+			assert.equal(result.toString(), query);
+		});
 		test("Menor que o igual a y Mayor que o igual a.", async () => {
 			const debug = false;
 			const query = `SELECT TITULO_CD, DERECHOSDEAUTOR
@@ -1524,11 +1520,11 @@ AND TITULO_CD LIKE ('%Blue%'));`;
 			const debug = false;
 			const query = `CREATE TABLE IF NOT EXISTS MENUDEO_CD
 ( NOMBRE_CD VARCHAR(60),
- MENUDEO DECIMAL(5,2),
+ MENUDEO NUMERIC(5,2),
  EN_EXISTENCIA INTEGER );
 CREATE TABLE IF NOT EXISTS REBAJA_CD
 ( TITULO VARCHAR(60),
- VENTA DECIMAL(5,2) );
+ VENTA NUMERIC(5,2) );
 INSERT INTO MENUDEO_CD
 VALUES
 ('Famous Blue Raincoat', 16.99, 5),
@@ -1562,7 +1558,7 @@ VALUES
 		/**
 		 * Los valores RETAIL deberán ser de filas que tengan un valor EN_EXISTENCIA mayor a 9. En
 otras palabras, la consulta deberá arrojar solamente aquellos CD cuyo precio rebajado (VENTA)
-sea menor que cualquier precio de lista (MENUDEO) en aquellos CD que haya una existencia
+sea menor que algun precio de lista (MENUDEO) en aquellos CD que haya una existencia
 mayor a nueve.
 		 */
 		test("uso de ANY", async () => {
@@ -1594,6 +1590,9 @@ WHERE EN_EXISTENCIA > 9 );`;
 		});
 		//fin test
 		test("uso de SOME", async () => {
+			/**
+			 * SOME is a synonym for ANY. IN is equivalent to = ANY.
+			 */
 			const debug = false;
 			const query = `SELECT TITULO, VENTA
 FROM REBAJA_CD
@@ -1622,6 +1621,10 @@ WHERE EN_EXISTENCIA > 9 );`;
 		});
 		//fin test
 		test("uso de ALL", async () => {
+			/**
+			 * The result of ALL is “true” if all rows yield true (including the case
+where the subquery returns no rows). The result is “false” if any false result is found.
+			 */
 			const debug = false;
 			const query = `SELECT TITULO, VENTA
 FROM REBAJA_CD
@@ -1768,9 +1771,19 @@ FROM CDS_VENDIDOS );`;
 			showResults(result, debug);
 
 			assert.equal(result.toString(), query);
+			assert.deepStrictEqual(result.result.rows[0], [
+				{
+					nombre_artista: "Patsy Cline",
+					nombre_cd: "Patsy Cline: 12 Greatest Hits",
+					vendidos: 54,
+				},
+			]);
 		});
 		//fin test
 		test("el valor mas alto para una columna usando agrupacion", async () => {
+			/**
+			 * De los artistas que han vendido mas de 30 CDS, muestra el nombre y el numero maximo de ventas
+			 */
 			const debug = false;
 			const query = `SELECT NOMBRE_ARTISTA, MAX(VENDIDOS) AS MAX_VENDIDOS
 FROM CDS_VENDIDOS
@@ -1789,6 +1802,9 @@ GROUP BY NOMBRE_ARTISTA;`;
 		});
 		//fin test
 		test("suma de valores de una columna usando grupos", async () => {
+			/**
+			 * De los artistas que han vendido más de 30 CDS, muestra el nombre y el total vendido
+			 */
 			const debug = false;
 			const query = `SELECT NOMBRE_ARTISTA, SUM(VENDIDOS) AS TOTAL_VENDIDOS
 FROM CDS_VENDIDOS
@@ -1920,7 +1936,7 @@ WHERE SUBSTRING(DISCO_COMPACTO FROM 1 FOR 4) = 'Blue';`;
 	});
 	describe("uso de funciones valor  numericas", () => {
 		test("crea la tabla RASTREO_CD", async () => {
-			const debug = false;
+			const debug = true;
 			const rastreoCd = {
 				NOMBRE_CD: "VARCHAR(60)",
 				CATEGORIA_CD: "CHAR(4)",
@@ -1943,8 +1959,8 @@ WHERE SUBSTRING(DISCO_COMPACTO FROM 1 FOR 4) = 'Blue';`;
 			const query = `CREATE TABLE IF NOT EXISTS RASTREO_CD
 ( NOMBRE_CD VARCHAR(60),
  CATEGORIA_CD CHAR(4),
- EN_EXISTENCIA INTEGER ,
- EN_PEDIDO INTEGER ,
+ EN_EXISTENCIA INTEGER,
+ EN_PEDIDO INTEGER,
  VENDIDOS INTEGER );
 INSERT INTO RASTREO_CD
 VALUES
@@ -1971,7 +1987,7 @@ VALUES
 			assert.equal(result.toString(), query);
 		});
 		//fin test
-		test("expresion de valor numerico", async () => {
+		test("expresion de valor numerico", { only: true }, async () => {
 			const debug = false;
 			const query = `SELECT NOMBRE_CD, EN_EXISTENCIA, EN_PEDIDO, (EN_EXISTENCIA + EN_PEDIDO) AS TOTAL
 FROM RASTREO_CD
@@ -1982,7 +1998,7 @@ WHERE (EN_EXISTENCIA + EN_PEDIDO) > 25;`;
 					"NOMBRE_CD",
 					"EN_EXISTENCIA",
 					"EN_PEDIDO",
-					"(EN_EXISTENCIA + EN_PEDIDO) AS TOTAL",
+					qb.exp("(EN_EXISTENCIA + EN_PEDIDO)").as("TOTAL"),
 				])
 				.from("RASTREO_CD")
 				.where(qb.gt("(EN_EXISTENCIA + EN_PEDIDO)", 25))
@@ -2392,7 +2408,7 @@ ORDER BY a.ID_EMP;`;
 CREATE TABLE IF NOT EXISTS COSTOS_TITULO
 ( TITULO_CD VARCHAR(60),
  TIPO_CD CHAR(20),
- MENUDEO DECIMAL(5,2) );`;
+ MENUDEO NUMERIC(5,2) );`;
 
 			const result = await qb
 				.createTable("TITULOS_EN_EXISTENCIA", {
@@ -3162,7 +3178,7 @@ la tabla primaria se comparan con los valores arrojados por la subconsulta.
 			const query = `DROP TABLE IF EXISTS PRECIOS_MENUDEO;
 CREATE TABLE PRECIOS_MENUDEO
 ( NOMBRE_CD VARCHAR(60),
- P_MENUDEO DECIMAL(5, 2),\n CANTIDAD INTEGER );
+ P_MENUDEO NUMERIC(5, 2),\n CANTIDAD INTEGER );
 INSERT INTO PRECIOS_MENUDEO
 VALUES
 ('Famous Blue Raincoat', 16.99, 5),
@@ -3199,7 +3215,7 @@ VALUES
 				["Patsy Cline: 12 Greatest Hits", 16.99],
 			];
 			const query = `DROP TABLE IF EXISTS PRECIOS_VENTA;
-CREATE TABLE PRECIOS_VENTA\n( TITULO_CD VARCHAR(60),\n P_VENTA DECIMAL(5,2) );
+CREATE TABLE PRECIOS_VENTA\n( TITULO_CD VARCHAR(60),\n P_VENTA NUMERIC(5,2) );
 INSERT INTO PRECIOS_VENTA\nVALUES
 ('Famous Blue Raincoat', 14.99),
 ('Blue', 12.99),

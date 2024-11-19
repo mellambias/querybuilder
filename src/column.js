@@ -1,4 +1,5 @@
 import QueryBuilder from "./querybuilder.js";
+import Expresion from "./expresion.js";
 
 class Column {
 	constructor(name, table, type) {
@@ -24,6 +25,9 @@ class Column {
 				throw new Error("El campo subselect tiene que usar un alias AS");
 			}
 			return `( ${this.name.toString({ as: "subselect" })} ) AS ${this._alias}`;
+		}
+		if (this.name instanceof Expresion) {
+			return `${this.name} AS ${this._alias}`;
 		}
 	}
 	as(alias) {

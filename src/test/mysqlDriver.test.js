@@ -1623,7 +1623,7 @@ VALUES
 		/**
 		 * Los valores RETAIL deberán ser de filas que tengan un valor EN_EXISTENCIA mayor a 9. En
 otras palabras, la consulta deberá arrojar solamente aquellos CD cuyo precio rebajado (VENTA)
-sea menor que cualquier precio de lista (MENUDEO) en aquellos CD que haya una existencia
+sea menor que algun precio de lista (MENUDEO) en aquellos CD que haya una existencia
 mayor a nueve.
 		 */
 		test("uso de ANY", async () => {
