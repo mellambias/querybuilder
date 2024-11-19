@@ -1987,7 +1987,7 @@ VALUES
 			assert.equal(result.toString(), query);
 		});
 		//fin test
-		test("expresion de valor numerico", { only: true }, async () => {
+		test("expresion de valor numerico", async () => {
 			const debug = false;
 			const query = `SELECT NOMBRE_CD, EN_EXISTENCIA, EN_PEDIDO, (EN_EXISTENCIA + EN_PEDIDO) AS TOTAL
 FROM RASTREO_CD
@@ -2064,7 +2064,11 @@ END;`;
 			assert.equal(result.toString(), query);
 		});
 		//fin test
-		test("utilizar la expresión CAST en SELECT", async () => {
+		test("utilizar la expresión CAST en SELECT", { only: true }, async () => {
+			/**
+			 * Transforma una fecha en un string CHAR(25)
+			 * usamos el metodo 'cast()' del objeto 'Column' devuelto por QueryBuilder.col()
+			 */
 			const debug = false;
 			const query = `SELECT DISCO_COMPACTO, FECHA_VENTA, CAST(FECHA_VENTA AS CHAR(25)) AS CHAR_FECHA
 FROM FECHAS_VENTAS
@@ -2074,7 +2078,7 @@ WHERE DISCO_COMPACTO LIKE ('%Blue%');`;
 				.select([
 					"DISCO_COMPACTO",
 					"FECHA_VENTA",
-					"CAST(FECHA_VENTA AS CHAR(25)) AS CHAR_FECHA",
+					qb.col("FECHA_VENTA").cast("CHARACTER(25)").as("CHAR_FECHA"),
 				])
 				.from("FECHAS_VENTAS")
 				.where(qb.like("DISCO_COMPACTO", "%Blue%"))

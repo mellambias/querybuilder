@@ -504,7 +504,7 @@ class QueryBuilder {
 			throw new Error(error);
 		}
 		this.commandStack.push("col");
-		return new Column(name, table);
+		return new Column(name, table, this.language.dataType);
 	}
 	/**
 	 * Es igual a col salvo el orden de los parametros
@@ -521,7 +521,7 @@ class QueryBuilder {
 			throw new Error(error);
 		}
 		this.commandStack.push("coltn");
-		return new Column(name, table);
+		return new Column(name, table, this.language.dataType);
 	}
 
 	exp(expresion) {

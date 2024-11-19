@@ -637,28 +637,7 @@ class Core {
 	 * @param {string} defecto - Caso else
 	 * @returns {string}
 	 */
-	case(column, casos, defecto) {
-		let command = "";
-		let items = [];
-		let lastChance = "";
-		if (Array.isArray(column)) {
-			command = `${column} = \nCASE\n`;
-			items = casos;
-			lastChance = defecto;
-		} else {
-			command = "CASE\n";
-			items = column;
-			lastChance = casos;
-		}
-		command += items
-			.map((item) => {
-				return `WHEN ${item[0]} THEN ${item[1]}`;
-			})
-			.join("\n");
-		command += `\n${lastChance !== undefined ? `ELSE ${lastChance}\n` : ""}`;
-		command += "END";
-		return new Expresion(command);
-	}
+
 	functionDate() {
 		const names = {
 			currentDate: "CURRENT_DATE",
@@ -670,8 +649,42 @@ class Core {
 		for (const name in names) {
 			this[name] = () => names[name];
 		}
-	}
+	} /**
+	 * Este metodo tienr dos firmas:
+	 * case(column, casos, defecto)
+	 * columna = CASE [WHEN condicion THEN resultado,..] ELSE defecto END
+	 * @param {string|column} column - nombre de la columna AS
+	 * @param {Array<Casos>} Casos - Array<column,string> => [ [condicion, resultado],...]
+	 * @param {string} defecto - Caso else
+	 *
+	 * @returns {Expresion} - instancia de Expresion
+	 * case(casos,defecto)
+	 * @param {Array<column,string>} casos - {Array<Casos>} Casos  Array<column,string> => [ [condicion, resultado],...]
+	 * @param {string} defecto - Caso else
+	 *
+	 * @returns {Expresion} - instancia de Expresion
+	 */
+	case(column, casos, defecto) {
+		let command = "CASE\n";
+		let items;
+		let lastChance = "";
+		if (Array.isArray(column)) {
+			items = column;
+			lastChance = casos;
+		} else {
+			items = casos;
+			lastChance = defecto;
+		}
 
+		command += items
+			.map((item) => {
+				return `WHEN ${item[0]} THEN ${item[1]}`;
+			})
+			.join("\n");
+		command += `\n${lastChance !== undefined ? `ELSE ${lastChance}\n` : ""}`;
+		command += `${Array.isArray(column) ? "END" : `END AS ${column}`}`;
+		return new Expresion(command);
+	}
 	// cursores
 	createCursor(name, expresion, options) {
 		if (typeof name !== "string" || typeof name === "undefined") {

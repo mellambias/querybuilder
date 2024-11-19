@@ -142,34 +142,6 @@ class MySQL extends Core {
 		return this.getStatement("CREATE", Mysql.createView, { name, ...options });
 	}
 
-	/**
-	 * columna = CASE [WHEN condicion THEN resultado,..] ELSE defecto END
-	 * @param {string|column} column - columna
-	 * @param {Array<column,string>} casos - [condicion, resultado]
-	 * @param {string} defecto - Caso else
-	 * @returns {string}
-	 */
-	case(column, casos, defecto) {
-		let command = "CASE\n";
-		let items;
-		let lastChance = "";
-		if (Array.isArray(column)) {
-			items = column;
-			lastChance = casos;
-		} else {
-			items = casos;
-			lastChance = defecto;
-		}
-
-		command += items
-			.map((item) => {
-				return `WHEN ${item[0]} THEN ${item[1]}`;
-			})
-			.join("\n");
-		command += `\n${lastChance !== undefined ? `ELSE ${lastChance}\n` : ""}`;
-		command += `${Array.isArray(column) ? "END" : `END AS ${column}`}`;
-		return new Expresion(command);
-	}
 	fullJoin(tables, alias) {
 		return new Error("MySQL no soporta de forma nativa 'FULL OUTER JOIN'");
 	}
