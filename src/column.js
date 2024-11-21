@@ -41,7 +41,11 @@ class Column {
 	 * @returns {Column}
 	 */
 	as(alias) {
-		this._alias = alias;
+		if (alias.validSqlId()) {
+			this._alias = alias;
+		} else {
+			return new Error(`❌El alias '${alias}' no es un identificador valido`);
+		}
 		return this;
 	}
 	/**

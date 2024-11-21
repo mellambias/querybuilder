@@ -1,13 +1,13 @@
 export function tableFormat(columns, rows, responses, query) {
 	try {
-		console.log(`${textCenter("SOLICITUD", 60, " +")}\n\n${query}`);
-		console.log("");
+		// console.log(`${textCenter("SOLICITUD", 60, " +")}\n\n${query}`);
+		// console.log("");
 		const queryList = query.split(";");
 		if (Array.isArray(responses)) {
-			console.log(`${textCenter("RESPUESTAS", 60, " -")}`);
+			console.log(`${textCenter("RESULTADO", 60, " -")}`);
 			for (let Ci = 0; Ci < responses.length; Ci++) {
 				console.log(
-					"\nComando_%s:\n%s;\n\n%o",
+					"\n#%s query:\n%s;\nrespuesta:\n%o",
 					Ci + 1,
 					queryList[Ci],
 					responses[Ci],
@@ -21,7 +21,7 @@ export function tableFormat(columns, rows, responses, query) {
 					continue;
 				}
 				console.log("");
-				const header = [];
+				const header = [" # "];
 				const grid = [];
 
 				let maxTable = 10;
@@ -34,7 +34,12 @@ export function tableFormat(columns, rows, responses, query) {
 				for (const row of rows[Ci]) {
 					grid[i] = [];
 					for (let j = 0; j < header.length; j++) {
-						const valor = String(row[header[j].trim()]);
+						let valor = 0;
+						if (header[j] === header[0]) {
+							valor = String(i + 1);
+						} else {
+							valor = String(row[header[j].trim()]);
+						}
 						if (header[j].length < valor.length) {
 							maxTable -= header[j].length;
 							header[j] = textCenter(header[j], valor.length, " ");
@@ -53,10 +58,10 @@ export function tableFormat(columns, rows, responses, query) {
 				console.log(header.join(" | "));
 				console.log(header.map((col) => "-".repeat(col.length)).join(" | "));
 				for (const row of grid) {
-					console.log(row.join(" | "));
+					console.log(`${row.join(" | ")}`);
 				}
 				console.log(header.map((col) => "-".repeat(col.length)).join(" | "));
-				console.log(`registros/filas: ${i}\n`);
+				console.log(`total filas: ${i}\n`);
 				console.log("\n");
 			}
 		}

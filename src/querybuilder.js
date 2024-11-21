@@ -513,10 +513,10 @@ class QueryBuilder {
 	 * @returns {Column}
 	 */
 	coltn(table, name) {
-		const error = check("col(name:string|QueryBuilder, table:string)", [
-			name,
-			table,
-		]);
+		const error = check(
+			"col(name:string|QueryBuilder|Expresion, table:string)",
+			[name, table],
+		);
 		if (error) {
 			throw new Error(error);
 		}

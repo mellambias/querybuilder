@@ -76,7 +76,7 @@ describe("Driver postgreSQL", async () => {
 		assert.equal(
 			result.toString(),
 			`CREATE TABLE IF NOT EXISTS table_test2
-( ID_ARTISTA INTEGER ,
+( ID_ARTISTA INTEGER,
  NOMBRE_ARTISTA CHAR(60) DEFAULT 'artista',
  FDN_ARTISTA DATE,
  POSTER_EN_EXISTENCIA TINYINT );`,
@@ -2064,7 +2064,7 @@ END;`;
 			assert.equal(result.toString(), query);
 		});
 		//fin test
-		test("utilizar la expresión CAST en SELECT", { only: true }, async () => {
+		test("utilizar la expresión CAST en SELECT", async () => {
 			/**
 			 * Transforma una fecha en un string CHAR(25)
 			 * usamos el metodo 'cast()' del objeto 'Column' devuelto por QueryBuilder.col()
@@ -2112,7 +2112,7 @@ WHERE DISCO_COMPACTO LIKE ('%Blue%');`;
 			];
 			const query = `CREATE TABLE INVENTARIO_CD
 ( NOMBRE_CD VARCHAR(60),
- ID_INTER INTEGER ,
+ ID_INTER INTEGER,
  EN_EXISTENCIA INTEGER );
 INSERT INTO INVENTARIO_CD
 VALUES
@@ -2156,7 +2156,7 @@ VALUES
 				[109, "Leonard Cohen", 12],
 			];
 			const query = `CREATE TABLE INTERPRETES
-( ID_INTER INTEGER ,
+( ID_INTER INTEGER,
  NOMBRE_INTER VARCHAR(60),
  ID_TIPO INTEGER );
 INSERT INTO INTERPRETES
@@ -2198,7 +2198,7 @@ VALUES
 				[18, "Soundtrack"],
 			];
 			const query = `CREATE TABLE TIPO_INTER
-( ID_TIPO INTEGER ,
+( ID_TIPO INTEGER,
  NOMBRE_TIPO CHAR(20) );
 INSERT INTO TIPO_INTER
 VALUES
@@ -2348,7 +2348,7 @@ AND c.EN_EXISTENCIA < 15);`;
 				[107, "Mr. Carver", 103],
 			];
 			const query = `CREATE TABLE IF NOT EXISTS EMPLEADOS
-( ID_EMP INTEGER ,
+( ID_EMP INTEGER,
  NOMBRE_EMP VARCHAR(60),
  ADMIN INTEGER );
 INSERT INTO EMPLEADOS
@@ -2428,6 +2428,7 @@ CREATE TABLE IF NOT EXISTS COSTOS_TITULO
 
 			assert.equal(result.toString(), query);
 		});
+		//fin
 		test("añade registros a las tablas TITULOS_EN_EXISTENCIA y COSTOS_TITULO", async () => {
 			const debug = false;
 			const TITULOS_EN_EXISTENCIA = [
@@ -2454,15 +2455,14 @@ CREATE TABLE IF NOT EXISTS COSTOS_TITULO
 			];
 			const query = `INSERT INTO TITULOS_EN_EXISTENCIA
 VALUES
-('Famous Blue Raincoat','Folk',12),
-('Blue','Popular',24),
-('Past Light','New Age',9),
-('Luck of the Draw','Popular',19),
-('Deuces Wild','Blues',25),
-('Nick of Time','Popular',17),
-('Blues on the Bayou','Blues',11),
-('Both Sides Now','Popular',13),
-;
+('Famous Blue Raincoat', 'Folk', 12),
+('Blue', 'Popular', 24),
+('Past Light', 'New Age', 9),
+('Luck of the Draw', 'Popular', 19),
+('Deuces Wild', 'Blues', 25),
+('Nick of Time', 'Popular', 17),
+('Blues on the Bayou', 'Blues', 11),
+('Both Sides Now', 'Popular', 13);
 INSERT INTO COSTOS_TITULO
 VALUES
 ('Famous Blue Raincoat', 'Folk', 16.99),
@@ -2484,7 +2484,10 @@ VALUES
 			assert.equal(result.toString(), query);
 		});
 		//fin test
-		test("join natural hace coincidir automáticamente las filas de aquellas columnas con el mismo nombre", async () => {
+		test("join natural ", async () => {
+			/**
+			 * hace coincidir automáticamente las filas de aquellas columnas con el mismo nombre
+			 */
 			const debug = false;
 			const query = `SELECT TITULO_CD, TIPO_CD, c.MENUDEO
 FROM TITULOS_EN_EXISTENCIA s NATURAL JOIN COSTOS_TITULO c
@@ -2500,7 +2503,10 @@ WHERE s.INVENTARIO > 15;`;
 			assert.equal(result.toString(), query);
 		});
 		//fin test
-		test("join natural de columna nombrada permite especificar las columnas coincidentes", async () => {
+		test("join natural de columna nombrada ", async () => {
+			/**
+			 * permite especificar las columnas coincidentes
+			 */
 			const debug = false;
 			//las columnas identificadas en la cláusula USING están sin cualificar el resto debe hacerlo
 			const query = `SELECT TITULO_CD, s.TIPO_CD, c.MENUDEO
@@ -2544,17 +2550,23 @@ WHERE s.INVENTARIO > 15;`;
 				ID_ARTISTA: "INT",
 				ARTISTA: "VARCHAR(60)",
 			};
-			const query = `CREATE TABLE TITULO_CDS
-( ID_TITULO INTEGER ,
+			const query = `DROP TABLE IF EXISTS TITULO_CDS;
+DROP TABLE IF EXISTS ARTISTAS_TITULOS;
+DROP TABLE IF EXISTS ARTISTAS_CD;
+CREATE TABLE TITULO_CDS
+( ID_TITULO INTEGER,
  TITULO VARCHAR(60) );
 CREATE TABLE ARTISTAS_TITULOS
-( TITLE_ID INTEGER ,
+( ID_TITULO INTEGER,
  ID_ARTISTA INTEGER );
 CREATE TABLE ARTISTAS_CD
-( ID_ARTISTA INTEGER ,
+( ID_ARTISTA INTEGER,
  ARTISTA VARCHAR(60) );`;
 
 			const result = await qb
+				.dropTable("TITULO_CDS", { secure: true })
+				.dropTable("ARTISTAS_TITULOS", { secure: true })
+				.dropTable("ARTISTAS_CD", { secure: true })
 				.createTable("TITULO_CDS", {
 					cols: TITULO_CDS,
 				})
@@ -2737,7 +2749,8 @@ WHERE t.TITULO LIKE ('%Blue%');`;
 				ID_TIPO: "CHAR(4)",
 				NOMBRE_TIPO: "CHAR(20)",
 			};
-			const query = `CREATE TABLE INFO_CD
+			const query = `DROP TABLE IF EXISTS INFO_CD, TIPO_CD;
+CREATE TABLE INFO_CD
 ( TITULO VARCHAR(60),
  ID_TIPO CHAR(4),
  EXISTENCIA INTEGER );
@@ -2746,6 +2759,7 @@ CREATE TABLE TIPO_CD
  NOMBRE_TIPO CHAR(20) );`;
 
 			const result = await qb
+				.dropTable(["INFO_CD", "TIPO_CD"], { secure: true })
 				.createTable("INFO_CD", { cols: INFO_CD })
 				.createTable("TIPO_CD", { cols: TIPO_CD })
 				.execute(debug);
@@ -2848,7 +2862,7 @@ ON i.ID_TIPO = t.ID_TIPO;`;
 			assert.equal(result.toString(), query);
 		});
 		//fin test
-		test("incluir las filas no coincidentes de la tabla TIPO_CD usando RIGHT OUTER JOIN", async () => {
+		test("incluir las filas no coincidentes con la tabla TIPO_CD usando RIGHT OUTER JOIN", async () => {
 			const debug = false;
 			const $ = qb;
 			const query = `SELECT i.TITULO, t.NOMBRE_TIPO, i.EXISTENCIA
@@ -2869,27 +2883,25 @@ ON i.ID_TIPO = t.ID_TIPO;`;
 			assert.equal(result.toString(), query);
 		});
 		//fin test
-		// 		test(
-		// 			"todas las filas no coincidentes usando full outer join",
-		// 			async () => {const debug = false;
-		// 				const $ = qb;
-		// 				const query = `SELECT i.TITULO, t.NOMBRE_TIPO, i.EXISTENCIA
-		// FROM INFO_CD i FULL OUTER JOIN TIPO_CD t
-		// ON i.ID_TIPO = t.ID_TIPO;`;
+		test("todas las filas no coincidentes usando full outer join", async () => {
+			const debug = false;
+			const $ = qb;
+			const query = `SELECT i.TITULO, t.NOMBRE_TIPO, i.EXISTENCIA
+FROM INFO_CD i FULL OUTER JOIN TIPO_CD t
+ON i.ID_TIPO = t.ID_TIPO;`;
 
-		// 				const result = await qb
-		// 					.select([
-		// 						$.col("TITULO").from("i"),
-		// 						$.col("NOMBRE_TIPO").from("t"),
-		// 						$.col("EXISTENCIA", "i"),
-		// 					])
-		// 					.fullJoin(["INFO_CD", "TIPO_CD"], ["i", "t"])
-		// 					.on($.eq($.col("ID_TIPO", "i"), $.col("ID_TIPO", "t")));
-
-		//
-		// 				assert.equal(result.toString(), query);
-		// 			},
-		// 		);
+			const result = await qb
+				.select([
+					$.col("TITULO").from("i"),
+					$.col("NOMBRE_TIPO").from("t"),
+					$.col("EXISTENCIA", "i"),
+				])
+				.fullJoin(["INFO_CD", "TIPO_CD"], ["i", "t"])
+				.on($.eq($.col("ID_TIPO", "i"), $.col("ID_TIPO", "t")))
+				.execute(debug);
+			showResults(result, debug);
+			assert.equal(result.toString(), query);
+		});
 		//fin test
 		test("crea tablas CDS_CONTINUADOS y CDS_DESCONTINUADOS", async () => {
 			const debug = false;
@@ -2903,7 +2915,8 @@ ON i.ID_TIPO = t.ID_TIPO;`;
 				TIPO_CD: "CHAR(4)",
 				EN_EXISTENCIA: "INT",
 			};
-			const query = `CREATE TABLE CDS_CONTINUADOS
+			const query = `DROP TABLE IF EXISTS CDS_CONTINUADOS, CDS_DESCONTINUADOS;
+CREATE TABLE CDS_CONTINUADOS
 ( NOMBRE_CD VARCHAR(60),
  TIPO_CD CHAR(4),
  EN_EXISTENCIA INTEGER );
@@ -2913,6 +2926,9 @@ CREATE TABLE CDS_DESCONTINUADOS
  EN_EXISTENCIA INTEGER );`;
 
 			const result = await qb
+				.dropTable(["CDS_CONTINUADOS", "CDS_DESCONTINUADOS"], {
+					secure: true,
+				})
 				.createTable("CDS_CONTINUADOS", {
 					cols: CDS_CONTINUADOS,
 				})
@@ -3095,7 +3111,10 @@ VALUES
 			assert.equal(result.toString(), query);
 		});
 		//fin test
-		test("el predicado IN compara valores de una columna en la tabla primaria con valores arrojados por la subconsulta", async () => {
+		test("el predicado IN ", async () => {
+			/**
+			 * compara valores de una columna en la tabla primaria con valores arrojados por la subconsulta
+			 */
 			const debug = false;
 			const query = `SELECT *
 FROM EXISTENCIA_CD
@@ -3240,6 +3259,9 @@ INSERT INTO PRECIOS_VENTA\nVALUES
 		});
 		//fin test
 		test("predicado cuantificado", async () => {
+			/**
+			 * Devuelve los CDS cuyo precio al por menor sea mayor a cualquier precio de venta inferior a 15.99
+			 */
 			const debug = false;
 			const query = `SELECT NOMBRE_CD, P_MENUDEO
 FROM PRECIOS_MENUDEO
@@ -3267,7 +3289,11 @@ WHERE P_VENTA < 15.99 );`;
 			assert.equal(result.toString(), query);
 		});
 		//fin test
-		test("incluir una subconsulta en la cláusula SELECT", async () => {
+		test("usar una subconsulta como campo de SELECT", async () => {
+			/**
+			 * obtiene el valor para la columna 'Artista' usando un select que devuelve el nombre buscando
+			 * en la tabla 'ARTISTAS_CD' coincidencias con el titulo del CD
+			 */
 			const debug = false;
 			const query = `SELECT TITULO_CD, ( SELECT ARTIST_NAME
 FROM ARTISTAS_CD a
@@ -3295,6 +3321,9 @@ FROM EXISTENCIA_CD s;`;
 		});
 		//fin test
 		test("subconsultas que devuelve un solo valor", async () => {
+			/**
+			 * devuelve los CDS cuyo valor de venta al por menor sea igual al precio maximo de venta
+			 */
 			const debug = false;
 			const query = `SELECT NOMBRE_CD, P_MENUDEO
 FROM PRECIOS_MENUDEO
@@ -3336,7 +3365,7 @@ FROM PRECIOS_VENTA );`;
 			];
 			const query = `DROP TABLE IF EXISTS INVENTARIO_TITULOS;
 CREATE TABLE INVENTARIO_TITULOS
-( ID_TITULO INTEGER ,
+( ID_TITULO INTEGER,
  TITULO VARCHAR(60),
  EXISTENCIA INTEGER );
 INSERT INTO INVENTARIO_TITULOS
@@ -3402,6 +3431,11 @@ VALUES
 		});
 		//fin test
 		test("insertar registros usando una subconsulta", async () => {
+			/**
+			 * añade un registro a 'TIPOS_TITULO' con los valores
+			 * el 'titulo_cd' se obtiene buscando en 'INVENTARIO_TITULOS' aquel cuyo ID sea 108 (Both Sides Now)
+			 * el 'tipo_cd' será 'Popular'
+			 */
 			const debug = false;
 			const query = `INSERT INTO TIPOS_TITULO
 VALUES
@@ -3425,8 +3459,14 @@ VALUES
 			assert.equal(result.toString(), query);
 		});
 		//fin test
-		test("actualizar el valor Both Sides Now", async () => {
+		test("actualizar el tipo_cd de 'Both Sides Now'", async () => {
 			const debug = false;
+			/**
+			 * Cambia el 'tipo_cd' por 'Folk' para aquellos titulos que coincidan con el id_titulo 108
+			 * busca el 'TITULO' en 'INVENTARIO_TITULOS' cuyo 'ID_TITULO' es 108
+			 * compara si 'TITULO_CD' de 'TIPOS_TITULO' esta entre los resultados devueltos
+			 * si es así, establece su 'TIPO_CD' como 'Folk'
+			 */
 			const query = `UPDATE TIPOS_TITULO
 SET TIPO_CD = 'Folk'
 WHERE TITULO_CD IN ( SELECT TITULO
@@ -3475,7 +3515,7 @@ WHERE TITULO_CD = 'Both Sides Now';`;
 			assert.equal(result.toString(), query);
 		});
 		//fin test
-		test("borra el valor Both Sides", async () => {
+		test("borra el registro cuyo titulo coincide con el id 108", async () => {
 			const debug = false;
 			const query = `DELETE FROM TIPOS_TITULO
 WHERE TITULO_CD IN ( SELECT TITULO
@@ -3499,7 +3539,10 @@ WHERE ID_TITULO = 108 );`;
 			assert.equal(result.toString(), query);
 		});
 		//fin test
-		test("uso de limit y offset para MySQL, PostgreSQL, y SQLite ", async () => {
+		test("uso de limit y offset PostgreSQL", async () => {
+			/**
+			 * Devuelve tres registros empezando por el cuarto
+			 */
 			const debug = false;
 			const query = `SELECT *
 FROM TIPOS_TITULO
@@ -3522,8 +3565,7 @@ OFFSET 3;`;
 		test("usar una transaccion para actualizar", async () => {
 			const debug = false;
 			const query = `SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
-START TRANSACTION WITH CONSISTENT SNAPSHOT, READ WRITE;
-
+START TRANSACTION READ WRITE;
 UPDATE DISCOS_COMPACTOS
 SET EN_EXISTENCIA = EN_EXISTENCIA - 1;
 UPDATE COSTOS_TITULO
@@ -3538,6 +3580,7 @@ SET MENUDEO = MENUDEO - 10;`;
 				)
 				.add(qb.update("COSTOS_TITULO", { MENUDEO: qb.exp("MENUDEO - 10") }))
 				.start({ snapshot: true, access: "READ WRITE" });
+			showResults(result, debug);
 
 			assert.equal(result.toString(), `${query}`);
 		});
@@ -3545,13 +3588,11 @@ SET MENUDEO = MENUDEO - 10;`;
 		test("punto de recuperación a la transacción", async () => {
 			const debug = false;
 			const query = `SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
-START TRANSACTION;
-
+START TRANSACTION ;
 SELECT TITULO_CD, EN_EXISTENCIA
 FROM DISCOS_COMPACTOS
 WHERE ID_DISQUERA = 832;
 SAVEPOINT SECCION_1;
-
 UPDATE DISCOS_COMPACTOS
 SET EN_EXISTENCIA = EN_EXISTENCIA + 2
 WHERE ID_DISQUERA = 832;
@@ -3577,7 +3618,7 @@ ROLLBACK TO SAVEPOINT SECCION_1;`;
 				)
 				.rollback("SECCION_1") // Invierte la actualización de datos
 				.start();
-
+			showResults(result, debug);
 			assert.equal(result.toString(), `${query}`);
 		});
 		//fin test

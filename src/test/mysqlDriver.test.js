@@ -18,7 +18,8 @@ beforeEach(() => {
 describe("Driver MySqlDriver", async () => {
 	test("crea una base de datos", async () => {
 		try {
-			await qb.createDatabase("testing").execute();
+			const result = await qb.createDatabase("testing").execute();
+			showResults(result);
 			assert.equal(qb.toString(), "CREATE DATABASE testing;");
 		} catch (error) {
 			assert.equal(
@@ -30,17 +31,15 @@ describe("Driver MySqlDriver", async () => {
 	test("Crear una tabla en la base de datos testing", async () => {
 		const result = await qb
 			.use("testing")
+			.dropTable("TABLE_TEST", { secure: true })
 			.createTable("TABLE_TEST", { cols: { ID: "INT" } })
 			.execute();
+		showResults(result);
 
-		if (!result.error) {
-			assert.equal(
-				result.toString(),
-				"USE testing;\nCREATE TABLE TABLE_TEST\n( ID INT );",
-			);
-		} else {
-			assert.equal(result.error, "Table 'table_test' already exists");
-		}
+		assert.equal(
+			result.toString(),
+			"USE testing;\nDROP TABLE IF EXIST TABLE_TEST;\nCREATE TABLE TABLE_TEST\n( ID INT );",
+		);
 	});
 
 	test("Crear una tabla temporal global", async () => {
@@ -52,7 +51,7 @@ describe("Driver MySqlDriver", async () => {
 				cols: { ID: "INT" },
 			})
 			.execute();
-
+		showResults(result);
 		if (!result.error) {
 			assert.equal(
 				result.toString(),
@@ -74,20 +73,17 @@ describe("Driver MySqlDriver", async () => {
 			.use("testing")
 			.createTable("table_test2", { cols, secure: true })
 			.execute();
+		showResults(result);
 
-		if (!result.error) {
-			assert.equal(
-				result.toString(),
-				`USE testing;
+		assert.equal(
+			result.toString(),
+			`USE testing;
 CREATE TABLE IF NOT EXISTS table_test2
 ( ID_ARTISTA INT,
  NOMBRE_ARTISTA CHAR(60) DEFAULT 'artista',
  FDN_ARTISTA DATE,
  POSTER_EN_EXISTENCIA TINYINT );`,
-			);
-		} else {
-			assert.equal(result.error, "Table 'table_test2' already exists");
-		}
+		);
 	});
 
 	test("Crear un tipo definido por el usuario", async () => {
@@ -569,7 +565,7 @@ CREATE TABLE IF NOT EXISTS TITULOS_CD
 			showResults(result);
 		});
 		//fin
-		test("CDS_ARTISTA", { only: true }, async () => {
+		test("CDS_ARTISTA", async () => {
 			const table = "CDS_ARTISTA";
 			const rows = [
 				[2001, 101],
@@ -971,7 +967,7 @@ WHERE ID_DISCO_COMPACTO = 116;`,
 			);
 		});
 
-		test("leer datos de la tabla DISCOS_COMPACTO", { only: true }, async () => {
+		test("leer datos de la tabla DISCOS_COMPACTO", async () => {
 			const result = await qb
 				.select("*")
 				.from("DISCOS_COMPACTOS")
@@ -2550,17 +2546,23 @@ WHERE s.INVENTARIO > 15;`;
 				ID_ARTISTA: "INT",
 				ARTISTA: "VARCHAR(60)",
 			};
-			const query = `CREATE TABLE TITULO_CDS
+			const query = `DROP TABLE IF EXISTS TITULO_CDS;
+DROP TABLE IF EXISTS ARTISTAS_TITULOS;
+DROP TABLE IF EXISTS ARTISTAS_CD;
+CREATE TABLE TITULO_CDS
 ( ID_TITULO INT,
  TITULO VARCHAR(60) );
 CREATE TABLE ARTISTAS_TITULOS
-( TITLE_ID INT,
+( ID_TITULO INT,
  ID_ARTISTA INT );
 CREATE TABLE ARTISTAS_CD
 ( ID_ARTISTA INT,
  ARTISTA VARCHAR(60) );`;
 
 			const result = await qb
+				.dropTable("TITULO_CDS", { secure: true })
+				.dropTable("ARTISTAS_TITULOS", { secure: true })
+				.dropTable("ARTISTAS_CD", { secure: true })
 				.createTable("TITULO_CDS", {
 					cols: TITULO_CDS,
 				})

@@ -108,5 +108,11 @@ class PostgreSQL extends Core {
 			" ",
 		);
 	}
+	limit(limit) {
+		return `LIMIT ${limit}`;
+	}
+	offset(offset) {
+		return `OFFSET ${offset}`;
+	}
 }
 export default PostgreSQL;

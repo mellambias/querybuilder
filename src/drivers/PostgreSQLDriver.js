@@ -57,7 +57,12 @@ class PostgreSQLDriver extends Driver {
 				const result = await this.connection.query(query);
 				this.queyResult.push(result);
 			}
-			await this.close();
+			if (
+				options?.transaction === undefined ||
+				options?.transaction === false
+			) {
+				await this.close();
+			}
 			return this;
 		} catch (error) {
 			await this.close();
