@@ -87,12 +87,13 @@ function justifica(valor, width, fill) {
  * @param {QueryBuilder} datos - instancia de QueryBuilder
  * @param {Bollean} query - true muestra la consulta si no existen resultados
  */
-export function showResults(datos, debug) {
+export async function showResults(datos, debug) {
 	if (datos?.result) {
 		const { response, columns, rows } = datos.result;
-		tableFormat(columns, rows, response, datos.queryJoin());
+		tableFormat(columns, rows, response, await datos.queryJoin());
 	} else if (debug) {
-		console.log(`> ${datos.queryJoin()}\n`);
+		const query = await datos.queryJoin();
+		console.log(`✔ query>>\n ${query}\n<<`);
 	}
 	console.log(
 		"%s\n",

@@ -1,6 +1,8 @@
-/*
-clase base para los drivers/connectores a bases de datos
-*/
+/**
+ * Adaptador para conectar con bases de datos PostgreSQL
+ *
+ * utiliza la libreria pg https://www.npmjs.com/package/pg
+ */
 import Driver from "./Driver.js";
 import pg from "pg";
 const { Client } = pg;
@@ -18,7 +20,6 @@ class PostgreSQLDriver extends Driver {
 				"✔ [postgreSQL:pg] conecta con la base de datos '%s'",
 				this.database ? this.database : "postgreSQL",
 			);
-			// const { Client } = this.library;
 			this.connection = new Client({
 				host: this.host,
 				port: this.port,

@@ -4,11 +4,20 @@ import Cursor from "./cursor.js";
 import Transaction from "./transaction.js";
 import Expresion from "./expresion.js";
 import Value from "./value.js";
+/**
+ * Clase principal del paquete
+ * @constructor
+ * @param {Core} language - Clase que implementa los comandos del lenguaje
+ * @param {Object} options - {
+		typeIdentificator: "regular", - Identifica el tipo de identificadores validos
+		mode: "test", - Modo de trabajo
+	}
+ */
 class QueryBuilder {
 	constructor(language, options = {}) {
 		this.languageClass = language;
 		this.options = options;
-		this.language = new language();
+		this.language = new language(this);
 		this.query = options?.value || [];
 		if (this.options?.typeIdentificator) {
 			Types.identificador.set(this.options.typeIdentificator);
@@ -29,7 +38,13 @@ class QueryBuilder {
 		this.joins();
 		this.prevInstance = null;
 	}
-
+	/**
+	 * Añade una instancia del controlador para ejecutar los comandos y
+	 * enviarlos a una base de datos
+	 * @param {Driver} driverClass - Clase que implementa el controlador
+	 * @param {Object} params - objeto con los parametros enviados al controlador
+	 * @returns
+	 */
 	driver(driverClass, params) {
 		this.driverDB = new driverClass(params);
 		this.params = params;
@@ -153,7 +168,8 @@ class QueryBuilder {
 
 	dropTable(name, option) {
 		this.commandStack.push("dropTable");
-		this.query.push(`${this.language.dropTable(name, option)}`);
+		const response = this.language.dropTable(name, option);
+		this.query.push(response);
 		return this;
 	}
 	createType(name, options) {
@@ -728,7 +744,7 @@ class QueryBuilder {
 		return this;
 	}
 
-	queryJoin(options) {
+	async queryJoin(options) {
 		if (/^(subselect)$/i.test(options?.as) === false) {
 			if (this.prevInstance !== null) {
 				const prevQuery = this.prevInstance.queryJoin(options);
@@ -760,7 +776,12 @@ class QueryBuilder {
 		}
 
 		if (this.query.length > 0) {
-			const send = this.query.join(";\n").concat(";").replace(";;", ";");
+			const data = await Promise.all(this.query);
+			const send = data
+				.filter((item) => item !== null)
+				.join(";\n")
+				.concat(";")
+				.replace(";;", ";");
 			if (this.error) {
 				throw new Error(`${send}\n> ${this.error}`, { cause: this.error });
 			}
@@ -768,8 +789,8 @@ class QueryBuilder {
 		}
 		return null;
 	}
-	toString(options) {
-		let joinQuery = this.queryJoin(options);
+	async toString(options) {
+		let joinQuery = await this.queryJoin(options);
 		if (/^(subselect)$/i.test(options?.as)) {
 			joinQuery = joinQuery.replace(/;$/, "");
 		}
@@ -799,7 +820,7 @@ class QueryBuilder {
 		}
 
 		try {
-			const send = this.queryJoin();
+			const send = await this.queryJoin();
 			await this.driverDB.execute(send);
 			this.result = this.driverDB.response();
 			this.error = undefined;

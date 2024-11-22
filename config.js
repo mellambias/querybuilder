@@ -4,6 +4,7 @@
 
 import MySqlDriver from "./src/drivers/MySqlDriver.js";
 import PostgreSQLDriver from "./src/drivers/PostgreSQLDriver.js";
+import MongodbDriver from "./src/drivers/MongodbDriver.js";
 
 const config = {
 	databases: {
@@ -36,6 +37,26 @@ const config = {
 				port: 5432,
 				username: "postgres",
 				password: "d4t55qpl",
+			},
+		},
+		MongoDB: {
+			version: "5.0.6",
+			driver: MongodbDriver,
+			params: {
+				host: "localhost",
+				port: 27017,
+				username: undefined,
+				password: undefined,
+				options: { retryWrites: true, w: "majority" },
+				getConnectionString: function () {
+					const { host, port, username, password, options } = this;
+					const userPaswordString =
+						username !== undefined ? `${username}:${password}@` : "";
+					const optionsString = `?${Object.keys(options)
+						.map((key) => `${key}=${options[key]}`)
+						.join("&")}`;
+					return `mongodb://${userPaswordString}${host}${port ? `:${port}` : ""}/${optionsString}`;
+				},
 			},
 		},
 	},

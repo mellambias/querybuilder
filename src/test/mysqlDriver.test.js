@@ -37,7 +37,7 @@ describe("Driver MySqlDriver", async () => {
 		showResults(result);
 
 		assert.equal(
-			result.toString(),
+			await result.toString(),
 			"USE testing;\nDROP TABLE IF EXIST TABLE_TEST;\nCREATE TABLE TABLE_TEST\n( ID INT );",
 		);
 	});
@@ -54,7 +54,7 @@ describe("Driver MySqlDriver", async () => {
 		showResults(result);
 		if (!result.error) {
 			assert.equal(
-				result.toString(),
+				await result.toString(),
 				"USE testing;\nCREATE TEMPORARY TABLE table_test_temp ( ID INT );",
 			);
 			assert.ok(result.queryResult);
@@ -76,7 +76,7 @@ describe("Driver MySqlDriver", async () => {
 		showResults(result);
 
 		assert.equal(
-			result.toString(),
+			await result.toString(),
 			`USE testing;
 CREATE TABLE IF NOT EXISTS table_test2
 ( ID_ARTISTA INT,
@@ -93,7 +93,7 @@ CREATE TABLE IF NOT EXISTS table_test2
 			.execute();
 
 		if (!result.error) {
-			assert.equal(result.toString(), "USE testing;");
+			assert.equal(await result.toString(), "USE testing;");
 		} else {
 			assert.equal(result.error, "No soportado utilice SET o ENUM");
 		}
@@ -107,7 +107,7 @@ CREATE TABLE IF NOT EXISTS table_test2
 
 		if (!result.error) {
 			assert.equal(
-				result.toString(),
+				await result.toString(),
 				"USE testing;\nDROP TABLE IF EXISTS TABLE_TEST_2 CASCADE;",
 			);
 		} else {
@@ -173,7 +173,7 @@ describe("Trabaja con INVENTARIO", () => {
 		const result = await qb.createDatabase("INVENTARIO").execute();
 
 		assert.equal(
-			result.toString(),
+			await result.toString(),
 			"USE INVENTARIO;\nCREATE DATABASE INVENTARIO;",
 		);
 
@@ -210,7 +210,7 @@ describe("Trabaja con INVENTARIO", () => {
 
 			if (!result.error) {
 				assert.equal(
-					result.toString(),
+					await result.toString(),
 					`USE INVENTARIO;
 CREATE TABLE IF NOT EXISTS TIPOS_MUSICA
 ( ID_TIPO INT,
@@ -240,7 +240,7 @@ CREATE TABLE IF NOT EXISTS TIPOS_MUSICA
 
 			if (!result.error) {
 				assert.equal(
-					result.toString(),
+					await result.toString(),
 					`USE INVENTARIO;
 CREATE TABLE IF NOT EXISTS DISQUERAS_CD
 ( ID_DISQUERA INT,
@@ -279,7 +279,7 @@ CREATE TABLE IF NOT EXISTS DISQUERAS_CD
 
 			if (!result.error) {
 				assert.equal(
-					result.toString(),
+					await result.toString(),
 					`USE INVENTARIO;
 CREATE TABLE IF NOT EXISTS DISCOS_COMPACTOS
 ( ID_DISCO_COMPACTO INT,
@@ -328,7 +328,7 @@ CREATE TABLE IF NOT EXISTS DISCOS_COMPACTOS
 
 			if (!result.error) {
 				assert.equal(
-					result.toString(),
+					await result.toString(),
 					`USE INVENTARIO;
 CREATE TABLE IF NOT EXISTS TIPOS_DISCO_COMPACTO
 ( ID_DISCO_COMPACTO INT,
@@ -361,7 +361,7 @@ CREATE TABLE IF NOT EXISTS TIPOS_DISCO_COMPACTO
 
 			if (!result.error) {
 				assert.equal(
-					result.toString(),
+					await result.toString(),
 					`USE INVENTARIO;
 CREATE TABLE IF NOT EXISTS ARTISTAS
 ( ID_ARTISTA INT,
@@ -409,7 +409,7 @@ CREATE TABLE IF NOT EXISTS ARTISTAS
 
 			if (!result.error) {
 				assert.equal(
-					result.toString(),
+					await result.toString(),
 					`USE INVENTARIO;
 CREATE TABLE IF NOT EXISTS CDS_ARTISTA
 ( ID_ARTISTA INT,
@@ -433,7 +433,7 @@ CREATE TABLE IF NOT EXISTS CDS_ARTISTA
 
 			if (!result.error) {
 				assert.equal(
-					result.toString(),
+					await result.toString(),
 					`USE INVENTARIO;
 CREATE TABLE IF NOT EXISTS TITULOS_CD
 ( ID_DISCO_COMPACTO INT,
@@ -613,7 +613,7 @@ CREATE TABLE IF NOT EXISTS TITULOS_CD
 
 			if (!result.error) {
 				assert.equal(
-					result.toString(),
+					await result.toString(),
 					`USE INVENTARIO;
 ALTER TABLE DISCOS_COMPACTOS
 ADD COLUMN EN_EXISTENCIA INT NOT NULL;`,
@@ -633,7 +633,7 @@ ADD COLUMN EN_EXISTENCIA INT NOT NULL;`,
 
 			if (!result.error) {
 				assert.equal(
-					result.toString(),
+					await result.toString(),
 					`USE INVENTARIO;
 ALTER TABLE DISCOS_COMPACTOS
 ADD CONSTRAINT CK_EN_EXISTENCIA CHECK ( (EN_EXISTENCIA > 0
@@ -660,7 +660,7 @@ AND EN_EXISTENCIA < 50) );`,
 
 			if (!result.error) {
 				assert.equal(
-					result.toString(),
+					await result.toString(),
 					`USE INVENTARIO;
 CREATE VIEW CDS_EN_EXISTENCIA
 AS SELECT TITULO_CD, EN_EXISTENCIA
@@ -698,7 +698,7 @@ WITH CHECK OPTION;`,
 				.execute();
 			if (!result.error) {
 				assert.equal(
-					result.toString(),
+					await result.toString(),
 					`USE INVENTARIO;
 CREATE VIEW EDITORES_CD
 ( TITULO_CD, EDITOR )
@@ -737,7 +737,7 @@ WHERE DISCOS_COMPACTOS.ID_DISQUERA = DISQUERAS_CD.ID_DISQUERA`;
 				.execute();
 			if (!result.error) {
 				assert.equal(
-					result.toString(),
+					await result.toString(),
 					`USE INVENTARIO;
 DROP VIEW EDITORES_CD;
 CREATE VIEW EDITORES_CD
@@ -761,7 +761,7 @@ WHERE DISCOS_COMPACTOS.ID_DISQUERA = DISQUERAS_CD.ID_DISQUERA;`,
 
 			if (!result.error) {
 				assert.equal(
-					result.toString(),
+					await result.toString(),
 					"USE INVENTARIO;\nCREATE ROLE IF NOT EXISTS ADMIN@localhost, USER@localhost;",
 				);
 			} else {
@@ -848,7 +848,7 @@ WHERE DISCOS_COMPACTOS.ID_DISQUERA = DISQUERAS_CD.ID_DISQUERA;`,
 				.execute();
 
 			assert.equal(
-				result.toString(),
+				await result.toString(),
 				"USE INVENTARIO;\nREVOKE IF EXISTS SELECT ON INVENTARIO.CDS_EN_EXISTENCIA FROM 'PERSONAL_VENTAS'@'%';",
 			);
 		});
@@ -860,7 +860,7 @@ WHERE DISCOS_COMPACTOS.ID_DISQUERA = DISQUERAS_CD.ID_DISQUERA;`,
 				.execute();
 
 			assert.equal(
-				result.toString(),
+				await result.toString(),
 				"USE INVENTARIO;\nREVOKE ALL ON INVENTARIO.DISCOS_COMPACTOS FROM 'PERSONAL_VENTAS'@'%' IGNORE UNKNOWN USER;",
 			);
 		});
@@ -874,7 +874,7 @@ WHERE DISCOS_COMPACTOS.ID_DISQUERA = DISQUERAS_CD.ID_DISQUERA;`,
 				.execute();
 
 			assert.equal(
-				result.toString(),
+				await result.toString(),
 				"USE INVENTARIO;\nREVOKE PERSONAL_VENTAS FROM 'MRKT'@'localhost' IGNORE UNKNOWN USER;",
 			);
 		});
@@ -893,7 +893,7 @@ WHERE DISCOS_COMPACTOS.ID_DISQUERA = DISQUERAS_CD.ID_DISQUERA;`,
 				.execute();
 
 			assert.equal(
-				result.toString(),
+				await result.toString(),
 				"USE INVENTARIO;\nDROP ROLE IF EXISTS 'MRKT'@'localhost';",
 			);
 		});
@@ -909,7 +909,7 @@ WHERE DISCOS_COMPACTOS.ID_DISQUERA = DISQUERAS_CD.ID_DISQUERA;`,
 				.execute();
 
 			assert.equal(
-				result.toString(),
+				await result.toString(),
 				"USE INVENTARIO;\nDROP ROLE IF EXISTS 'PERSONAL_VENTAS'@'%';",
 			);
 		});
@@ -930,7 +930,7 @@ WHERE DISCOS_COMPACTOS.ID_DISQUERA = DISQUERAS_CD.ID_DISQUERA;`,
 			showResults(result);
 
 			assert.equal(
-				result.toString(),
+				await result.toString(),
 				`USE INVENTARIO;
 INSERT INTO DISQUERAS_CD
 VALUES ( 837, 'DRG Records' );
@@ -956,7 +956,7 @@ VALUES ( 117, 'Rhythm Country and Blues', 837, 21 );`,
 			showResults(result);
 
 			assert.equal(
-				result.toString(),
+				await result.toString(),
 				`USE INVENTARIO;
 UPDATE DISCOS_COMPACTOS
 SET ID_DISQUERA =
@@ -983,7 +983,7 @@ WHERE ID_DISCO_COMPACTO = 116;`,
 			showResults(result);
 
 			assert(
-				result.toString(),
+				await result.toString(),
 				`USE INVENTARIO;
 SELECT *
 FROM DISCOS_COMPACTOS
@@ -1008,7 +1008,7 @@ OR ID_DISCO_COMPACTO = 117);`,
 			showResults(result);
 
 			assert.equal(
-				result.toString(),
+				await result.toString(),
 				`USE INVENTARIO;
 DELETE FROM DISCOS_COMPACTOS
 WHERE (ID_DISCO_COMPACTO = 116
@@ -1042,7 +1042,7 @@ WHERE ID_DISQUERA = 837;`,
 			showResults(result);
 
 			assert.equal(
-				result.toString(),
+				await result.toString(),
 				`USE INVENTARIO;
 CREATE TABLE IF NOT EXISTS INVENTARIO_CD
 ( NOMBRE_CD VARCHAR(60) NOT NULL,
@@ -1063,7 +1063,7 @@ CREATE TABLE IF NOT EXISTS INVENTARIO_CD
 			showResults(result);
 
 			assert.equal(
-				result.toString(),
+				await result.toString(),
 				`USE INVENTARIO;
 INSERT INTO INVENTARIO_CD
 VALUES ( 'Patsy Cline: 12 Greatest Hits', 'Country', 'MCA Records', 32 );`,
@@ -1082,7 +1082,7 @@ VALUES ( 'Patsy Cline: 12 Greatest Hits', 'Country', 'MCA Records', 32 );`,
 			showResults(result);
 
 			assert.equal(
-				result.toString(),
+				await result.toString(),
 				`INSERT INTO INVENTARIO_CD\n( NOMBRE_CD, EDITOR, EN_EXISTENCIA )
 VALUES ( 'Fundamental', 'Capitol Records', 34 );`,
 			);
@@ -1106,7 +1106,7 @@ VALUES ( 'Fundamental', 'Capitol Records', 34 );`,
 			showResults(result);
 
 			assert.equal(
-				result.toString(),
+				await result.toString(),
 				`USE INVENTARIO;
 CREATE TABLE INVENTARIO_CD_2
 ( NOMBRE_CD_2 VARCHAR(60) NOT NULL,
@@ -1134,7 +1134,7 @@ FROM INVENTARIO_CD;`,
 			showResults(result);
 
 			assert.equal(
-				result.toString(),
+				await result.toString(),
 				`USE INVENTARIO;
 INSERT INTO DISQUERAS_CD
 VALUES
@@ -1151,7 +1151,7 @@ VALUES
 				.execute();
 			showResults(result);
 			assert.equal(
-				result.toString(),
+				await result.toString(),
 				`USE INVENTARIO;
 UPDATE INVENTARIO_CD
 SET EN_EXISTENCIA = 27;`,
@@ -1165,7 +1165,7 @@ SET EN_EXISTENCIA = 27;`,
 				.execute();
 			showResults(result);
 			assert.equal(
-				result.toString(),
+				await result.toString(),
 				`USE INVENTARIO;
 ALTER TABLE INVENTARIO_CD
 ADD COLUMN CANTIDAD INT;`,
@@ -1181,7 +1181,7 @@ ADD COLUMN CANTIDAD INT;`,
 				.execute();
 			showResults(result);
 			assert.equal(
-				result.toString(),
+				await result.toString(),
 				`USE INVENTARIO;
 UPDATE INVENTARIO_CD
 SET EN_EXISTENCIA = '27',
@@ -1198,7 +1198,7 @@ CANTIDAD = 10;`,
 			showResults(result);
 
 			assert(
-				result.toString(),
+				await result.toString(),
 				`USE INVENTARIO;
 UPDATE INVENTARIO_CD
 SET EN_EXISTENCIA = 37
@@ -1219,7 +1219,7 @@ WHERE NOMBRE_CD = 'Fundamental';`,
 			showResults(result);
 
 			assert.equal(
-				result.toString(),
+				await result.toString(),
 				`USE INVENTARIO;
 UPDATE INVENTARIO_CD_2
 SET EN_EXISTENCIA_2 =
@@ -1234,7 +1234,7 @@ WHERE NOMBRE_CD_2 = 'Fundamental';`,
 
 			showResults(result);
 			assert.equal(
-				result.toString(),
+				await result.toString(),
 				"USE INVENTARIO;\nDELETE FROM INVENTARIO_CD_2;",
 			);
 		});
@@ -1248,7 +1248,7 @@ WHERE NOMBRE_CD_2 = 'Fundamental';`,
 			showResults(result);
 
 			assert.equal(
-				result.toString(),
+				await result.toString(),
 				`USE INVENTARIO;
 DELETE FROM INVENTARIO_CD
 WHERE TIPO_MUSICA = 'Country';`,
@@ -1267,7 +1267,7 @@ WHERE TIPO_MUSICA = 'Country';`,
 			showResults(result);
 
 			assert.equal(
-				result.toString(),
+				await result.toString(),
 				`USE INVENTARIO;
 SELECT ID_TIPO, NOMBRE_TIPO
 FROM TIPOS_MUSICA
@@ -1290,7 +1290,7 @@ OR ID_TIPO = 12);`,
 			showResults(result);
 
 			assert.equal(
-				result.toString(),
+				await result.toString(),
 				`USE INVENTARIO;
 SELECT NOMBRE_ARTISTA, LUGAR_DE_NACIMIENTO
 FROM ARTISTAS
@@ -1313,7 +1313,7 @@ AND NOMBRE_ARTISTA <> 'Bing Crosby');`,
 			showResults(result);
 
 			assert.equal(
-				result.toString(),
+				await result.toString(),
 				`USE INVENTARIO;
 SELECT *
 FROM DISCOS_COMPACTOS
@@ -1347,7 +1347,7 @@ AND TITULO_CD LIKE ('%Blue%'));`,
 			showResults(result);
 
 			assert.equal(
-				result.toString(),
+				await result.toString(),
 				`USE INVENTARIO;
 CREATE TABLE CDS_A_LA_MANO\n( TITULO_CD VARCHAR(60),
  DERECHOSDEAUTOR INT,
@@ -1378,7 +1378,7 @@ WHERE TITULO_CD = 'Past Light';`;
 
 			showResults(result);
 
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		test("operador distinto a para comparar los valores en la columna TITULO_CD con uno de los títulos de CD", async () => {
 			const query = `SELECT TITULO_CD, DERECHOSDEAUTOR
@@ -1393,7 +1393,7 @@ WHERE TITULO_CD <> 'Past Light';`;
 
 			showResults(result);
 
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		test("operador Menor que y al operador Mayor que", async () => {
 			const query = `SELECT TITULO_CD, INVENTARIO
@@ -1416,7 +1416,7 @@ AND  PRECIO_MENUDEO <> 16.99);`;
 
 			showResults(result);
 
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		test("Menor que o igual a y Mayor que o igual a.", async () => {
 			const query = `SELECT TITULO_CD, DERECHOSDEAUTOR
@@ -1437,7 +1437,7 @@ AND DERECHOSDEAUTOR <= 1989);`;
 
 			showResults(result);
 
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 
 		test("combinar dos o más predicados para formar una condición de búsqueda", async () => {
@@ -1458,7 +1458,7 @@ AND DERECHOSDEAUTOR = 1993);`;
 
 			showResults(result);
 
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 
 		test("especifica un rango entre 14 y 16", async () => {
@@ -1477,7 +1477,7 @@ AND INVENTARIO > 10);`;
 
 			showResults(result);
 
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 
 		test("excluye un rango entre 14 y 16", async () => {
@@ -1493,7 +1493,7 @@ WHERE PRECIO_MENUDEO NOT BETWEEN 14 AND 16;`;
 
 			showResults(result);
 
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 
 		test("arroja filas con un valor nulo", async () => {
@@ -1509,7 +1509,7 @@ WHERE LUGAR_DE_NACIMIENTO IS NULL;`;
 
 			showResults(result);
 
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("arroja filas con un valor no nulo", async () => {
@@ -1525,7 +1525,7 @@ WHERE LUGAR_DE_NACIMIENTO IS NOT NULL;`;
 
 			showResults(result);
 
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("encontrar cualquier CD que no contenga la palabra Christmas y si la palabra Blue en el título", async () => {
@@ -1547,7 +1547,7 @@ AND TITULO_CD LIKE ('%Blue%'));`;
 
 			showResults(result);
 
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("Crea las tablas MENUDEO_CD y REBAJA_CD", async () => {
@@ -1613,7 +1613,7 @@ VALUES
 
 			showResults(result);
 
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		/**
@@ -1646,7 +1646,7 @@ WHERE EN_EXISTENCIA > 9 );`;
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("uso de SOME", async () => {
@@ -1673,7 +1673,7 @@ WHERE EN_EXISTENCIA > 9 );`;
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("uso de ALL", async () => {
@@ -1700,7 +1700,7 @@ WHERE EN_EXISTENCIA > 9 );`;
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 	});
@@ -1753,7 +1753,7 @@ VALUES
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("contar registros", async () => {
@@ -1766,7 +1766,7 @@ FROM CDS_VENDIDOS;`;
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("contar valores en una columna", async () => {
@@ -1781,7 +1781,7 @@ WHERE VENDIDOS > 20;`;
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("contar valores unicos en una columna", async () => {
@@ -1796,7 +1796,7 @@ WHERE VENDIDOS > 20;`;
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 
@@ -1815,7 +1815,7 @@ FROM CDS_VENDIDOS );`;
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("el valor mas alto para una columna usando agrupacion", async () => {
@@ -1832,7 +1832,7 @@ GROUP BY NOMBRE_ARTISTA;`;
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("suma de valores de una columna usando grupos", async () => {
@@ -1849,7 +1849,7 @@ GROUP BY NOMBRE_ARTISTA;`;
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("promedio de valores de una columna usando grupos", async () => {
@@ -1866,7 +1866,7 @@ GROUP BY NOMBRE_ARTISTA;`;
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 	});
@@ -1912,7 +1912,7 @@ VALUES
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("extrae un número definido de caracteres", async () => {
@@ -1925,7 +1925,7 @@ FROM FECHAS_VENTAS;`;
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("uso de substring en la clausula WHERE", async () => {
@@ -1940,7 +1940,7 @@ WHERE SUBSTRING(DISCO_COMPACTO FROM 1 FOR 4) = 'Blue';`;
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("uso de UPPER y LOWER", async () => {
@@ -1955,7 +1955,7 @@ WHERE SUBSTRING(DISCO_COMPACTO FROM 1 FOR 4) = 'Blue';`;
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 	});
@@ -2008,7 +2008,7 @@ VALUES
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("expresion de valor numerico", async () => {
@@ -2028,7 +2028,7 @@ WHERE (EN_EXISTENCIA + EN_PEDIDO) > 25;`;
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("expresion de valor numerico case", async () => {
@@ -2058,7 +2058,7 @@ WHERE EN_PEDIDO < 11;`;
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("expresion de valor numerico case en un SET", async () => {
@@ -2082,7 +2082,7 @@ END;`;
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("utilizar la expresión CAST en SELECT", async () => {
@@ -2101,7 +2101,7 @@ WHERE DISCO_COMPACTO LIKE ('%Blue%');`;
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 	});
@@ -2149,7 +2149,7 @@ VALUES
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("crea la tabla INTERPRETES", async () => {
@@ -2191,7 +2191,7 @@ VALUES
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("crea la tabla TIPO_INTER", async () => {
@@ -2231,7 +2231,7 @@ VALUES
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("operciones basicas JOIN", async () => {
@@ -2259,7 +2259,7 @@ AND INVENTARIO_CD.EN_EXISTENCIA < 15);`;
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("uso de nombres de correlacion", async () => {
@@ -2284,7 +2284,7 @@ AND c.EN_EXISTENCIA < 15);`;
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("JOIN con mas de dos tablas", async () => {
@@ -2311,7 +2311,7 @@ AND NOMBRE_TIPO = 'Popular');`;
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("operacion CROSS JOIN", async () => {
@@ -2336,7 +2336,7 @@ AND c.EN_EXISTENCIA < 15);`;
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("crea tabla EMPLEADOS", async () => {
@@ -2375,7 +2375,7 @@ VALUES
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("operacion SELF JOIN", async () => {
@@ -2396,7 +2396,7 @@ ORDER BY a.ID_EMP;`;
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("Crea tablas TITULOS_EN_EXISTENCIA y COSTOS_TITULOS", async () => {
@@ -2432,7 +2432,7 @@ CREATE TABLE IF NOT EXISTS COSTOS_TITULO
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		test("añade registros a las tablas TITULOS_EN_EXISTENCIA y COSTOS_TITULO", async () => {
 			const TITULOS_EN_EXISTENCIA = [
@@ -2486,7 +2486,7 @@ VALUES
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("join natural hace coincidir automáticamente las filas de aquellas columnas con el mismo nombre", async () => {
@@ -2501,7 +2501,7 @@ WHERE s.INVENTARIO > 15;`;
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("join natural de columna nombrada permite especificar las columnas coincidentes", async () => {
@@ -2523,7 +2523,7 @@ WHERE s.INVENTARIO > 15;`;
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		/*
@@ -2571,7 +2571,7 @@ CREATE TABLE ARTISTAS_CD
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("añadir registros a TITULO_CD", async () => {
@@ -2609,7 +2609,7 @@ VALUES
 			const result = await qb.insert("TITULO_CDS", [], TITULO_CDS).execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("añadir registros a ARTISTAS_TITULOS", async () => {
@@ -2655,7 +2655,7 @@ VALUES
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("añadir registros a ARTISTAS_CD", async () => {
@@ -2697,7 +2697,7 @@ VALUES
 			const result = await qb.insert("ARTISTAS_CD", [], ARTISTAS_CD).execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("unir las tablas TITULO_CDS, ARTISTAS_TITULOS y ARTISTAS_CD usando dos INNER JOIN", async () => {
@@ -2723,7 +2723,7 @@ WHERE t.TITULO LIKE ('%Blue%');`;
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("crea tablas INFO_CD y TIPO_CD", async () => {
@@ -2750,7 +2750,7 @@ CREATE TABLE TIPO_CD
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("añadir registros a INFO_CD", async () => {
@@ -2774,7 +2774,7 @@ VALUES
 			const result = await qb.insert("INFO_CD", [], INFO_CD).execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("añadir registros a TIPO_CD", async () => {
@@ -2800,7 +2800,7 @@ VALUES
 			const result = await qb.insert("TIPO_CD", [], TIPO_CD).execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("operación join sobre dos tablas", async () => {
@@ -2820,7 +2820,7 @@ ON i.ID_TIPO = t.ID_TIPO;`;
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("incluir las filas no coincidentes de la tabla INFO_CD usando LEFT OUTER JOIN", async () => {
@@ -2840,7 +2840,7 @@ ON i.ID_TIPO = t.ID_TIPO;`;
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("incluir las filas no coincidentes de la tabla TIPO_CD usando RIGHT OUTER JOIN", async () => {
@@ -2860,7 +2860,7 @@ ON i.ID_TIPO = t.ID_TIPO;`;
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		// 		test(
@@ -2881,7 +2881,7 @@ ON i.ID_TIPO = t.ID_TIPO;`;
 		// 					.on($.eq($.col("ID_TIPO", "i"), $.col("ID_TIPO", "t")));
 
 		// 				showResults(result);
-		// 				assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+		// 				assert.equal(await  result.toString(), `USE INVENTARIO;\n${query}`);
 		// 			},
 		// 		);
 		//fin test
@@ -2915,7 +2915,7 @@ CREATE TABLE CDS_DESCONTINUADOS
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("añade registros a CDS_CONTINUADOS", async () => {
@@ -2941,7 +2941,7 @@ VALUES
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("añade registros a CDS_DESCONTINUADOS", async () => {
@@ -2967,7 +2967,7 @@ VALUES
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("combinar instrucciones 'SELECT' en una sola que combine la información", async () => {
@@ -2985,7 +2985,7 @@ FROM CDS_DESCONTINUADOS;`;
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		/**
@@ -3030,7 +3030,7 @@ VALUES
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("crea tabla ARTISTAS_CD", async () => {
@@ -3080,7 +3080,7 @@ VALUES
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("el predicado IN compara valores de una columna en la tabla primaria con valores arrojados por la subconsulta", async () => {
@@ -3105,7 +3105,7 @@ WHERE ARTIST_NAME = 'Joni Mitchell' );`;
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		/**
@@ -3141,7 +3141,7 @@ AND s.TITULO_CD = a.TITULO) );`;
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		}); //fin test
 		/**
 		 * El predicado ALL comprueba si todos los valores arrojados cumplen con la condición
@@ -3185,7 +3185,7 @@ VALUES
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("crea tabla PRECIOS_VENTA", async () => {
@@ -3220,7 +3220,7 @@ INSERT INTO PRECIOS_VENTA\nVALUES
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("predicado cuantificado", async () => {
@@ -3247,7 +3247,7 @@ WHERE P_VENTA < 15.99 );`;
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("incluir una subconsulta en la cláusula SELECT", async () => {
@@ -3273,7 +3273,7 @@ FROM EXISTENCIA_CD s;`;
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("subconsultas que devuelve un solo valor", async () => {
@@ -3294,7 +3294,7 @@ FROM PRECIOS_VENTA );`;
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		//Modificar datos
@@ -3337,7 +3337,7 @@ VALUES
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("crea tabla TIPOS_TITULO", async () => {
@@ -3377,7 +3377,7 @@ VALUES
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("insertar registros usando una subconsulta", async () => {
@@ -3400,7 +3400,7 @@ VALUES
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("actualizar el valor Both Sides Now", async () => {
@@ -3426,7 +3426,7 @@ WHERE ID_TITULO = 108 );`;
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("subconsulta en la cláusula SET para proporcionar un valor para la columna identificada", async () => {
@@ -3448,7 +3448,7 @@ WHERE TITULO_CD = 'Both Sides Now';`;
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("borra el valor Both Sides", async () => {
@@ -3471,7 +3471,7 @@ WHERE ID_TITULO = 108 );`;
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("uso de limit y offset para MySQL, PostgreSQL, y SQLite ", async () => {
@@ -3488,7 +3488,7 @@ OFFSET 3;`;
 				.execute();
 
 			showResults(result);
-			assert.equal(result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 	});
@@ -3513,7 +3513,7 @@ SET MENUDEO = MENUDEO - 10;`;
 				.start({ snapshot: true, access: "READ WRITE" });
 
 			showResults(result);
-			assert.equal(result.toString(), `${query}`);
+			assert.equal(await result.toString(), `${query}`);
 		});
 		//fin test
 		test("punto de recuperación a la transacción", async () => {
@@ -3552,7 +3552,7 @@ ROLLBACK TO SAVEPOINT SECCION_1;`;
 				.start();
 
 			showResults(result);
-			assert.equal(result.toString(), `${query}`);
+			assert.equal(await result.toString(), `${query}`);
 		});
 		//fin test
 	});
@@ -3565,7 +3565,7 @@ ROLLBACK TO SAVEPOINT SECCION_1;`;
 			const result = await qb;
 
 			showResults(result);
-			assert.equal(result.toString(),`USE INVENTARIO;\n${query}`);
+			assert.equal(await  result.toString(),`USE INVENTARIO;\n${query}`);
 		});
 		//fin test
  */

@@ -23,7 +23,11 @@ class Driver {
 	}
 
 	response() {
-		console.log("devuelve la respuesta del servidor");
+		console.log("Implementa la respuesta del servidor");
+		const rows = [];
+		const columns = [];
+		const response = [];
+		return { response, rows, columns };
 	}
 
 	async close() {

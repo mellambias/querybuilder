@@ -19,13 +19,16 @@
 		"test:driver:pg": "node --test **/postgresDriver.test.js",
 		"test:driver:pg:only": "node --test --test-only **/postgresDriver.test.js",
 		"test:inventario": "node --test **/inventario.test.js",
-		"test:inventario:only": "node --test --test-only **/inventario.test.js"
+		"test:inventario:only": "node --test --test-only **/inventario.test.js",
+		"test:mongo": "node --test  **/mongodbDriver.test.js",
+		"test:mongo:only": "node --test --test-only **/mongodbDriver.test.js"
 	},
 	"keywords": [],
 	"author": "mellambias",
 	"license": "ISC",
 	"devDependencies": {
-		"mysql2": "^3.11.3",
-		"pg": "^8.13.0"
+		"mongodb": "6.10.0",
+		"mysql2": "3.11.3",
+		"pg": "8.13.0"
 	}
 }

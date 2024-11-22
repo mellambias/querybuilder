@@ -3,8 +3,6 @@ Implementa las variaciones al SQL2006 propias del SGBD
 */
 import Core from "../core.js";
 import postgreSQL from "../comandos/postgreSQL.js";
-import Mysql84 from "../comandos/Mysql.js";
-import Expresion from "../expresion.js";
 class PostgreSQL extends Core {
 	constructor() {
 		super();
