@@ -48,6 +48,7 @@ class QueryBuilder {
 	driver(driverClass, params) {
 		this.driverDB = new driverClass(params);
 		this.params = params;
+		this.close = async () => this.driverDB.close();
 		return this;
 	}
 	use(database) {
@@ -68,9 +69,8 @@ class QueryBuilder {
 	createDatabase(name, options) {
 		this.commandStack.push("createDatabase");
 		try {
-			this.query.push(
-				`${this.language.createDatabase(name.validSqlId(), options)}`,
-			);
+			const response = this.language.createDatabase(name.validSqlId(), options);
+			this.query.push(response);
 		} catch (error) {
 			this.error = error.message;
 		}
@@ -175,9 +175,8 @@ class QueryBuilder {
 	createType(name, options) {
 		this.commandStack.push("createType");
 		try {
-			this.query.push(
-				`${this.language.createType(name.validSqlId(), options)}`,
-			);
+			const response = this.language.createType(name.validSqlId(), options);
+			this.query.push(response);
 		} catch (error) {
 			this.error = error.message;
 		}
@@ -186,7 +185,8 @@ class QueryBuilder {
 	dropType(name, options) {
 		this.commandStack.push("dropType");
 		try {
-			this.query.push(`${this.language.dropType(name, options)}`);
+			const response = this.language.dropType(name, options);
+			this.query.push(response);
 		} catch (error) {
 			this.error = error.message;
 		}
@@ -747,7 +747,7 @@ class QueryBuilder {
 	async queryJoin(options) {
 		if (/^(subselect)$/i.test(options?.as) === false) {
 			if (this.prevInstance !== null) {
-				const prevQuery = this.prevInstance.queryJoin(options);
+				const prevQuery = await this.prevInstance.queryJoin(options);
 				if (prevQuery !== null) {
 					this.query.unshift(prevQuery);
 				}
@@ -813,6 +813,7 @@ class QueryBuilder {
 	async execute(testOnly = false) {
 		if (testOnly) {
 			console.log(">[QueryBuilder] [execute] en modo 'solo-test'\n");
+			await this.queryJoin();
 			return this;
 		}
 		if (!this.driverDB) {

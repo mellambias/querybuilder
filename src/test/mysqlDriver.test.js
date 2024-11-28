@@ -3474,22 +3474,27 @@ WHERE ID_TITULO = 108 );`;
 			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
-		test("uso de limit y offset para MySQL, PostgreSQL, y SQLite ", async () => {
-			const query = `SELECT *
+		test(
+			"uso de limit y offset para MySQL, PostgreSQL, y SQLite ",
+			{ only: true },
+			async () => {
+				const debug = true;
+				const query = `SELECT *
 FROM TIPOS_TITULO
 LIMIT 3
 OFFSET 3;`;
 
-			const result = await qb
-				.select("*")
-				.from("TIPOS_TITULO")
-				.limit(3)
-				.offset(3)
-				.execute();
+				const result = await qb
+					.select("*")
+					.from("TIPOS_TITULO")
+					.limit(3)
+					.offset(3)
+					.execute(debug);
 
-			showResults(result);
-			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
-		});
+				showResults(result, debug);
+				assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+			},
+		);
 		//fin test
 	});
 	describe("Capitulo 16 Transacciones", () => {

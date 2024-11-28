@@ -5,94 +5,75 @@
  */
 import Driver from "./Driver.js";
 import { MongoClient } from "mongodb";
+import Command from "../noSql/Command.js";
+
+const cursorCommands = [
+	"find",
+	"aggregate",
+	"listCollections",
+	"listIndexes",
+	"watch",
+	"explain",
+];
 
 class MongodbDriver extends Driver {
 	constructor(params) {
 		super(MongoClient, params);
+		this.params = params;
 		this.connection = null;
 		this.queyResult = [];
 		this.queryFields = [];
-		this.client = new MongoClient(params.getConnectionString());
+		this.client = null;
 	}
 	async connect() {
 		try {
-			console.log("conectando con la base de datos");
+			this.client = new this.library(this.params.getConnectionString());
 			await this.client.connect();
-			console.log("conectado a la base de datos");
-			// const dbs = await this.client.db().admin().listDatabases();
-			// console.table(dbs.databases);
-			const cursor = await this.client.db("fullstack").runCursorCommand({
-				find: "users",
-				filter: { username: "root" },
-			});
-			for await (const doc of cursor) {
-				console.log(doc);
-			}
-			// const temp = await this.client
-			// 	.db("fullstack")
-			// 	.command({ find: "users", filter: { username: "root" } });
-			// console.log(temp);
+			return this;
 		} catch (error) {
-			return new Error(error);
-		} finally {
-			this.client.close();
+			throw new Error(error);
 		}
 	}
 	async use(database) {
 		this.database = database;
 	}
-	async getTable(name) {
-		await this.execute({
-			find: "tableDef",
-			filter: { tableName: name },
-		});
-		const { response } = this.response();
-		return response;
-	}
+
 	async execute(query, options) {
 		try {
-			console.log(
-				`[MongodbDriver][execute] envia la consulta a la base de datos '${this.database}'`,
-			);
-			await this.client.connect();
-			// const dbs = await this.client.db().admin().listDatabases();
-			// console.table(dbs.databases);
+			if (this.client === null) {
+				await this.connect();
+			}
+			// Array con los comandos a ejecutar
+			let commands;
 			if (typeof query === "string") {
-				const querys = query.split(";").filter((q) => q.length > 0);
-				for await (const query of querys) {
-					console.log("[MongodbDriver][execute]comando string", query);
-					let sendCommand = query;
-					if (typeof query === "string") {
-						sendCommand = JSON.parse(query);
-					}
-					const result = await this.client
+				commands = query
+					.split(";")
+					.filter((q) => q.length > 0)
+					.map((command) => JSON.parse(command));
+			}
+			if (query instanceof Command) {
+				commands = query.commands;
+			}
+			console.log("comandos a ejecutar", commands);
+			let response = null;
+			for await (const command of commands) {
+				if (this.isCursorCommand(command)) {
+					response = await this.client
 						.db(this.database)
-						.command(sendCommand);
-					this.queyResult.push(result);
-				}
-			} else {
-				console.log("[MongodbDriver][execute]comando object", query);
-				const cursor = await this.client
-					.db(this.database)
-					.runCursorCommand(query);
-				for await (const doc of cursor) {
-					this.queyResult.push(doc);
+						.runCursorCommand(command);
+					for await (const doc of response) {
+						this.queyResult.push(doc);
+					}
+				} else {
+					response = await this.client.db(this.database).command(command);
+					this.queyResult.push(response);
 				}
 			}
-
-			// const cursor = await this.client.db(this.database).runCursorCommand({
-			// 	find: "users",
-			// 	filter: { username: "root" },
-			// });
-			// for await (const doc of cursor) {
-			// 	this.queyResult.push(doc);
-			// }
-			this.client.close();
 			return this;
 		} catch (error) {
-			console.log(error);
-			console.error("[MongodbDriver]", error.errorResponse);
-			this.client.close();
+			console.log("[Error][MongodbDriver]", error);
+			console.error("[errorResponse][MongodbDriver]", error.errorResponse);
+			await this.close(error);
 			return this;
 		}
 	}
@@ -100,12 +81,25 @@ class MongodbDriver extends Driver {
 	response() {
 		const rows = [];
 		const columns = [];
-		const response = [];
-		return { response: this.queyResult, rows, columns };
+		const response = this.queyResult;
+		this.queyResult = [];
+		this.queryFields = [];
+		return { response, rows, columns };
 	}
 
-	async close() {
-		console.log("cierra la conexión");
+	async close(error) {
+		if (this.client === null) {
+			return this;
+		}
+		if (!this.client?.s.hasBeenClosed) {
+			this.client.close();
+			this.client = null;
+		}
+		return this;
+	}
+
+	isCursorCommand(command) {
+		return Object.keys(command).some((key) => cursorCommands.includes(key));
 	}
 }
 export default MongodbDriver;

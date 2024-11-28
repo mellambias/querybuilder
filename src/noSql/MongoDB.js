@@ -2,20 +2,40 @@
 Implementa las variaciones al SQL2006 propias de los NoSQL
 */
 import Core from "../core.js";
+import Command from "./Command.js";
 class MongoDB extends Core {
 	constructor(qbuilder) {
 		super();
 		this.dataType = "mongobd"; // especifica el tipo de datos usado
 		this.qb = qbuilder;
 	}
-	createDatabase(name, options) {
+	async createDatabase(name, options) {
 		/**
 		 * MongoDB crea la base de datos automáticamente cuando insertas el primer documento en una colección.
 		 */
-		return null;
+		// Establece el nombre de la base de datos
+		this.qb.driverDB.use(name);
+		//comandos para poblar la base de datos
+		const createDatabase = new Command({ create: "esquema" });
+		createDatabase.add({
+			insert: "esquema",
+			documents: [
+				{
+					_id: "table",
+					tables: [],
+				},
+				{
+					_id: "userType",
+					types: [],
+				},
+			],
+		});
+		return createDatabase;
 	}
 	dropDatabase(name, options) {
-		return null;
+		this.qb.driverDB.use(name);
+		const dropDatabase = new Command({ dropDatabase: 1 });
+		return dropDatabase;
 	}
 	use(database) {
 		// devuelve null
@@ -54,19 +74,29 @@ class MongoDB extends Core {
 		];
 		const fieldOptions = this.checkOptions(options, fields);
 
-		const tableDef = JSON.stringify({
-			insert: "tableDef",
-			documents: [
+		// Añadiremos la definición al documento 'table' de la coleccion 'esquema'
+		const tableDef = new Command({
+			update: "esquema",
+			updates: [
 				{
-					tableName: name,
-					fields: Object.keys(options.cols),
-					types: Object.values(options.cols),
+					q: { _id: "table" },
+					u: {
+						$addToSet: {
+							tables: {
+								name,
+								cols: Object.keys(options.cols),
+								types: Object.values(options.cols),
+								constraints: options.constraints,
+							},
+						},
+					},
 				},
 			],
 		});
-		const createTable = JSON.stringify({ create: name, ...fieldOptions });
+		// creamos la colección
+		tableDef.add({ create: name, ...fieldOptions });
 
-		return `${createTable};${tableDef}`;
+		return tableDef;
 	}
 	column(name, options) {
 		return null;
@@ -103,20 +133,52 @@ class MongoDB extends Core {
 	async dropTable(name, options) {
 		const fields = ["writeConcern", "comment"];
 		const fieldOptions = this.checkOptions(options, fields);
-		if (options?.secure) {
-			const response = await this.qb.driverDB.getTable(name);
-			if (response.length) {
-				return JSON.stringify({ drop: name, ...fieldOptions });
-			}
-			return null;
-		}
-		return JSON.stringify({ drop: name, ...fieldOptions });
+		const drop = new Command({ drop: name, ...fieldOptions }).add({
+			update: "esquema",
+			updates: [
+				{
+					q: { _id: "table" },
+					u: {
+						$pull: { tables: { name: name } },
+					},
+				},
+			],
+		});
+
+		return drop;
 	}
 	createType(name, options) {
-		return null;
+		const tableType = new Command({
+			update: "esquema",
+			updates: [
+				{
+					q: { _id: "userType" },
+					u: {
+						$addToSet: {
+							types: {
+								name,
+								options,
+							},
+						},
+					},
+				},
+			],
+		});
+		return tableType;
 	}
-	dropType(name, options) {
-		return null;
+	async dropType(name, options) {
+		const dropType = new Command({
+			update: "esquema",
+			updates: [
+				{
+					q: { _id: "userType" },
+					u: {
+						$pull: { types: { name: name } },
+					},
+				},
+			],
+		});
+		return dropType;
 	}
 	createAssertion(name, assertion) {
 		return null;
@@ -309,6 +371,11 @@ class MongoDB extends Core {
 
 	// Mofificacion de Datos
 	insert(table, cols, values) {
+		// Primero recuperar la definicion de la tabla
+		const findTable = new Command({
+			find: "esquema",
+			filter: { _id: "table", "tables.name": table },
+		}).execute(this.driver);
 		return null;
 	}
 	update(table, sets) {
@@ -433,6 +500,9 @@ class MongoDB extends Core {
 	 * @returns
 	 */
 	checkOptions(options, fields) {
+		if (options === undefined) {
+			return {};
+		}
 		return Object.keys(options)
 			.filter((key) => fields.includes(key))
 			.reduce((acc, key) => {
@@ -441,4 +511,5 @@ class MongoDB extends Core {
 			}, {});
 	}
 }
+
 export default MongoDB;

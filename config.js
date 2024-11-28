@@ -40,14 +40,18 @@ const config = {
 			},
 		},
 		MongoDB: {
-			version: "5.0.6",
+			version: "8.0.3",
 			driver: MongodbDriver,
 			params: {
 				host: "localhost",
 				port: 27017,
 				username: undefined,
 				password: undefined,
-				options: { retryWrites: true, w: "majority" },
+				options: {
+					retryWrites: true,
+					w: "majority",
+					connectTimeoutMS: 30000,
+				},
 				getConnectionString: function () {
 					const { host, port, username, password, options } = this;
 					const userPaswordString =
