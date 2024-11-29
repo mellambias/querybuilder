@@ -8,27 +8,27 @@ const dataTypes = {
 	CHARACTER: {
 		mysql: "CHAR",
 		postgresql: "CHAR",
-		mongobd: "String",
+		mongobd: "string",
 	},
 	CHAR: {
 		mysql: "CHAR",
 		postgresql: "CHAR",
-		mongobd: "String",
+		mongobd: "string",
 	},
 	VARCHAR: {
 		mysql: "VARCHAR",
 		postgresql: "VARCHAR",
-		mongobd: "String",
+		mongobd: "string",
 	},
 	TEXT: {
 		mysql: "TEXT",
 		postgresql: "TEXT",
-		mongobd: "String",
+		mongobd: "string",
 	},
 	CLOB: {
 		mysql: "BINARY",
 		postgresql: "BPCHAR",
-		mongobd: "Binary",
+		mongobd: "binary",
 	},
 	NCHAR: {
 		mysql: "",
@@ -74,53 +74,53 @@ const dataTypes = {
 	NUMERIC: {
 		mysql: "DECIMAL",
 		postgresql: "NUMERIC",
-		mongobd: "Number",
+		mongobd: "number",
 	},
 	DECIMAL: {
 		postgresql: "DECIMAL",
-		mongobd: "Number",
+		mongobd: "number",
 	},
 	INTEGER: {
 		mysql: "INT",
 		postgresql: "INTEGER",
-		mongobd: "Number",
+		mongobd: "number",
 	},
 	INT: {
 		mysql: "INT",
 		postgresql: "INTEGER",
-		mongobd: "Number",
+		mongobd: "number",
 	},
 	TINYINT: {
 		mysql: "TINYINT",
-		mongobd: "Number",
+		mongobd: "number",
 	},
 	SMALLINT: {
 		mysql: "SMALLINT",
 		postgresql: "SMALLINT",
-		mongobd: "Number",
+		mongobd: "number",
 	},
 	MEDIUMINT: {
 		mysql: "MEDIUMINT",
-		mongobd: "Number",
+		mongobd: "number",
 	},
 	BIGINT: {
 		mysql: "BIGINT",
 		postgresql: "BIGINT",
-		mongobd: "Number",
+		mongobd: "number",
 	},
 	FLOAT: {
 		mysql: "FLOAT",
-		mongobd: "Number",
+		mongobd: "number",
 	},
 	REAL: {
 		mysql: "REAL",
 		postgresql: "REAL",
-		mongobd: "Number",
+		mongobd: "number",
 	},
 	"DOUBLE PRECISION": {
 		mysql: "DOUBLE PRECISION",
 		postgresql: "DOUBLE PRECISION",
-		mongobd: "Number",
+		mongobd: "number",
 	},
 	smallserial: {
 		postgresql: "SMALLSERIAL",
@@ -137,26 +137,26 @@ const dataTypes = {
 	DATE: {
 		mysql: "DATE",
 		postgresql: "DATE",
-		mongobd: "Date",
+		mongobd: "date",
 	},
 	TIME: {
 		mysql: "TIME",
 		postgresql: "TIME",
-		mongobd: "Date",
+		mongobd: "date",
 	},
 	"TIME WITH TIME ZONE": {
 		mysql: "DATETIME",
 		postgresql: "TIME WHIT TIME ZONE",
-		mongobd: "Date",
+		mongobd: "date",
 	},
 	TIMESTAMP: {
 		mysql: "TIMESTAMP",
 		postgresql: "TIMESTAMP",
-		mongobd: "Date",
+		mongobd: "date",
 	},
 	"TIMESTAMP WITH TIME ZONE": {
 		postgresql: "TIMESTAMP WITH TIME ZONE",
-		mongobd: "Date",
+		mongobd: "date",
 	},
 	INTERVAL: {
 		postgresql: "INTERVAL",

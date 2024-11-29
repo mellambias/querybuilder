@@ -445,6 +445,49 @@ CREATE TABLE IF NOT EXISTS TITULOS_CD
 			}
 		});
 	});
+	describe("Alterar las tablas", () => {
+		test("Añadir una columna a la tabla DISCOS_COMPACTOS", async () => {
+			const result = await qb
+				.alterTable("DISCOS_COMPACTOS")
+				.addColumn("EN_EXISTENCIA", { type: "INT", values: ["not null"] })
+				.execute();
+
+			if (!result.error) {
+				assert.equal(
+					await result.toString(),
+					`USE INVENTARIO;
+ALTER TABLE DISCOS_COMPACTOS
+ADD COLUMN EN_EXISTENCIA INT NOT NULL;`,
+				);
+			} else {
+				assert.equal(result.error, "Duplicate column name 'EN_EXISTENCIA'");
+			}
+		});
+
+		test("añade una constraint de tipo CHECK al campo EN_EXISTENCIA", async () => {
+			const result = await qb
+				.alterTable("DISCOS_COMPACTOS")
+				.addConstraint("CK_EN_EXISTENCIA", {
+					check: qb.and(qb.gt("EN_EXISTENCIA", 0), qb.lt("EN_EXISTENCIA", 50)),
+				})
+				.execute();
+
+			if (!result.error) {
+				assert.equal(
+					await result.toString(),
+					`USE INVENTARIO;
+ALTER TABLE DISCOS_COMPACTOS
+ADD CONSTRAINT CK_EN_EXISTENCIA CHECK ( (EN_EXISTENCIA > 0
+AND EN_EXISTENCIA < 50) );`,
+				);
+			} else {
+				assert.equal(
+					result.error,
+					"Duplicate check constraint name 'CK_EN_EXISTENCIA'.",
+				);
+			}
+		});
+	});
 	describe("llena las tablas inventario", async () => {
 		test("TIPOS_MUSICA", async () => {
 			const table = "TIPOS_MUSICA";
@@ -603,49 +646,6 @@ CREATE TABLE IF NOT EXISTS TITULOS_CD
 		// 	showResults(result);
 		// });
 		//fin
-	});
-	describe("Alterar las tablas", () => {
-		test("Añadir una columna a la tabla DISCOS_COMPACTOS", async () => {
-			const result = await qb
-				.alterTable("DISCOS_COMPACTOS")
-				.addColumn("EN_EXISTENCIA", { type: "INT", values: ["not null"] })
-				.execute();
-
-			if (!result.error) {
-				assert.equal(
-					await result.toString(),
-					`USE INVENTARIO;
-ALTER TABLE DISCOS_COMPACTOS
-ADD COLUMN EN_EXISTENCIA INT NOT NULL;`,
-				);
-			} else {
-				assert.equal(result.error, "Duplicate column name 'EN_EXISTENCIA'");
-			}
-		});
-
-		test("añade una constraint de tipo CHECK al campo EN_EXISTENCIA", async () => {
-			const result = await qb
-				.alterTable("DISCOS_COMPACTOS")
-				.addConstraint("CK_EN_EXISTENCIA", {
-					check: qb.and(qb.gt("EN_EXISTENCIA", 0), qb.lt("EN_EXISTENCIA", 50)),
-				})
-				.execute();
-
-			if (!result.error) {
-				assert.equal(
-					await result.toString(),
-					`USE INVENTARIO;
-ALTER TABLE DISCOS_COMPACTOS
-ADD CONSTRAINT CK_EN_EXISTENCIA CHECK ( (EN_EXISTENCIA > 0
-AND EN_EXISTENCIA < 50) );`,
-				);
-			} else {
-				assert.equal(
-					result.error,
-					"Duplicate check constraint name 'CK_EN_EXISTENCIA'.",
-				);
-			}
-		});
 	});
 
 	describe("Crear vistas", () => {

@@ -4,6 +4,7 @@ import Cursor from "./cursor.js";
 import Transaction from "./transaction.js";
 import Expresion from "./expresion.js";
 import Value from "./value.js";
+import Command from "./noSql/Command.js";
 /**
  * Clase principal del paquete
  * @constructor
@@ -144,7 +145,7 @@ class QueryBuilder {
 				const alterTablePos = this.commandStack.indexOf("alterTable");
 				if (alterTablePos !== -1) {
 					this.alterTableStack.push(
-						`${this.alterTableCommand}${this.language[comand](name, options)}`,
+						`${this.alterTableCommand}${this.language[comand](name, options, this.alterTableCommand)}`,
 					);
 					return this;
 				}
@@ -754,11 +755,18 @@ class QueryBuilder {
 				this.prevInstance = null;
 			}
 		}
-		if (this.alterTableCommand?.length > 0) {
-			this.alterTableCommand = this.alterTableStack.join(";\n");
-			this.query.push(this.alterTableCommand);
-			this.alterTableCommand = undefined;
-			this.alterTableStack = [];
+
+		if (this.alterTableCommand !== undefined) {
+			if (this.alterTableCommand instanceof Command) {
+				this.query.push(this.alterTableCommand);
+				this.alterTableCommand = undefined;
+			}
+			if (this.alterTableCommand?.length > 0) {
+				this.alterTableCommand = this.alterTableStack.join(";\n");
+				this.query.push(this.alterTableCommand);
+				this.alterTableCommand = undefined;
+				this.alterTableStack = [];
+			}
 		}
 		if (this.selectCommand?.length > 0) {
 			if (this.selectStack.length > 0) {

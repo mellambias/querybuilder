@@ -75,6 +75,12 @@ class MongoDB extends Core {
 		const fieldOptions = this.checkOptions(options, fields);
 
 		// Añadiremos la definición al documento 'table' de la coleccion 'esquema'
+
+		for (const col in options.cols) {
+			if (typeof options.cols[col] !== "object") {
+				options.cols[col] = { type: options.cols[col] };
+			}
+		}
 		const tableDef = new Command({
 			update: "esquema",
 			updates: [
@@ -84,8 +90,7 @@ class MongoDB extends Core {
 						$addToSet: {
 							tables: {
 								name,
-								cols: Object.keys(options.cols),
-								types: Object.values(options.cols),
+								cols: options.cols,
 								constraints: options.constraints,
 							},
 						},
@@ -106,13 +111,38 @@ class MongoDB extends Core {
 		return null;
 	}
 	alterTable(name) {
-		return null;
+		this._currentTable = name;
+		console.log("[MongoDB][alterTable]");
+		const alterTable = new Command({
+			update: "esquema",
+			updates: [],
+		});
+		return alterTable;
 	}
-	addColumn(name, options) {
-		return null;
+	addColumn(name, options, alterTable) {
+		const { updates } = alterTable.commands[0];
+		updates.push({
+			q: { "tables.name": this._currentTable },
+			u: {
+				$addToSet: {
+					"tables.$[elem].cols": name,
+					"tables.$[elem].types": options,
+				},
+			},
+			arrayFilters: [{ "elem.name": this._currentTable }],
+		});
+		return alterTable;
 	}
-	alterColumn(name) {
-		return null;
+	alterColumn(name, options, alterTable) {
+		const { updates } = alterTable.commands[0];
+		updates.push({
+			q: { "tables.name": this._currentTable },
+			u: {
+				$set: { "tables.$[table].cols.$[]": name, "tables.types": options },
+			},
+			arrayFilters: [{ "table.name": this._currentTable }],
+		});
+		return alterTable;
 	}
 
 	dropColumn(name, option) {
@@ -370,13 +400,56 @@ class MongoDB extends Core {
 	}
 
 	// Mofificacion de Datos
-	insert(table, cols, values) {
+	async insert(table, columns, values) {
 		// Primero recuperar la definicion de la tabla
-		const findTable = new Command({
+		const [findTable] = await new Command({
 			find: "esquema",
-			filter: { _id: "table", "tables.name": table },
-		}).execute(this.driver);
-		return null;
+			filter: { _id: "table" },
+		}).execute(this.qb.driverDB);
+		const tableDef = findTable.tables.find((item) => item.name === table);
+		console.log(tableDef);
+		const { cols, types } = tableDef;
+		let fields;
+		if (columns.length > 0) {
+			console.log("Insertar usando", columns);
+			fields = columns;
+		} else {
+			fields = cols;
+		}
+		const documents = values.map((item) =>
+			item.reduce((row, val, index) => {
+				const pos = cols.indexOf(fields[index]);
+				const type = types[pos]?.type || types[pos];
+				console.log(fields[index], type);
+				if (!type.toDataType(this.dataType).startsWith(typeof val)) {
+					throw new Error(
+						`El tipo: '${typeof val}' del campo '${fields[index]}' no es compatible con '${type.toDataType(this.dataType)}'`,
+					);
+				}
+				if (types[pos]?.values) {
+					if (
+						types[pos]?.values.includes("not null") &&
+						(val === undefined || val === "null") &&
+						types[pos]?.default === undefined
+					) {
+						throw new Error(`El campo '${fields[index]}' no puede ser 'null'`);
+					}
+					if (types[pos]?.values.includes("primary key")) {
+						row._id = val;
+						return row;
+					}
+				}
+				row[fields[index]] = val || types[pos]?.default;
+				return row;
+			}, {}),
+		);
+		// creamos un comando para insertar los documentos
+		const insertMany = new Command({
+			insert: table,
+			documents,
+		});
+
+		return insertMany;
 	}
 	update(table, sets) {
 		return null;

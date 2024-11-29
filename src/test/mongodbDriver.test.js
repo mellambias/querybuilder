@@ -23,24 +23,20 @@ describe("Driver MongodbDriver", async () => {
 		assert.ok(result.toString());
 	});
 	//fin
-	test(
-		"Crear una tabla en la base de datos testing",
-		{ only: false },
-		async () => {
-			const debug = false;
-			const result = await qb
-				.use("testing")
-				// .dropTable("TABLE_TEST", {
-				// 	comment: "elimina esta colección",
-				// 	secure: true,
-				// })
-				.createTable("TABLE_TEST", { cols: { ID: "INT" } })
-				.execute(debug);
-			showResults(result, debug);
+	test("Crear una tabla en la base de datos testing", async () => {
+		const debug = false;
+		const result = await qb
+			.use("testing")
+			// .dropTable("TABLE_TEST", {
+			// 	comment: "elimina esta colección",
+			// 	secure: true,
+			// })
+			.createTable("TABLE_TEST", { cols: { ID: "INT" } })
+			.execute(debug);
+		showResults(result, debug);
 
-			assert.ok(await result.toString());
-		},
-	);
+		assert.ok(await result.toString());
+	});
 	//fin
 	test("elimina una tabla en la base de datos testing", async () => {
 		const debug = false;
@@ -57,13 +53,13 @@ describe("Driver MongodbDriver", async () => {
 	});
 	//fin
 	test("Crear una tabla con varias columnas", async () => {
+		const debug = true;
 		const cols = {
 			ID_ARTISTA: "INTEGER",
 			NOMBRE_ARTISTA: { type: "CHARACTER(60)", default: "artista" },
 			FDN_ARTISTA: "DATE",
 			POSTER_EN_EXISTENCIA: "BOOLEAN",
 		};
-		const debug = true;
 		const result = await qb
 			.use("testing")
 			.createTable("table_test2", { cols, secure: true })
@@ -334,9 +330,49 @@ describe("Trabaja con INVENTARIO", () => {
 			assert.ok(await result.toString());
 		});
 	});
+	describe("Alterar las tablas", () => {
+		test(
+			"Añadir una columna a la tabla DISCOS_COMPACTOS",
+			{ only: true },
+			async () => {
+				const debug = true;
+				const result = await qb
+					.alterTable("DISCOS_COMPACTOS")
+					.addColumn("EN_EXISTENCIA", { type: "INT", values: ["not null"] })
+					.execute(debug);
+
+				showResults(result, debug);
+				assert.ok(await result.toString());
+			},
+		);
+
+		test("añade una constraint de tipo CHECK al campo EN_EXISTENCIA", async () => {
+			const result = await qb
+				.alterTable("DISCOS_COMPACTOS")
+				.addConstraint("CK_EN_EXISTENCIA", {
+					check: qb.and(qb.gt("EN_EXISTENCIA", 0), qb.lt("EN_EXISTENCIA", 50)),
+				})
+				.execute();
+
+			if (!result.error) {
+				assert.equal(
+					await result.toString(),
+					`USE INVENTARIO;
+ALTER TABLE DISCOS_COMPACTOS
+ADD CONSTRAINT CK_EN_EXISTENCIA CHECK ( (EN_EXISTENCIA > 0
+AND EN_EXISTENCIA < 50) );`,
+				);
+			} else {
+				assert.equal(
+					result.error,
+					"Duplicate check constraint name 'CK_EN_EXISTENCIA'.",
+				);
+			}
+		});
+	});
 	describe("llena las tablas inventario", async () => {
-		test("TIPOS_MUSICA", { only: true }, async () => {
-			const debug = true;
+		test("TIPOS_MUSICA", async () => {
+			const debug = false;
 			const table = "TIPOS_MUSICA";
 			const rows = [
 				[11, "Blues"],
@@ -351,11 +387,14 @@ describe("Trabaja con INVENTARIO", () => {
 				[20, "Soundtracks"],
 				[21, "Christmas"],
 			];
-			const result = await qb.insert(table, [], rows).execute(debug);
+			const result = await qb
+				.insert(table, ["ID_TIPO", "NOMBRE_TIPO"], rows)
+				.execute(debug);
 			showResults(result, debug);
 		});
 		//fin
 		test("DISQUERAS_CD", async () => {
+			const debug = false;
 			const disqueras_cd = [
 				[827, "Private Music"],
 				[828, "Reprise Records"],
@@ -370,11 +409,12 @@ describe("Trabaja con INVENTARIO", () => {
 			];
 			const result = await qb
 				.insert("DISQUERAS_CD", [], disqueras_cd)
-				.execute();
-			showResults(result);
+				.execute(debug);
+			showResults(result, debug);
 		});
 		//fin
 		test("DISCOS_COMPACTOS", async () => {
+			const debug = true;
 			const discos_compactos = [
 				[101, "Famous Blue Raincoat", 827, 13],
 				[102, "Blue", 828, 42],
@@ -394,8 +434,8 @@ describe("Trabaja con INVENTARIO", () => {
 			];
 			const result = await qb
 				.insert("DISCOS_COMPACTOS", [], discos_compactos)
-				.execute();
-			showResults(result);
+				.execute(debug);
+			showResults(result, debug);
 		});
 		//fin
 		test("TIPOS_DISCO_COMPACTO", async () => {
@@ -482,60 +522,6 @@ describe("Trabaja con INVENTARIO", () => {
 			showResults(result);
 		});
 		//fin
-
-		//fin
-
-		//fin
-		// test("", async () => {
-		// 	const table = "";
-		// 	const rows = [];
-		// 	const result = await qb.insert(table, [], rows).execute();
-		// 	showResults(result);
-		// });
-		//fin
-	});
-	describe("Alterar las tablas", () => {
-		test("Añadir una columna a la tabla DISCOS_COMPACTOS", async () => {
-			const result = await qb
-				.alterTable("DISCOS_COMPACTOS")
-				.addColumn("EN_EXISTENCIA", { type: "INT", values: ["not null"] })
-				.execute();
-
-			if (!result.error) {
-				assert.equal(
-					await result.toString(),
-					`USE INVENTARIO;
-ALTER TABLE DISCOS_COMPACTOS
-ADD COLUMN EN_EXISTENCIA INT NOT NULL;`,
-				);
-			} else {
-				assert.equal(result.error, "Duplicate column name 'EN_EXISTENCIA'");
-			}
-		});
-
-		test("añade una constraint de tipo CHECK al campo EN_EXISTENCIA", async () => {
-			const result = await qb
-				.alterTable("DISCOS_COMPACTOS")
-				.addConstraint("CK_EN_EXISTENCIA", {
-					check: qb.and(qb.gt("EN_EXISTENCIA", 0), qb.lt("EN_EXISTENCIA", 50)),
-				})
-				.execute();
-
-			if (!result.error) {
-				assert.equal(
-					await result.toString(),
-					`USE INVENTARIO;
-ALTER TABLE DISCOS_COMPACTOS
-ADD CONSTRAINT CK_EN_EXISTENCIA CHECK ( (EN_EXISTENCIA > 0
-AND EN_EXISTENCIA < 50) );`,
-				);
-			} else {
-				assert.equal(
-					result.error,
-					"Duplicate check constraint name 'CK_EN_EXISTENCIA'.",
-				);
-			}
-		});
 	});
 
 	describe("Crear vistas", () => {
@@ -1049,6 +1035,7 @@ SET EN_EXISTENCIA = 27;`,
 		});
 
 		test("añadir columna cantidad a inventario_cd", async () => {
+			const debug = true;
 			const result = await qb
 				.alterTable("INVENTARIO_CD")
 				.addColumn("CANTIDAD", "INT")
