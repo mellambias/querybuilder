@@ -93,7 +93,12 @@ export async function showResults(datos, debug) {
 		tableFormat(columns, rows, response, await datos.queryJoin());
 	} else if (debug) {
 		console.log("******* DEBUG INFO *********\n");
-		const query = await datos.queryJoin();
+		let query;
+		if (query instanceof Promise) {
+			query = await datos.queryJoin();
+		} else {
+			query = datos;
+		}
 		console.log("el tipo de query es", typeof query);
 		if (typeof query === "object") {
 			console.log("✔ queryObject>>\n");

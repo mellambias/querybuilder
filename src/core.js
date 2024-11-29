@@ -405,7 +405,7 @@ class Core {
 			distinct: "DISTINCT",
 		};
 		for (const oper in logicos) {
-			if (/^(AND|OR)$/i.test(logicos[oper])) {
+			if (/^(AND|OR)$/i.test(oper)) {
 				this[oper] = (...predicados) => {
 					if (predicados.length > 1) {
 						return `(${predicados.join(`\n${logicos[oper].toUpperCase()} `)})`;
@@ -413,7 +413,7 @@ class Core {
 					return `\n${logicos[oper].toUpperCase()} ${predicados}`;
 				};
 			}
-			if (/^(NOT)$/i.test(logicos[oper])) {
+			if (/^(NOT)$/i.test(oper)) {
 				this[oper] = (...predicados) => {
 					if (predicados.length > 1) {
 						return `(${predicados.join(`\n${logicos[oper].toUpperCase()} `)})`;
@@ -422,11 +422,11 @@ class Core {
 				};
 			}
 
-			if (/^(LIKE|NOT LIKE)$/i.test(logicos[oper])) {
+			if (/^(LIKE|NOT LIKE)$/i.test(oper)) {
 				this[oper] = (...predicados) =>
 					`${predicados[0]} ${logicos[oper].toUpperCase()} ('${predicados[1]}')`;
 			}
-			if (/^(DISTINCT)$/i.test(logicos[oper])) {
+			if (/^(DISTINCT)$/i.test(oper)) {
 				this[oper] = (...predicados) =>
 					`${logicos[oper].toUpperCase()} ${predicados}`;
 			}

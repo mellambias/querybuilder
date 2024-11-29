@@ -157,8 +157,10 @@ class QueryBuilder {
 			this[comand] = (value) => {
 				const alterColumnPos = this.commandStack.lastIndexOf("alterColumn");
 				if (alterColumnPos !== -1) {
-					this.alterTableStack[alterColumnPos - 1] +=
-						this.language[comand](value);
+					this.alterTableStack[alterColumnPos - 1] += this.language[comand](
+						value,
+						this.alterTableCommand,
+					);
 				} else {
 					this.error = "No es posible aplicar, falta el comando 'alterColumn'";
 				}
@@ -459,7 +461,6 @@ class QueryBuilder {
 			"any",
 			"some",
 			"all",
-			"distinct",
 		];
 
 		const operTwoCols = [
@@ -475,7 +476,7 @@ class QueryBuilder {
 
 		const operTreeArg = ["between", "notBetween"];
 
-		const logicos = ["and", "or", "not"];
+		const logicos = ["and", "or", "not", "distinct"];
 		for (const operTwo of operTwoCols) {
 			this[operTwo] = (a, b) => this.language[operTwo](a, b);
 		}
@@ -757,6 +758,10 @@ class QueryBuilder {
 		}
 
 		if (this.alterTableCommand !== undefined) {
+			if (this.alterTableCommand instanceof Promise) {
+				this.alterTableCommand = await this.alterTableCommand;
+			}
+
 			if (this.alterTableCommand instanceof Command) {
 				this.query.push(this.alterTableCommand);
 				this.alterTableCommand = undefined;

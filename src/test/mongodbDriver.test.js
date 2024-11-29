@@ -330,49 +330,119 @@ describe("Trabaja con INVENTARIO", () => {
 			assert.ok(await result.toString());
 		});
 	});
-	describe("Alterar las tablas", () => {
+	describe("Alterar las tablas", async () => {
+		test("Añadir una columna a la tabla DISCOS_COMPACTOS", async () => {
+			const debug = false;
+			const result = await qb
+				.alterTable("DISCOS_COMPACTOS")
+				.addColumn("EN_EXISTENCIA", { type: "INT", values: ["not null"] })
+				.execute(debug);
+
+			showResults(result, debug);
+			assert.ok(await result.toString());
+		});
+		//fin
+		test("Modificar una columna a la tabla DISCOS_COMPACTOS", async () => {
+			const debug = false;
+			const result = await qb
+				.alterTable("DISCOS_COMPACTOS")
+				.alterColumn("EN_EXISTENCIA", {
+					type: "number",
+					values: ["no", "si"],
+				})
+				.execute(debug);
+
+			showResults(result, debug);
+			assert.ok(await result.toString());
+		});
+		//fin
+		test("elimina una columna a la tabla DISCOS_COMPACTOS", async () => {
+			const debug = false;
+			const result = await qb
+				.alterTable("DISCOS_COMPACTOS")
+				.dropColumn("EN_EXISTENCIA")
+				.execute(debug);
+
+			showResults(result, debug);
+			assert.ok(await result.toString());
+		});
+		//fin
+		test("establece un valor por defecto una columna a la tabla DISCOS_COMPACTOS", async () => {
+			const debug = false;
+			const result = await qb
+				.alterTable("DISCOS_COMPACTOS")
+				.addColumn("EN_EXISTENCIA", { type: "INT", values: ["not null"] })
+				.alterColumn("EN_EXISTENCIA")
+				.setDefault(10)
+				.execute(debug);
+
+			showResults(result, debug);
+			assert.ok(await result.toString());
+		});
+		//fin
 		test(
-			"Añadir una columna a la tabla DISCOS_COMPACTOS",
-			{ only: true },
+			"añade una constraint de tipo CHECK al campo EN_EXISTENCIA",
+			{ only: false },
 			async () => {
+				/**
+				 *qb.gt("EN_EXISTENCIA", 0) => {EN_EXISTENCIA:{$eq:0}}
+				 */
 				const debug = true;
 				const result = await qb
 					.alterTable("DISCOS_COMPACTOS")
-					.addColumn("EN_EXISTENCIA", { type: "INT", values: ["not null"] })
+					.addConstraint("CK_EN_EXISTENCIA", {
+						check: qb.and(
+							qb.gt("EN_EXISTENCIA", 0),
+							qb.lt("EN_EXISTENCIA", 50),
+						),
+					})
 					.execute(debug);
 
 				showResults(result, debug);
 				assert.ok(await result.toString());
 			},
 		);
-
-		test("añade una constraint de tipo CHECK al campo EN_EXISTENCIA", async () => {
-			const result = await qb
-				.alterTable("DISCOS_COMPACTOS")
-				.addConstraint("CK_EN_EXISTENCIA", {
-					check: qb.and(qb.gt("EN_EXISTENCIA", 0), qb.lt("EN_EXISTENCIA", 50)),
-				})
-				.execute();
-
-			if (!result.error) {
-				assert.equal(
-					await result.toString(),
-					`USE INVENTARIO;
-ALTER TABLE DISCOS_COMPACTOS
-ADD CONSTRAINT CK_EN_EXISTENCIA CHECK ( (EN_EXISTENCIA > 0
-AND EN_EXISTENCIA < 50) );`,
-				);
-			} else {
-				assert.equal(
-					result.error,
-					"Duplicate check constraint name 'CK_EN_EXISTENCIA'.",
-				);
-			}
+	});
+	describe("operadores", () => {
+		test("comparación", async () => {
+			const debug = true;
+			showResults(qb.eq("campo", "valor"), debug);
+			showResults(qb.gt("campo", "valor"), debug);
+			showResults(qb.gte("campo", "valor"), debug);
+			showResults(qb.in("campo", "valor"), debug);
+			showResults(qb.lt("campo", "valor"), debug);
+			showResults(qb.lte("campo", "valor"), debug);
+			showResults(qb.ne("campo", "valor"), debug);
+			showResults(qb.in("campo", ["valor1", "valor2"]), debug);
+			showResults(qb.notIn("campo", ["valor1", "valor2"]), debug);
+		});
+		test("logicos", async () => {
+			const debug = true;
+			showResults(
+				qb.and(
+					qb.eq("campo", "valor"),
+					qb.in("campo", ["valor1", "valor2"]),
+					qb.lte("campo", "valor"),
+				),
+				debug,
+			);
+			showResults(
+				qb.or(qb.eq("campo", "valor"), qb.lte("campo", "valor")),
+				debug,
+			);
+			//{ field: { $not: { <operator-expression> } } }
+			//{ price: { $not: { $gt: 1.99 } } }
+			showResults(qb.not("price", qb.gt(1.99)), debug);
+			//{ $nor: [ { tag: {$eq: [ A, B ] } }, { sale: {$gt:20} } ]  }
+			showResults(
+				qb.distinct(qb.eq("tag", ["A", "B"]), qb.gt("sale", 20)),
+				debug,
+			);
 		});
 	});
-	describe("llena las tablas inventario", async () => {
+	describe("llena las tablas inventario", { only: true }, async () => {
 		test("TIPOS_MUSICA", async () => {
-			const debug = false;
+			const debug = true;
 			const table = "TIPOS_MUSICA";
 			const rows = [
 				[11, "Blues"],
@@ -3436,5 +3506,6 @@ ROLLBACK TO SAVEPOINT SECCION_1;`;
 	});
 });
 after(async () => {
+	console.log("cerrando conexion con la base de datos");
 	await qb.close();
 });

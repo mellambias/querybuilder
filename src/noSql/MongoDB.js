@@ -3,6 +3,7 @@ Implementa las variaciones al SQL2006 propias de los NoSQL
 */
 import Core from "../core.js";
 import Command from "./Command.js";
+import QueryBuilder from "../querybuilder.js";
 class MongoDB extends Core {
 	constructor(qbuilder) {
 		super();
@@ -135,34 +136,89 @@ class MongoDB extends Core {
 		return alterTable;
 	}
 	alterColumn(name, options, alterTable) {
-		// añade las modificaciones al campo
+		this._currentColumn = name;
+		if (options !== undefined) {
+			const { updates } = alterTable.commands[0];
+			const fieldsToUpdate = {};
+			for (const option in options) {
+				fieldsToUpdate[`tables.$[table].cols.$[field].${option}`] =
+					options[option];
+			}
+
+			updates.push({
+				q: { "tables.name": this._currentTable },
+				u: {
+					$set: fieldsToUpdate,
+				},
+				arrayFilters: [
+					{ "table.name": this._currentTable },
+					{ "field.name": name },
+				],
+			});
+		}
+		return alterTable;
+	}
+
+	dropColumn(name, option, alterTable) {
 		const { updates } = alterTable.commands[0];
 		updates.push({
 			q: { "tables.name": this._currentTable },
 			u: {
-				$set: { "tables.$[table].cols.$[field]": { name, ...options } },
+				$pull: { "tables.$[table].cols.$[field]": name },
 			},
 			arrayFilters: [
 				{ "table.name": this._currentTable },
-				{ "cols.name": name },
+				{ "field.name": name },
+			],
+		});
+		return alterTable;
+	}
+	setDefault(value, alterTable) {
+		if (this._currentColumn === undefined) {
+			return alterTable;
+		}
+		const { updates } = alterTable.commands[0];
+		updates.push({
+			q: { "tables.name": this._currentTable },
+			u: {
+				$set: { "tables.$[table].cols.$[field].default": value },
+			},
+			arrayFilters: [
+				{ "table.name": this._currentTable },
+				{ "field.name": this._currentColumn },
 			],
 		});
 		return alterTable;
 	}
 
-	dropColumn(name, option) {
-		return null;
-	}
-	setDefault(value) {
-		return null;
-	}
-
 	dropDefault() {
-		return null;
+		if (this._currentColumn === undefined) {
+			return alterTable;
+		}
+		const { updates } = alterTable.commands[0];
+		updates.push({
+			q: { "tables.name": this._currentTable },
+			u: {
+				$unset: { "tables.$[table].cols.$[field].default": "" },
+			},
+			arrayFilters: [
+				{ "table.name": this._currentTable },
+				{ "field.name": this._currentColumn },
+			],
+		});
+		return alterTable;
 	}
 
-	addConstraint(name, option) {
-		return null;
+	addConstraint(name, options, alterTable) {
+		const { updates } = alterTable.commands[0];
+		updates.push({
+			q: { "tables.name": this._currentTable },
+			u: {
+				$addToSet: { "tables.$[table].constraints": { name, ...options } },
+			},
+			arrayFilters: [{ "table.name": this._currentTable }],
+		});
+		return alterTable;
 	}
 
 	async dropTable(name, options) {
@@ -300,14 +356,14 @@ class MongoDB extends Core {
 	// Predicados
 	predicados() {
 		const operadores = {
-			eq: "=",
-			ne: "<>",
-			gt: ">",
-			gte: ">=",
-			lt: "<",
-			lte: "<=",
-			isNull: "IS NULL",
-			isNotNull: "IS NOT NULL",
+			eq: "$eq",
+			ne: "$ne",
+			gt: "$gt",
+			gte: "$gte",
+			lt: "$lt",
+			lte: "$lte",
+			isNull: "$eg:null",
+			isNotNull: "$ne:null",
 		};
 		for (const oper in operadores) {
 			if (typeof this[oper] === "function") {
@@ -316,49 +372,53 @@ class MongoDB extends Core {
 			this[oper] = (a, b) => {
 				if (b !== undefined) {
 					if (b instanceof QueryBuilder) {
-						return `${a} ${operadores[oper]} ( ${b.toString({ as: "subselect" })} )`;
+						return `{${a}: {${operadores[oper]}:( ${b.toString({ as: "subselect" })} )}}`;
 					}
-					return `${a} ${operadores[oper]} ${typeof b === "string" ? (/^(ANY|SOME|ALL)$/.test(b.match(/^\w+/)[0]) ? b : `'${b}'`) : b}`;
+					if (Array.isArray(b)) {
+						return `{ ${a}: {${operadores[oper]}: [ ${b.join(", ")} ] } }`;
+					}
+					return `{${a}: {${operadores[oper]}:${typeof b === "string" ? (/^(ANY|SOME|ALL)$/.test(b.match(/^\w+/)[0]) ? b : `'${b}'`) : b}}}`;
 				}
 				if (Array.isArray(a)) {
 					return `${a.join(` ${operadores[oper]}\nAND `)} ${operadores[oper]}`;
 				}
-				return `${a} ${operadores[oper]}`;
+				return `{ ${operadores[oper]}: ${a} }`;
 			};
 		}
 		const logicos = {
-			and: "AND",
-			or: "OR",
-			not: "NOT",
+			and: "$and",
+			or: "$or",
+			not: "$not",
 			like: "LIKE",
 			notLike: "NOT LIKE",
-			distinct: "DISTINCT",
+			distinct: "$nor",
 		};
 		for (const oper in logicos) {
-			if (/^(AND|OR)$/i.test(logicos[oper])) {
+			if (/^(AND|OR)$/i.test(oper)) {
 				this[oper] = (...predicados) => {
 					if (predicados.length > 1) {
-						return `(${predicados.join(`\n${logicos[oper].toUpperCase()} `)})`;
+						return `{ ${logicos[oper]}: [ ${predicados.join(", ")} ] }`;
 					}
-					return `\n${logicos[oper].toUpperCase()} ${predicados}`;
+					return `{ ${logicos[oper]}: [ ${predicados} ] }`;
 				};
 			}
-			if (/^(NOT)$/i.test(logicos[oper])) {
+			if (/^(NOT)$/i.test(oper)) {
 				this[oper] = (...predicados) => {
 					if (predicados.length > 1) {
-						return `(${predicados.join(`\n${logicos[oper].toUpperCase()} `)})`;
+						return `{ ${predicados[0]}: { ${logicos[oper]}: ${predicados[1]} } }`;
 					}
-					return `${logicos[oper].toUpperCase()} (${predicados})`;
+					return `{ ${logicos[oper]}: ${predicados} }`;
 				};
 			}
 
-			if (/^(LIKE|NOT LIKE)$/i.test(logicos[oper])) {
+			if (/^(LIKE|NOT LIKE)$/i.test(oper)) {
 				this[oper] = (...predicados) =>
-					`${predicados[0]} ${logicos[oper].toUpperCase()} ('${predicados[1]}')`;
+					`${predicados[0]} ${logicos[oper]} ('${predicados[1]}')`;
 			}
-			if (/^(DISTINCT)$/i.test(logicos[oper])) {
-				this[oper] = (...predicados) =>
-					`${logicos[oper].toUpperCase()} ${predicados}`;
+			if (/^(DISTINCT)$/i.test(oper)) {
+				this[oper] = (...predicados) => {
+					return `{ ${logicos[oper]}: [ ${predicados.join(", ")} ] }`;
+				};
 			}
 		}
 		const operTreeArg = { between: "BETWEEN", notBetween: "NOT BETWEEN" };
@@ -372,16 +432,16 @@ class MongoDB extends Core {
 	}
 
 	in(columna, ...values) {
-		return null;
+		return `{ ${columna}: { $in: [${values}] } }`;
 	}
 	notIn(columna, ...values) {
-		return null;
+		return `{ ${columna}: { $nin: [${values}] } }`;
 	}
 	exists(subSelect) {
-		return null;
+		return this.in(subSelect);
 	}
 	notExists(subSelect) {
-		return null;
+		return this.nin(subSelect);
 	}
 
 	any(subSelect) {
