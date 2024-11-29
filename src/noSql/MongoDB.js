@@ -75,11 +75,13 @@ class MongoDB extends Core {
 		const fieldOptions = this.checkOptions(options, fields);
 
 		// Añadiremos la definición al documento 'table' de la coleccion 'esquema'
-
+		const columns = [];
 		for (const col in options.cols) {
 			if (typeof options.cols[col] !== "object") {
 				options.cols[col] = { type: options.cols[col] };
 			}
+			options.cols[col] = { name: col, ...options.cols[col] };
+			columns.push(options.cols[col]);
 		}
 		const tableDef = new Command({
 			update: "esquema",
@@ -90,7 +92,7 @@ class MongoDB extends Core {
 						$addToSet: {
 							tables: {
 								name,
-								cols: options.cols,
+								cols: columns,
 								constraints: options.constraints,
 							},
 						},
@@ -125,8 +127,7 @@ class MongoDB extends Core {
 			q: { "tables.name": this._currentTable },
 			u: {
 				$addToSet: {
-					"tables.$[elem].cols": name,
-					"tables.$[elem].types": options,
+					"tables.$[elem].cols": { name, ...options },
 				},
 			},
 			arrayFilters: [{ "elem.name": this._currentTable }],
@@ -134,13 +135,17 @@ class MongoDB extends Core {
 		return alterTable;
 	}
 	alterColumn(name, options, alterTable) {
+		// añade las modificaciones al campo
 		const { updates } = alterTable.commands[0];
 		updates.push({
 			q: { "tables.name": this._currentTable },
 			u: {
-				$set: { "tables.$[table].cols.$[]": name, "tables.types": options },
+				$set: { "tables.$[table].cols.$[field]": { name, ...options } },
 			},
-			arrayFilters: [{ "table.name": this._currentTable }],
+			arrayFilters: [
+				{ "table.name": this._currentTable },
+				{ "cols.name": name },
+			],
 		});
 		return alterTable;
 	}
