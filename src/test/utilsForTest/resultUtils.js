@@ -94,10 +94,11 @@ export async function showResults(datos, debug) {
 	} else if (debug) {
 		console.log("******* DEBUG INFO *********\n");
 		let query;
-		if (query instanceof Promise) {
-			query = await datos.queryJoin();
-		} else {
+
+		if (typeof query === "string") {
 			query = datos;
+		} else {
+			query = await datos.queryJoin();
 		}
 		console.log("el tipo de query es", typeof query);
 		if (typeof query === "object") {

@@ -440,9 +440,9 @@ describe("Trabaja con INVENTARIO", () => {
 			);
 		});
 	});
-	describe("llena las tablas inventario", { only: true }, async () => {
+	describe("llena las tablas inventario", async () => {
 		test("TIPOS_MUSICA", async () => {
-			const debug = true;
+			const debug = false;
 			const table = "TIPOS_MUSICA";
 			const rows = [
 				[11, "Blues"],
@@ -457,9 +457,7 @@ describe("Trabaja con INVENTARIO", () => {
 				[20, "Soundtracks"],
 				[21, "Christmas"],
 			];
-			const result = await qb
-				.insert(table, ["ID_TIPO", "NOMBRE_TIPO"], rows)
-				.execute(debug);
+			const result = await qb.insert(table, [], rows).execute(debug);
 			showResults(result, debug);
 		});
 		//fin
@@ -483,7 +481,7 @@ describe("Trabaja con INVENTARIO", () => {
 			showResults(result, debug);
 		});
 		//fin
-		test("DISCOS_COMPACTOS", async () => {
+		test("DISCOS_COMPACTOS", { only: true }, async () => {
 			const debug = true;
 			const discos_compactos = [
 				[101, "Famous Blue Raincoat", 827, 13],

@@ -39,14 +39,14 @@ class MongoDB extends Core {
 		return dropDatabase;
 	}
 	use(database) {
-		// devuelve null
+		// devuelve null, para usar el metodo del Driver
 		return null;
 	}
 	createSchema(name, options) {
-		return null;
+		return this.createTable(name, options);
 	}
 	dropSchema(name, options) {
-		return null;
+		return this.dropTable(name, options);
 	}
 	createTable(name, options) {
 		/**
@@ -465,50 +465,85 @@ class MongoDB extends Core {
 	}
 
 	// Mofificacion de Datos
-	async insert(table, columns, values) {
-		// Primero recuperar la definicion de la tabla
+	async getTableDef(table) {
 		const [findTable] = await new Command({
 			find: "esquema",
 			filter: { _id: "table" },
 		}).execute(this.qb.driverDB);
 		const tableDef = findTable.tables.find((item) => item.name === table);
-		console.log(tableDef);
-		const { cols, types } = tableDef;
-		let fields;
-		if (columns.length > 0) {
-			console.log("Insertar usando", columns);
-			fields = columns;
-		} else {
-			fields = cols;
+		if (tableDef?.constraints) {
+			// se aplican las "constraints" a los campos
+			for (const rule of tableDef.constraints) {
+				const column = tableDef.cols.find((col) =>
+					rule.cols.includes(col.name),
+				);
+				column.constraint = rule;
+			}
 		}
-		const documents = values.map((item) =>
-			item.reduce((row, val, index) => {
-				const pos = cols.indexOf(fields[index]);
-				const type = types[pos]?.type || types[pos];
-				console.log(fields[index], type);
-				if (!type.toDataType(this.dataType).startsWith(typeof val)) {
+		return tableDef;
+	}
+
+	apliConstraints(field, val) {
+		let value = val;
+		const errorStack = [];
+		if (field === undefined) {
+			errorStack.push("El identificador no es un campo de la tabla");
+			return errorStack;
+		}
+		const { name, type } = field;
+		if (value === undefined) {
+			value = field?.default || null;
+		}
+		if (field?.values) {
+			if (
+				field.values.some((item) => /^(not null)$/i.test(item)) &&
+				value === null
+			) {
+				errorStack.push(
+					`[Regla 'NOT NULL'] El campo '${name}' no puede ser 'null'`,
+				);
+			}
+			if (field.values.some((item) => /^(primary key)$/i.test(item))) {
+				field._id = value;
+			}
+		}
+		// tipo de valor compatible
+		if (!type.toDataType(this.dataType).startsWith(typeof value)) {
+			errorStack.push(
+				`El tipo: '${typeof value}' del campo '${name}' no es compatible con '${type.toDataType(this.dataType)}'`,
+			);
+		}
+		return errorStack;
+	}
+	async insert(table, columns, values) {
+		// Primero recuperar la definicion de la tabla
+		const { cols } = await this.getTableDef(table);
+		const fields = columns.length > 0 ? columns : cols.map((item) => item.name);
+
+		const documents = values.map((item, rowNumber) =>
+			item.reduce((row, val, index, elements) => {
+				const field = cols.find((item) => item.name === fields[index]);
+				const check = this.apliConstraints(field, val);
+				if (check.length > 0) {
 					throw new Error(
-						`El tipo: '${typeof val}' del campo '${fields[index]}' no es compatible con '${type.toDataType(this.dataType)}'`,
+						`❌ En ${values[rowNumber]} el valor '${elements[index]}'`,
+						{
+							cause: check,
+						},
 					);
 				}
-				if (types[pos]?.values) {
-					if (
-						types[pos]?.values.includes("not null") &&
-						(val === undefined || val === "null") &&
-						types[pos]?.default === undefined
-					) {
-						throw new Error(`El campo '${fields[index]}' no puede ser 'null'`);
-					}
-					if (types[pos]?.values.includes("primary key")) {
+				const { name } = field;
+
+				if (field?.constraint) {
+					if (/^(PRIMARY KEY)$/i.test(field.constraint.type)) {
 						row._id = val;
-						return row;
 					}
 				}
-				row[fields[index]] = val || types[pos]?.default;
+				row[name] = val || field?.default;
 				return row;
 			}, {}),
 		);
-		// creamos un comando para insertar los documentos
+		//creamos un comando para insertar los documentos
 		const insertMany = new Command({
 			insert: table,
 			documents,
