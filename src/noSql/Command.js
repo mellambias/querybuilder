@@ -1,6 +1,6 @@
 class Command {
 	constructor(command) {
-		this._commands = [command];
+		this._commands = command !== undefined ? [command] : [];
 	}
 
 	async execute(driver) {
@@ -9,14 +9,18 @@ class Command {
 		return response;
 	}
 	set(value) {
-		this._commands = [value];
+		if (value !== undefined) {
+			this._commands = [value];
+		}
 		return this;
 	}
 	get commands() {
 		return this._commands;
 	}
 	add(value) {
-		this._commands.push(value);
+		if (value !== undefined) {
+			this._commands.push(value);
+		}
 		return this;
 	}
 

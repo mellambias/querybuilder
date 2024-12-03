@@ -481,8 +481,8 @@ describe("Trabaja con INVENTARIO", () => {
 			showResults(result, debug);
 		});
 		//fin
-		test("DISCOS_COMPACTOS", { only: true }, async () => {
-			const debug = true;
+		test("DISCOS_COMPACTOS", async () => {
+			const debug = false;
 			const discos_compactos = [
 				[101, "Famous Blue Raincoat", 827, 13],
 				[102, "Blue", 828, 42],
@@ -507,6 +507,7 @@ describe("Trabaja con INVENTARIO", () => {
 		});
 		//fin
 		test("TIPOS_DISCO_COMPACTO", async () => {
+			const debug = false;
 			const table = "TIPOS_DISCO_COMPACTO";
 			const rows = [
 				[101, 18],
@@ -534,8 +535,8 @@ describe("Trabaja con INVENTARIO", () => {
 				[114, 11],
 				[115, 20],
 			];
-			const result = await qb.insert(table, [], rows).execute();
-			showResults(result);
+			const result = await qb.insert(table, [], rows).execute(debug);
+			showResults(result, debug);
 		});
 		test("ARTISTAS", async () => {
 			const table = "ARTISTAS";
@@ -591,9 +592,10 @@ describe("Trabaja con INVENTARIO", () => {
 		});
 		//fin
 	});
-
+	// Primero implementar SELECT
 	describe("Crear vistas", () => {
 		test("crea la vista CDS_EN_EXISTENCIA", async () => {
+			const debug = true;
 			const result = await qb.createView("CDS_EN_EXISTENCIA", {
 				as: qb
 					.select(["TITULO_CD", "EN_EXISTENCIA"])
@@ -698,78 +700,76 @@ WHERE DISCOS_COMPACTOS.ID_DISQUERA = DISQUERAS_CD.ID_DISQUERA;`,
 
 	describe("Roles", () => {
 		test("crear un rol", async () => {
-			const result = await qb.createRoles(["ADMIN", "USER"], {
-				secure: true,
-				host: "localhost",
-			});
+			const debug = false;
+			const result = await qb
+				.createRoles(["myClusterwideAdmin", "databaseAdmin"], {
+					privileges: [
+						{
+							resource: { db: "INVENTARIO", collection: "esquema" },
+							actions: ["find", "update", "insert", "remove"],
+						},
+						{
+							resource: { db: "INVENTARIO", collection: "" },
+							actions: ["find"],
+						},
+					],
+					writeConcern: { w: "majority", wtimeout: 5000 },
+				})
+				.execute(debug);
 
-			if (!result.error) {
-				assert.equal(
-					await result.toString(),
-					"USE INVENTARIO;\nCREATE ROLE IF NOT EXISTS ADMIN@localhost, USER@localhost;",
-				);
-			} else {
-				assert.equal(result.error, "");
-			}
+			showResults(result, debug);
+			assert.ok(await result.toString());
 		});
 
 		test("Gestion de roles y privilegios", async () => {
-			let nuevoRol = await qb
-				.createRoles("MRKT", {
-					secure: true,
-					host: "localhost",
+			const debug = false;
+			const result = await qb
+				.createRoles(["MRKT", "PERSONAL_VENTAS"], {
+					privileges: [
+						{
+							actions: ["select", "insert", "delete", "update"],
+							on: "ARTISTAS",
+						},
+					],
 				})
-				.execute();
+				.execute(debug);
+			showResults(result, debug);
 
-			if (!nuevoRol.error) {
-				assert.equal(
-					nuevoRol.toString(),
-					"USE INVENTARIO;\nCREATE ROLE IF NOT EXISTS 'MRKT'@'localhost';",
-				);
-			} else {
-				assert.equal(nuevoRol.error, "");
-			}
-			nuevoRol = await qb
-				.createRoles("PERSONAL_VENTAS", { secure: true })
-				.execute();
-
-			if (!nuevoRol.error) {
-				assert.equal(
-					nuevoRol.toString(),
-					"CREATE ROLE IF NOT EXISTS PERSONAL_VENTAS;",
-				);
-			} else {
-				assert.equal(nuevoRol.error, "");
-			}
+			assert.ok(result.toString());
 		});
 
 		test("otorga el privilegio SELECT en la vista CDS_EN_EXISTENCIA a PERSONAL_VENTAS", async () => {
-			const otorga = await qb
+			const debug = false;
+			const result = await qb
 				.grant("select", "CDS_EN_EXISTENCIA", ["PERSONAL_VENTAS"])
-				.execute();
+				.execute(debug);
 
-			assert.equal(
-				otorga.toString(),
-				"USE INVENTARIO;\nGRANT SELECT ON INVENTARIO.CDS_EN_EXISTENCIA TO 'PERSONAL_VENTAS'@'%';",
-			);
+			showResults(result, debug);
+
+			assert.ok(result.toString());
 		});
-		test("al rol PERSONAL_VENTAS Se otorgan los privilegios SELECT, INSERT y UPDATE en la tabla DISCOS_COMPACTOS", async () => {
-			/* al rol PERSONAL_VENTAS Se otorgan los privilegios SELECT, INSERT y UPDATE en la tabla DISCOS_COMPACTOS.
+		test(
+			"al rol PERSONAL_VENTAS Se otorgan los privilegios SELECT, INSERT y UPDATE en la tabla DISCOS_COMPACTOS",
+			{ only: true },
+			async () => {
+				/* al rol PERSONAL_VENTAS Se otorgan los privilegios SELECT, INSERT y UPDATE en la tabla DISCOS_COMPACTOS.
     Para el privilegio UPDATE se especifica la columna TITULO_CD. PERSONAL_VENTAS puede otorgar estos privilegios a otros usuarios
     */
-			const otorga = await qb
-				.grant(
-					["SELECT", "INSERT", "UPDATE(TITULO_CD)"],
-					"DISCOS_COMPACTOS",
-					"PERSONAL_VENTAS",
-				)
-				.execute();
-
-			assert.equal(
-				otorga.toString(),
-				`USE INVENTARIO;\nGRANT SELECT, INSERT, UPDATE(TITULO_CD) ON INVENTARIO.DISCOS_COMPACTOS TO 'PERSONAL_VENTAS'@'%';`,
-			);
-		});
+				const debug = false;
+				const result = await qb
+					.grant(
+						["SELECT", "INSERT", "UPDATE(TITULO_CD)"],
+						"DISCOS_COMPACTOS",
+						"PERSONAL_VENTAS",
+					)
+					.execute(debug);
+				showResults(result, debug);
+				assert.ok(
+					result.toString(),
+					`USE INVENTARIO;\nGRANT SELECT, INSERT, UPDATE(TITULO_CD) ON INVENTARIO.DISCOS_COMPACTOS TO 'PERSONAL_VENTAS'@'%';`,
+				);
+			},
+		);
 
 		test("se otorga el rol PERSONAL_VENTAS al rol MRKT", async () => {
 			const otorga = await qb

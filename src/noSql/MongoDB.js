@@ -2,13 +2,47 @@
 Implementa las variaciones al SQL2006 propias de los NoSQL
 */
 import Core from "../core.js";
+import mongo from "../comandos/mongoDB.js";
 import Command from "./Command.js";
 import QueryBuilder from "../querybuilder.js";
+import util from "node:util";
 class MongoDB extends Core {
 	constructor(qbuilder) {
 		super();
 		this.dataType = "mongobd"; // especifica el tipo de datos usado
 		this.qb = qbuilder;
+	}
+
+	getStatement(scheme, params) {
+		const values = params?.options ? { ...params, ...params.options } : params;
+		scheme._options = { ...params?.options };
+		scheme._values = { ...values };
+		const defaultOptions = Object.keys(scheme?.defaults || {});
+		const commandArray = scheme?.orden
+			.filter(
+				(key) =>
+					values[key] !== undefined || defaultOptions.indexOf(key) !== -1,
+			)
+			.map((key) => {
+				if (typeof scheme[key] !== "function") {
+					throw new Error(
+						`${key} tiene que ser una funcion ${typeof scheme[key]}`,
+					);
+				}
+				const callFunction = scheme[key].bind(this);
+				if (values[key] !== undefined) {
+					const respuesta = callFunction(values[key], scheme);
+					return respuesta;
+				}
+				return callFunction(scheme.defaults[key], scheme);
+			})
+			.filter((result) => result !== undefined)
+			.reduce((comand, objResult) => {
+				const key = Object.keys(objResult);
+				comand[key] = objResult[key];
+				return comand;
+			}, {});
+		return commandArray;
 	}
 	async createDatabase(name, options) {
 		/**
@@ -16,6 +50,7 @@ class MongoDB extends Core {
 		 */
 		// Establece el nombre de la base de datos
 		this.qb.driverDB.use(name);
+
 		//comandos para poblar la base de datos
 		const createDatabase = new Command({ create: "esquema" });
 		createDatabase.add({
@@ -277,7 +312,15 @@ class MongoDB extends Core {
 	createDomain(name, options) {
 		return null;
 	}
+	// implementar cuando tengamos el select
 	createView(name, options) {
+		/**
+		 * viewOn The name of the source collection or view from which to create the view. The name is not the full namespace of the collection or view; i.e. does not include the database name and implies the same database as the view to create. You must create views in the same database as the source collection. See also db.createView().
+		 * pipeline	array
+An array that consists of the aggregation pipeline stage(s). create creates the view by applying the specified pipeline to the viewOn collection or view.
+A view definition pipeline cannot include the $out or the $merge stage. This restriction also applies to embedded pipelines, such as pipelines used in $lookup or $facet stages.
+The view definition is public; i.e. db.getCollectionInfos() and explain operations on the view will include the pipeline that defines the view. As such, avoid referring directly to sensitive fields and values in view definitions.
+		*/
 		return null;
 	}
 
@@ -287,14 +330,48 @@ class MongoDB extends Core {
 	// Seguridad
 
 	createRoles(names, options) {
-		return null;
+		const result = new Command();
+		if (Array.isArray(names)) {
+			for (const name of names) {
+				result.add(
+					this.getStatement(mongo.createRoles, { name: name, options }),
+				);
+			}
+			return result;
+		}
+		result.set(this.getStatement(mongo.createRoles, { name: names, options }));
+		return result;
 	}
 	dropRoles(names, options) {
-		return null;
+		const result = new Command();
+		if (Array.isArray(names)) {
+			for (const name of names) {
+				result.add(this.getStatement(mongo.dropRoles, { name: name, options }));
+			}
+			return result;
+		}
+		result.set(this.getStatement(mongo.dropRoles, { name: names, options }));
+		return result;
 	}
 
 	grant(commands, on, to, options) {
-		return null;
+		const result = new Command();
+		if (Array.isArray(to)) {
+			for (const rol of to) {
+				result.add(
+					this.getStatement(mongo.grant, {
+						commands,
+						on,
+						to: rol,
+						options,
+					}),
+				);
+			}
+			return result;
+		}
+		result.set(this.getStatement(mongo.grant, { commands, on, to, options }));
+
+		return result;
 	}
 	revoke(commands, on, from, options) {
 		return null;
@@ -480,6 +557,7 @@ class MongoDB extends Core {
 				column.constraint = rule;
 			}
 		}
+		console.log("La tabla '%s' esta decinida como:\n%o", table, tableDef);
 		return tableDef;
 	}
 
@@ -507,13 +585,18 @@ class MongoDB extends Core {
 				field._id = value;
 			}
 		}
+		if (field?.constraint) {
+			if (/^(PRIMARY KEY)$/i.test(field.constraint.type)) {
+				field._id = value;
+			}
+		}
 		// tipo de valor compatible
 		if (!type.toDataType(this.dataType).startsWith(typeof value)) {
 			errorStack.push(
 				`El tipo: '${typeof value}' del campo '${name}' no es compatible con '${type.toDataType(this.dataType)}'`,
 			);
 		}
-		return errorStack;
+		return { error: errorStack, updatedField: field, currentValue: value };
 	}
 	async insert(table, columns, values) {
 		// Primero recuperar la definicion de la tabla
@@ -523,23 +606,23 @@ class MongoDB extends Core {
 		const documents = values.map((item, rowNumber) =>
 			item.reduce((row, val, index, elements) => {
 				const field = cols.find((item) => item.name === fields[index]);
-				const check = this.apliConstraints(field, val);
-				if (check.length > 0) {
+				const { updatedField, currentValue, error } = this.apliConstraints(
+					field,
+					val,
+				);
+				if (error.length > 0) {
 					throw new Error(
 						`❌ En ${values[rowNumber]} el valor '${elements[index]}'`,
 						{
-							cause: check,
+							cause: error,
 						},
 					);
 				}
 				const { name } = field;
-
-				if (field?.constraint) {
-					if (/^(PRIMARY KEY)$/i.test(field.constraint.type)) {
-						row._id = val;
-					}
+				if (updatedField?._id) {
+					row._id = updatedField._id;
 				}
-				row[name] = val || field?.default;
+				row[name] = currentValue;
 				return row;
 			}, {}),
 		);
