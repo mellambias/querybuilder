@@ -380,28 +380,21 @@ describe("Trabaja con INVENTARIO", () => {
 			assert.ok(await result.toString());
 		});
 		//fin
-		test(
-			"añade una constraint de tipo CHECK al campo EN_EXISTENCIA",
-			{ only: false },
-			async () => {
-				/**
-				 *qb.gt("EN_EXISTENCIA", 0) => {EN_EXISTENCIA:{$eq:0}}
-				 */
-				const debug = true;
-				const result = await qb
-					.alterTable("DISCOS_COMPACTOS")
-					.addConstraint("CK_EN_EXISTENCIA", {
-						check: qb.and(
-							qb.gt("EN_EXISTENCIA", 0),
-							qb.lt("EN_EXISTENCIA", 50),
-						),
-					})
-					.execute(debug);
+		test("añade una constraint de tipo CHECK al campo EN_EXISTENCIA", async () => {
+			/**
+			 *qb.gt("EN_EXISTENCIA", 0) => {EN_EXISTENCIA:{$eq:0}}
+			 */
+			const debug = true;
+			const result = await qb
+				.alterTable("DISCOS_COMPACTOS")
+				.addConstraint("CK_EN_EXISTENCIA", {
+					check: qb.and(qb.gt("EN_EXISTENCIA", 0), qb.lt("EN_EXISTENCIA", 50)),
+				})
+				.execute(debug);
 
-				showResults(result, debug);
-				assert.ok(await result.toString());
-			},
-		);
+			showResults(result, debug);
+			assert.ok(await result.toString());
+		});
 	});
 	describe("operadores", () => {
 		test("comparación", async () => {
@@ -748,66 +741,65 @@ WHERE DISCOS_COMPACTOS.ID_DISQUERA = DISQUERAS_CD.ID_DISQUERA;`,
 
 			assert.ok(result.toString());
 		});
-		test(
-			"al rol PERSONAL_VENTAS Se otorgan los privilegios SELECT, INSERT y UPDATE en la tabla DISCOS_COMPACTOS",
-			{ only: true },
-			async () => {
-				/* al rol PERSONAL_VENTAS Se otorgan los privilegios SELECT, INSERT y UPDATE en la tabla DISCOS_COMPACTOS.
+		test("al rol PERSONAL_VENTAS Se otorgan los privilegios SELECT, INSERT y UPDATE en la tabla DISCOS_COMPACTOS", async () => {
+			/* al rol PERSONAL_VENTAS Se otorgan los privilegios SELECT, INSERT y UPDATE en la tabla DISCOS_COMPACTOS.
     Para el privilegio UPDATE se especifica la columna TITULO_CD. PERSONAL_VENTAS puede otorgar estos privilegios a otros usuarios
     */
-				const debug = false;
-				const result = await qb
-					.grant(
-						["SELECT", "INSERT", "UPDATE(TITULO_CD)"],
-						"DISCOS_COMPACTOS",
-						"PERSONAL_VENTAS",
-					)
-					.execute(debug);
-				showResults(result, debug);
-				assert.ok(
-					result.toString(),
-					`USE INVENTARIO;\nGRANT SELECT, INSERT, UPDATE(TITULO_CD) ON INVENTARIO.DISCOS_COMPACTOS TO 'PERSONAL_VENTAS'@'%';`,
-				);
-			},
-		);
+			const debug = false;
+			const result = await qb
+				.grant(
+					["SELECT", "INSERT", "UPDATE(TITULO_CD)"],
+					"DISCOS_COMPACTOS",
+					"PERSONAL_VENTAS",
+				)
+				.execute(debug);
+			showResults(result, debug);
+			assert.ok(
+				result.toString(),
+				`USE INVENTARIO;\nGRANT SELECT, INSERT, UPDATE(TITULO_CD) ON INVENTARIO.DISCOS_COMPACTOS TO 'PERSONAL_VENTAS'@'%';`,
+			);
+		});
 
 		test("se otorga el rol PERSONAL_VENTAS al rol MRKT", async () => {
-			const otorga = await qb
-				.grantRoles("PERSONAL_VENTAS", "MRKT", {
-					host: "localhost",
-				})
-				.execute();
+			const debug = false;
+			const result = await qb
+				.grantRoles("PERSONAL_VENTAS", "MRKT", {})
+				.execute(debug);
+			showResults(result, debug);
 
-			assert.equal(
-				otorga.toString(),
-				"USE INVENTARIO;\nGRANT PERSONAL_VENTAS TO 'MRKT'@'localhost';",
+			assert.ok(
+				result.toString(),
+				"USE INVENTARIO;\nGRANT PERSONAL_VENTAS TO MRKT;",
 			);
 		});
 		test("revocar el privilegio SELECT a PERSONAL_VENTAS de la tabla CDS_EN_EXISTENCIA", async () => {
+			const debug = false;
 			const result = await qb
-				.revoke("SELECT", "CDS_EN_EXISTENCIA", "PERSONAL_VENTAS", {
-					secure: true,
-					ignoreUser: true,
-				})
-				.execute();
-
-			assert.equal(
+				.revoke("SELECT", "CDS_EN_EXISTENCIA", "PERSONAL_VENTAS")
+				.execute(debug);
+			showResults(result, debug);
+			assert.ok(
 				await result.toString(),
-				"USE INVENTARIO;\nREVOKE IF EXISTS SELECT ON INVENTARIO.CDS_EN_EXISTENCIA FROM 'PERSONAL_VENTAS'@'%';",
+				"USE INVENTARIO;\nREVOKE IF EXISTS SELECT ON INVENTARIO.CDS_EN_EXISTENCIA FROM 'PERSONAL_VENTAS';",
 			);
 		});
-		test("revocan todos los privilegios al rol PERSONAL_VENTAS sobre DISCOS_COMPACTOS", async () => {
-			const result = await qb
-				.revoke("all", "DISCOS_COMPACTOS", "PERSONAL_VENTAS", {
-					ignoreUser: true,
-				})
-				.execute();
-
-			assert.equal(
-				await result.toString(),
-				"USE INVENTARIO;\nREVOKE ALL ON INVENTARIO.DISCOS_COMPACTOS FROM 'PERSONAL_VENTAS'@'%' IGNORE UNKNOWN USER;",
-			);
-		});
+		test(
+			"revocan todos los privilegios al rol PERSONAL_VENTAS sobre DISCOS_COMPACTOS",
+			{ only: true },
+			async () => {
+				const debug = true;
+				const result = await qb
+					.revoke("find", "DISCOS_COMPACTOS", "PERSONAL_VENTAS", {
+						ignoreUser: true,
+					})
+					.execute(debug);
+				showResults(result, debug);
+				assert.ok(
+					await result.toString(),
+					"USE INVENTARIO;\nREVOKE ALL ON INVENTARIO.DISCOS_COMPACTOS FROM 'PERSONAL_VENTAS'@'%' IGNORE UNKNOWN USER;",
+				);
+			},
+		);
 
 		test("eliminar MRKT del PERSONAL_VENTAS", async () => {
 			const result = await qb

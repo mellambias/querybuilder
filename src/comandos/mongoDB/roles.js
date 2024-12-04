@@ -2,32 +2,14 @@
  * Comandos relacionados con los roles
  * para la base de datos MongoDB
  */
-import { splitCommand } from "../../utils/utils.js";
+
+import { actions } from "./utils.js";
 
 function resource(database, table) {
 	return {
 		db: database,
 		collection: table,
 	};
-} /**
- * https://www.mongodb.com/docs/manual/reference/privilege-actions/
- * @param {Array|String} dataArray - Contiene las acciones
- * @returns {Array} - cada elemento corresponde al equivalente en MongoDB
- */
-function actions(dataArray) {
-	const sqlToMongo = {
-		select: "find",
-		insert: "insert",
-		delete: "remove",
-		update: "update",
-	};
-	if (Array.isArray(dataArray)) {
-		return dataArray.map((item) => {
-			const [command] = splitCommand(item);
-			return sqlToMongo[command.toLowerCase()] || command.toLowerCase();
-		});
-	}
-	return [sqlToMongo[dataArray.toLowerCase()] || dataArray.toLowerCase()];
 }
 
 export const createRoles = {
@@ -83,4 +65,12 @@ export const grant = {
 	writeConcern: (document) => ({ writeConcern: document }),
 	comment: (any) => ({ comment: any }),
 	orden: ["to", "on", "commands", "writeConcern", "comment"],
+};
+
+export const grantRoles = {
+	user: (user) => ({ grantRolesToRole: user }),
+	roles: (roles) => ({ roles: typeof roles === "string" ? [roles] : roles }),
+	writeConcern: (document) => ({ writeConcern: document }),
+	comment: (any) => ({ comment: any }),
+	orden: ["user", "roles", "writeConcern", "comment"],
 };

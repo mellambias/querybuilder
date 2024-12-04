@@ -373,11 +373,53 @@ The view definition is public; i.e. db.getCollectionInfos() and explain operatio
 
 		return result;
 	}
+	/**
+	 * Elimina privilegios de uno o valios roles
+	 * @param {String|Array<String>} commands - privilegios a eliminar
+	 * @param {String} on - tabla
+	 * @param {String} from - rol sobre el que se actua
+	 * @param {object} options - opciones propias del lenguaje
+	 * @returns
+	 */
 	revoke(commands, on, from, options) {
-		return null;
+		const result = new Command();
+		if (Array.isArray(from)) {
+			for (const rol of from) {
+				result.add(
+					this.getStatement(mongo.revoke, {
+						commands,
+						on,
+						from: rol,
+						options,
+					}),
+				);
+			}
+			return result;
+		}
+		result.set(
+			this.getStatement(mongo.revoke, { commands, on, from, options }),
+		);
+
+		return result;
 	}
 	grantRoles(roles, users, options) {
-		return null;
+		const result = new Command();
+		if (Array.isArray(users)) {
+			for (const user of users) {
+				result.add(
+					this.getStatement(mongo.grantRoles, {
+						roles,
+						user,
+						options,
+					}),
+				);
+			}
+			return result;
+		}
+		result.set(
+			this.getStatement(mongo.grantRoles, { roles, user: users, options }),
+		);
+		return result;
 	}
 	revokeRoles(roles, from, options) {
 		return null;
