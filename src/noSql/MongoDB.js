@@ -422,7 +422,10 @@ The view definition is public; i.e. db.getCollectionInfos() and explain operatio
 		return result;
 	}
 	revokeRoles(roles, from, options) {
-		return null;
+		const result = new Command(
+			this.getStatement(mongo.revokeRoles, { roles, from, options }),
+		);
+		return result;
 	}
 
 	//Comandos DQL

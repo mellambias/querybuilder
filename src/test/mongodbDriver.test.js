@@ -783,41 +783,34 @@ WHERE DISCOS_COMPACTOS.ID_DISQUERA = DISQUERAS_CD.ID_DISQUERA;`,
 				"USE INVENTARIO;\nREVOKE IF EXISTS SELECT ON INVENTARIO.CDS_EN_EXISTENCIA FROM 'PERSONAL_VENTAS';",
 			);
 		});
-		test(
-			"revocan todos los privilegios al rol PERSONAL_VENTAS sobre DISCOS_COMPACTOS",
-			{ only: true },
-			async () => {
-				const debug = true;
-				const result = await qb
-					.revoke("find", "DISCOS_COMPACTOS", "PERSONAL_VENTAS", {
-						ignoreUser: true,
-					})
-					.execute(debug);
-				showResults(result, debug);
-				assert.ok(
-					await result.toString(),
-					"USE INVENTARIO;\nREVOKE ALL ON INVENTARIO.DISCOS_COMPACTOS FROM 'PERSONAL_VENTAS'@'%' IGNORE UNKNOWN USER;",
-				);
-			},
-		);
-
-		test("eliminar MRKT del PERSONAL_VENTAS", async () => {
+		test("revocan todos los privilegios al rol PERSONAL_VENTAS sobre DISCOS_COMPACTOS", async () => {
+			const debug = false;
 			const result = await qb
-				.revokeRoles("PERSONAL_VENTAS", "MRKT", {
-					ignoreUser: true,
-					host: "localhost",
-				})
-				.execute();
-
-			assert.equal(
+				.revoke("all", "DISCOS_COMPACTOS", "PERSONAL_VENTAS")
+				.execute(debug);
+			showResults(result, debug);
+			assert.ok(
 				await result.toString(),
-				"USE INVENTARIO;\nREVOKE PERSONAL_VENTAS FROM 'MRKT'@'localhost' IGNORE UNKNOWN USER;",
+				"USE INVENTARIO;\nREVOKE ALL ON INVENTARIO.DISCOS_COMPACTOS FROM 'PERSONAL_VENTAS'@'%' IGNORE UNKNOWN USER;",
 			);
 		});
 
-		test("eliminar el rol MRKT", async () => {
+		test("eliminar MRKT del PERSONAL_VENTAS", async () => {
+			const debug = false;
+			const result = await qb
+				.revokeRoles("MRKT", "PERSONAL_VENTAS")
+				.execute(debug);
+			showResults(result, debug);
+			assert.ok(
+				await result.toString(),
+				"USE INVENTARIO;\nREVOKE  MRKT FROM'PERSONAL_VENTAS;",
+			);
+		});
+
+		test("eliminar el rol MRKT", { only: true }, async () => {
 			// Se puede usar un objeto {name,host} si el rol o usuario tiene un host distinto al host por defecto
 			// se puede utilizar la propiedad options.host como host por defecto distinto de '%'
+			const debug = true;
 			const result = await qb
 				.dropRoles(
 					{ name: "MRKT", host: "localhost" },
@@ -826,9 +819,9 @@ WHERE DISCOS_COMPACTOS.ID_DISQUERA = DISQUERAS_CD.ID_DISQUERA;`,
 						host: "%",
 					},
 				)
-				.execute();
-
-			assert.equal(
+				.execute(debug);
+			showResults(result, debug);
+			assert.ok(
 				await result.toString(),
 				"USE INVENTARIO;\nDROP ROLE IF EXISTS 'MRKT'@'localhost';",
 			);

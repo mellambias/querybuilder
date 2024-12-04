@@ -5,6 +5,9 @@ export const sqlToMongo = {
 	insert: "insert",
 	delete: "remove",
 	update: "update",
+	all: function () {
+		return Object.values(this).filter((item) => typeof item === "string");
+	},
 };
 
 /**
@@ -15,9 +18,16 @@ export const sqlToMongo = {
 export function actions(dataArray) {
 	if (Array.isArray(dataArray)) {
 		return dataArray.map((item) => {
-			const [command] = splitCommand(item);
-			return sqlToMongo[command.toLowerCase()] || command.toLowerCase();
+			const [command] = splitCommand(item.toLowerCase());
+			if (typeof sqlToMongo[command] === "function") {
+				return sqlToMongo[command]();
+			}
+			return sqlToMongo[command] || command;
 		});
 	}
-	return [sqlToMongo[dataArray.toLowerCase()] || dataArray.toLowerCase()];
+	const [command] = splitCommand(dataArray.toLowerCase());
+	if (typeof sqlToMongo[command] === "function") {
+		return sqlToMongo[command]();
+	}
+	return [sqlToMongo[command.toLowerCase()] || command.toLowerCase()];
 }

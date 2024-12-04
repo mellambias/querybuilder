@@ -28,12 +28,13 @@ export const revoke = {
 };
 
 export const revokeRoles = {
-	adminOption: (adminOption) => (adminOption ? "ADMIN OPTION FOR" : undefined),
-	roles: (roles) => (typeof roles === "string" ? roles : roles.join(", ")),
-	from: (from, self) => revoke.from(from, self),
-	grantBy: (grantBy, self) => grant.grantBy(grantBy, self),
-	cascade: (cascade, self) => revoke.cascade(cascade, self),
-	restrict: (restrict, self) => revoke.restrict(restrict, self),
-	orden: ["adminOption", "roles", "from", "grantBy", "cascade", "restrict"],
-	defaults: { cascade: true },
+	from: (rol) => ({ revokeRolesFromRole: rol }),
+	roles: function (rolList) {
+		const database = this.qb.driverDB.database;
+		const roles = Array.isArray(rolList) ? rolList : [rolList];
+		return { roles: roles.map((role) => ({ role, db: database })) };
+	},
+	writeConcern: (document) => ({ writeConcern: document }),
+	comment: (any) => ({ comment: any }),
+	orden: ["from", "roles", "writeConcern", "comment"],
 };
