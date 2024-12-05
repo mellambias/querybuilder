@@ -1,6 +1,9 @@
+import QueryBuilder from "../querybuilder.js";
 class Command {
 	constructor(command) {
 		this._commands = command !== undefined ? [command] : [];
+		this.from = undefined;
+		this.where = undefined;
 	}
 
 	async execute(driver) {

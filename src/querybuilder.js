@@ -346,6 +346,12 @@ class QueryBuilder {
 		this.commandStack.push("from");
 		if (this.selectCommand?.length > 0) {
 			this.selectStack.push(this.language.from(tables, alias));
+		} else if (this.selectCommand instanceof Command) {
+			this.selectCommand = this.language.from(
+				tables,
+				alias,
+				this.selectCommand,
+			);
 		} else {
 			this.error = "No es posible aplicar, falta el comando 'select'";
 		}
@@ -423,6 +429,8 @@ class QueryBuilder {
 		this.commandStack.push("where");
 		if (this.selectCommand?.length > 0) {
 			this.selectStack.push(this.language.where(predicados));
+		} else if (this.selectCommand instanceof Command) {
+			this.selectCommand = this.language.where(predicados, this.selectCommand);
 		} else {
 			this.error = "No es posible aplicar, falta el comando 'select|delete'";
 		}
@@ -637,6 +645,7 @@ class QueryBuilder {
 				}
 				this.query.push(this.selectCommand);
 			}
+
 			this.selectCommand = this.language.update(table, sets);
 		} catch (error) {
 			this.error = error.message;

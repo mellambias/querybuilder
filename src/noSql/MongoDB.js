@@ -431,10 +431,34 @@ The view definition is public; i.e. db.getCollectionInfos() and explain operatio
 	//Comandos DQL
 	// SELECT [ DISTINCT | ALL ] { * | < selección de lista > }
 	select(columns, options) {
-		return null;
+		const select = {
+			find: (ref) => ref.from,
+			filter: (ref) => ref.where,
+		};
+		let projection;
+		if (!/^(\*|all)$/i.test(columns)) {
+			if (Array.isArray(columns)) {
+				projection = columns.reduce((fields, col) => {
+					fields[col] = 1;
+					return fields;
+				}, {});
+			} else {
+				projection = { columns: 1 };
+			}
+			select.projection = projection;
+		}
+
+		const selectCommand = new Command(select);
+		return selectCommand;
 	}
-	from(tables, alias) {
-		return null;
+	from(tables, alias, selectCommand) {
+		selectCommand.from = tables;
+		return selectCommand;
+	}
+	where(predicados, selectCommand) {
+		console.log("[MongoDB][where]predicados", predicados);
+		selectCommand.where = predicados;
+		return selectCommand;
 	}
 	joins() {
 		const joinTypes = {
@@ -461,9 +485,6 @@ The view definition is public; i.e. db.getCollectionInfos() and explain operatio
 	}
 
 	union(...selects) {
-		return null;
-	}
-	where(predicados) {
 		return null;
 	}
 
@@ -494,17 +515,30 @@ The view definition is public; i.e. db.getCollectionInfos() and explain operatio
 			this[oper] = (a, b) => {
 				if (b !== undefined) {
 					if (b instanceof QueryBuilder) {
-						return `{${a}: {${operadores[oper]}:( ${b.toString({ as: "subselect" })} )}}`;
+						return {
+							[`${a}`]: {
+								[`${operadores[oper]}`]: b.toString({ as: "subselect" }),
+							},
+						};
 					}
 					if (Array.isArray(b)) {
-						return `{ ${a}: {${operadores[oper]}: [ ${b.join(", ")} ] } }`;
+						return { [`${a}`]: { [`${operadores[oper]}`]: b.join(", ") } };
 					}
-					return `{${a}: {${operadores[oper]}:${typeof b === "string" ? (/^(ANY|SOME|ALL)$/.test(b.match(/^\w+/)[0]) ? b : `'${b}'`) : b}}}`;
+					return {
+						[`${a}`]: {
+							[`${operadores[oper]}`]:
+								typeof b === "string"
+									? /^(ANY|SOME|ALL)$/.test(b.match(/^\w+/)[0])
+										? b
+										: `'${b}'`
+									: b,
+						},
+					};
 				}
 				if (Array.isArray(a)) {
 					return `${a.join(` ${operadores[oper]}\nAND `)} ${operadores[oper]}`;
 				}
-				return `{ ${operadores[oper]}: ${a} }`;
+				return { [`${operadores[oper]}`]: a };
 			};
 		}
 		const logicos = {
@@ -519,17 +553,21 @@ The view definition is public; i.e. db.getCollectionInfos() and explain operatio
 			if (/^(AND|OR)$/i.test(oper)) {
 				this[oper] = (...predicados) => {
 					if (predicados.length > 1) {
-						return `{ ${logicos[oper]}: [ ${predicados.join(", ")} ] }`;
+						return {
+							[`${logicos[oper]}`]: predicados,
+						};
 					}
-					return `{ ${logicos[oper]}: [ ${predicados} ] }`;
+					return { [`${logicos[oper]}`]: predicados };
 				};
 			}
 			if (/^(NOT)$/i.test(oper)) {
 				this[oper] = (...predicados) => {
 					if (predicados.length > 1) {
-						return `{ ${predicados[0]}: { ${logicos[oper]}: ${predicados[1]} } }`;
+						return {
+							[`${predicados[0]}`]: { [`${logicos[oper]}`]: predicados[1] },
+						};
 					}
-					return `{ ${logicos[oper]}: ${predicados} }`;
+					return { [`${logicos[oper]}`]: predicados };
 				};
 			}
 
@@ -539,7 +577,7 @@ The view definition is public; i.e. db.getCollectionInfos() and explain operatio
 			}
 			if (/^(DISTINCT)$/i.test(oper)) {
 				this[oper] = (...predicados) => {
-					return `{ ${logicos[oper]}: [ ${predicados.join(", ")} ] }`;
+					return { [`${logicos[oper]}`]: predicados };
 				};
 			}
 		}
@@ -547,17 +585,19 @@ The view definition is public; i.e. db.getCollectionInfos() and explain operatio
 		for (const oper in operTreeArg) {
 			if (/^(BETWEEN|NOT BETWEEN)$/i.test(operTreeArg[oper])) {
 				this[oper] = (campo, min, max) => {
-					return `${campo} ${operTreeArg[oper].toUpperCase()} ${min} AND ${max}`;
+					return JSON.stringify(
+						`${campo} ${operTreeArg[oper].toUpperCase()} ${min} AND ${max}`,
+					);
 				};
 			}
 		}
 	}
 
 	in(columna, ...values) {
-		return `{ ${columna}: { $in: [${values}] } }`;
+		return { [`${columna}`]: { $in: [values] } };
 	}
 	notIn(columna, ...values) {
-		return `{ ${columna}: { $nin: [${values}] } }`;
+		return { [`${columna}`]: { $nin: [values] } };
 	}
 	exists(subSelect) {
 		return this.in(subSelect);
@@ -643,10 +683,11 @@ The view definition is public; i.e. db.getCollectionInfos() and explain operatio
 		}
 		return { error: errorStack, updatedField: field, currentValue: value };
 	}
-	async insert(table, columns, values) {
+	async insert(table, columns, datas) {
 		// Primero recuperar la definicion de la tabla
 		const { cols } = await this.getTableDef(table);
 		const fields = columns.length > 0 ? columns : cols.map((item) => item.name);
+		const values = Array.isArray(datas[0]) ? datas : [datas];
 
 		const documents = values.map((item, rowNumber) =>
 			item.reduce((row, val, index, elements) => {
@@ -680,7 +721,12 @@ The view definition is public; i.e. db.getCollectionInfos() and explain operatio
 		return insertMany;
 	}
 	update(table, sets) {
-		return null;
+		const updateCommand = new Command({
+			update: table,
+			updates: [{ q: (ref) => ref.where, $set: sets }],
+		});
+		console.log(updateCommand._commands[0]);
+		return updateCommand;
 	}
 	delete(from) {
 		return null;

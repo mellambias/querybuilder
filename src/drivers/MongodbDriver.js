@@ -23,6 +23,7 @@ class MongodbDriver extends Driver {
 		this.connection = null;
 		this.queyResult = [];
 		this.queryFields = [];
+		this.queryRows = [];
 		this.client = null;
 	}
 	async connect() {
@@ -58,12 +59,14 @@ class MongodbDriver extends Driver {
 			let response = null;
 			for await (const command of commands) {
 				if (this.isCursorCommand(command)) {
+					console.log("%s en un cursor", command);
 					response = await this.client
 						.db(this.database)
 						.runCursorCommand(command);
 					for await (const doc of response) {
-						this.queyResult.push(doc);
+						this.queryRows.push(doc);
 					}
+					this.queyResult.push(this.queryRows);
 				} else {
 					response = await this.client.db(this.database).command(command);
 					this.queyResult.push(response);
@@ -79,11 +82,27 @@ class MongodbDriver extends Driver {
 	}
 
 	response() {
-		const rows = [];
+		console.log("[response] resultados del comando\n", this.queyResult.length);
 		const columns = [];
-		const response = this.queyResult;
+		const rows = [];
+		const response = [];
+
+		if (Array.isArray(this.queyResult)) {
+			rows.push(this.queryRows || []);
+			columns.push(Object.keys(this.queryRows[0] || {}));
+			response.push({
+				...this.queyResult,
+				rows: rows.length,
+				fields: columns.length,
+			});
+		} else {
+			response.push(this.queyResult);
+		}
+		// clear
 		this.queyResult = [];
 		this.queryFields = [];
+		this.queryRows = [];
+
 		return { response, rows, columns };
 	}
 

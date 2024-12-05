@@ -3478,7 +3478,7 @@ WHERE ID_TITULO = 108 );`;
 			"uso de limit y offset para MySQL, PostgreSQL, y SQLite ",
 			{ only: true },
 			async () => {
-				const debug = true;
+				const debug = false;
 				const query = `SELECT *
 FROM TIPOS_TITULO
 LIMIT 3
