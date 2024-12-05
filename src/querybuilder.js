@@ -768,7 +768,7 @@ class QueryBuilder {
 
 		if (this.alterTableCommand !== undefined) {
 			if (this.alterTableCommand instanceof Promise) {
-				this.alterTableCommand = await this.alterTableCommand;
+				this.alterTableCommand = this.alterTableCommand;
 			}
 
 			if (this.alterTableCommand instanceof Command) {
@@ -796,11 +796,18 @@ class QueryBuilder {
 			this.selectCommand = undefined;
 			this.selectStack = [];
 		}
+		if (this.selectCommand instanceof Command) {
+			this.query.push(this.selectCommand);
+			this.selectCommand = undefined;
+		}
 
 		if (this.query.length > 0) {
 			const data = await Promise.all(this.query);
 			const send = data
 				.filter((item) => item !== null)
+				.map((item) => {
+					return item;
+				})
 				.join(";\n")
 				.concat(";")
 				.replace(";;", ";");

@@ -28,7 +28,29 @@ class Command {
 	}
 
 	toString() {
-		return this._commands.map((command) => JSON.stringify(command)).join(";");
+		return this._commands
+			.map((command) => {
+				this.evalCommand(command);
+				return JSON.stringify(command);
+			})
+			.join(";");
+	}
+	evalCommand(command) {
+		for (const item in command) {
+			if (typeof command[item] === "object") {
+				if (Array.isArray(command[item])) {
+					this.evalCommand(command[item]);
+				} else if (command[item] instanceof QueryBuilder) {
+					console.log("'%s es un objeto QueyBuilder", item);
+				} else {
+					this.evalCommand(command[item]);
+				}
+			}
+			if (typeof command[item] === "function") {
+				command[item] = command[item](this);
+			}
+		}
+		return command;
 	}
 }
 export default Command;
