@@ -852,33 +852,37 @@ VALUES ( 117, 'Rhythm Country and Blues', 837, 21 );`,
 			);
 		});
 
-		test("leer datos de la tabla DISCOS_COMPACTO", { only: true }, async () => {
-			const debug = false;
-			const result = await qb
-				.select("*")
-				.from("DISCOS_COMPACTOS")
-				.where(
-					qb.or(
-						qb.eq("ID_DISCO_COMPACTO", 116),
-						qb.eq("ID_DISCO_COMPACTO", 117),
-					),
-				)
-				.execute(debug);
+		test(
+			"leer datos de la tabla DISCOS_COMPACTO",
+			{ only: false },
+			async () => {
+				const debug = false;
+				const result = await qb
+					.select("*")
+					.from("DISCOS_COMPACTOS")
+					.where(
+						qb.or(
+							qb.eq("ID_DISCO_COMPACTO", 116),
+							qb.eq("ID_DISCO_COMPACTO", 117),
+						),
+					)
+					.execute(debug);
 
-			showResults(result, debug);
+				showResults(result, debug);
 
-			assert.ok(
-				await result.toString(),
-				`USE INVENTARIO;
+				assert.ok(
+					await result.toString(),
+					`USE INVENTARIO;
 SELECT *
 FROM DISCOS_COMPACTOS
 WHERE (ID_DISCO_COMPACTO = 116
 OR ID_DISCO_COMPACTO = 117);`,
-			);
-		});
+				);
+			},
+		);
 
-		test("Actualiza datos", { only: false }, async () => {
-			const debug = true;
+		test("Actualiza datos", { only: true }, async () => {
+			const debug = false;
 			const result = await qb
 				.update("DISCOS_COMPACTOS", {
 					ID_DISQUERA: qb

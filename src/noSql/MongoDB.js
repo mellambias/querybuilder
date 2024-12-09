@@ -443,7 +443,7 @@ The view definition is public; i.e. db.getCollectionInfos() and explain operatio
 					return fields;
 				}, {});
 			} else {
-				projection = { columns: 1 };
+				projection = { [columns]: 1 };
 			}
 			select.projection = projection;
 		}
@@ -526,12 +526,7 @@ The view definition is public; i.e. db.getCollectionInfos() and explain operatio
 					}
 					return {
 						[`${a}`]: {
-							[`${operadores[oper]}`]:
-								typeof b === "string"
-									? /^(ANY|SOME|ALL)$/.test(b.match(/^\w+/)[0])
-										? b
-										: `'${b}'`
-									: b,
+							[`${operadores[oper]}`]: b,
 						},
 					};
 				}
@@ -721,9 +716,15 @@ The view definition is public; i.e. db.getCollectionInfos() and explain operatio
 		return insertMany;
 	}
 	update(table, sets) {
+		const setStatements = Object.keys(sets).reduce((arrayData, field) => {
+			arrayData.push({
+				$set: { [field]: sets[field] },
+			});
+			return arrayData;
+		}, []);
 		const updateCommand = new Command({
 			update: table,
-			updates: [{ q: (ref) => ref.where, $set: sets }],
+			updates: [{ q: (ref) => ref.where, u: setStatements }],
 		});
 		console.log(updateCommand._commands[0]);
 		return updateCommand;

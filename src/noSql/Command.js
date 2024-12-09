@@ -7,9 +7,13 @@ class Command {
 	}
 
 	async execute(driver) {
-		await driver.execute(this);
-		const { response } = driver.response();
-		return response;
+		try {
+			await driver.execute(this);
+			const response = driver.response();
+			return response;
+		} catch (error) {
+			console.error("[Command][execute]", error);
+		}
 	}
 	set(value) {
 		if (value !== undefined) {
@@ -18,7 +22,10 @@ class Command {
 		return this;
 	}
 	get commands() {
-		return this._commands;
+		return this._commands.map((command) => {
+			this.evalCommand(command);
+			return command;
+		});
 	}
 	add(value) {
 		if (value !== undefined) {
@@ -30,10 +37,21 @@ class Command {
 	toString() {
 		return this._commands
 			.map((command) => {
+				console.log("comando", command);
 				this.evalCommand(command);
+				if (command instanceof Command) {
+					console.log("es un comando", command);
+				}
+				console.log("typeof", typeof command);
 				return JSON.stringify(command);
 			})
 			.join(";");
+	}
+	toJson() {
+		return this._commands.map((command) => {
+			this.evalCommand(command);
+			return command;
+		});
 	}
 	evalCommand(command) {
 		for (const item in command) {
@@ -41,7 +59,9 @@ class Command {
 				if (Array.isArray(command[item])) {
 					this.evalCommand(command[item]);
 				} else if (command[item] instanceof QueryBuilder) {
-					console.log("'%s es un objeto QueyBuilder", item);
+					const [subselect] = command[item].selectCommand.toJson();
+					console.log("El subselect es %o", subselect);
+					command[item] = `${item}`;
 				} else {
 					this.evalCommand(command[item]);
 				}

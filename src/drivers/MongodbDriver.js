@@ -7,15 +7,6 @@ import Driver from "./Driver.js";
 import { MongoClient } from "mongodb";
 import Command from "../noSql/Command.js";
 
-const cursorCommands = [
-	"find",
-	"aggregate",
-	"listCollections",
-	"listIndexes",
-	"watch",
-	"explain",
-];
-
 class MongodbDriver extends Driver {
 	constructor(params) {
 		super(MongoClient, params);
@@ -25,22 +16,41 @@ class MongodbDriver extends Driver {
 		this.queryFields = [];
 		this.queryRows = [];
 		this.client = null;
+		this._process = 0;
 	}
 	async connect() {
 		try {
 			this.client = new this.library(this.params.getConnectionString());
 			await this.client.connect();
+			console.log(`Conectado a ${this.params.getConnectionString()}`);
 			return this;
 		} catch (error) {
-			throw new Error(error);
+			throw new Error(
+				`No se puede conectar a ${this.params.getConnectionString()}`,
+				{
+					cause: error,
+				},
+			);
 		}
 	}
 	async use(database) {
 		this.database = database;
 	}
 
+	set process(value) {
+		this._process = value;
+		if (this._process <= 0) {
+			this._process = 0;
+			this.close();
+		}
+	}
+	get process() {
+		return this._process;
+	}
 	async execute(query, options) {
 		try {
+			this.process++;
+			console.log("[driver][execute] \n>>>\n%o\n<<<\n", query);
 			if (this.client === null) {
 				await this.connect();
 			}
@@ -52,37 +62,39 @@ class MongodbDriver extends Driver {
 					.filter((q) => q.length > 0)
 					.map((command) => JSON.parse(command));
 			}
+
 			if (query instanceof Command) {
+				console.log("Es un Commando");
 				commands = query.commands;
 			}
-			console.log("comandos a ejecutar", commands);
+			console.log("ℹ  comandos a ejecutar >>>\n%o\n<<<", commands);
 			let response = null;
 			for await (const command of commands) {
-				if (this.isCursorCommand(command)) {
-					console.log("%s en un cursor", command);
-					response = await this.client
-						.db(this.database)
-						.runCursorCommand(command);
-					for await (const doc of response) {
+				response = await this.client.db(this.database).command(command);
+				console.log("ℹ Procesando el 'resultado'", response);
+				if (response?.cursor) {
+					console.log("ℹ cursor %o", response.cursor);
+					for await (const doc of response.cursor.firstBatch) {
 						this.queryRows.push(doc);
 					}
-					this.queyResult.push(this.queryRows);
+					if (this.queryRows.length) this.queyResult.push(this.queryRows);
 				} else {
-					response = await this.client.db(this.database).command(command);
 					this.queyResult.push(response);
 				}
 			}
+			this.process--;
 			return this;
 		} catch (error) {
-			console.log("[Error][MongodbDriver]", error);
-			console.error("[errorResponse][MongodbDriver]", error.errorResponse);
+			console.log("[MongodbDriver][execute]", error);
+			console.error("[MongodbDriver][errorResponse]", error.errorResponse);
+			this.process--;
 			await this.close(error);
 			return this;
 		}
 	}
 
 	response() {
-		console.log("[response] resultados del comando\n", this.queyResult.length);
+		console.log("[response] resultados del comando: %o\n", this.queyResult);
 		const columns = [];
 		const rows = [];
 		const response = [];
@@ -92,8 +104,6 @@ class MongodbDriver extends Driver {
 			columns.push(Object.keys(this.queryRows[0] || {}));
 			response.push({
 				...this.queyResult,
-				rows: rows.length,
-				fields: columns.length,
 			});
 		} else {
 			response.push(this.queyResult);
@@ -110,15 +120,11 @@ class MongodbDriver extends Driver {
 		if (this.client === null) {
 			return this;
 		}
-		if (!this.client?.s.hasBeenClosed) {
+		if (!this.client?.s.hasBeenClosed && this.process <= 0) {
 			this.client.close();
 			this.client = null;
 		}
 		return this;
-	}
-
-	isCursorCommand(command) {
-		return Object.keys(command).some((key) => cursorCommands.includes(key));
 	}
 }
 export default MongodbDriver;
