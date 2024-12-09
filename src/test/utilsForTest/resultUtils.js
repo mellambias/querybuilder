@@ -1,11 +1,11 @@
 export function tableFormat(columns, rows, responses, query) {
-	console.log(
-		"columns %o\nrows %o\nresponses %o\n query %o",
-		columns,
-		rows,
-		responses,
-		query,
-	);
+	// console.log(
+	// 	"columns %o\nrows %o\nresponses %o\n query %o",
+	// 	columns,
+	// 	rows,
+	// 	responses,
+	// 	query,
+	// );
 	try {
 		// console.log(`${textCenter("SOLICITUD", 60, " +")}\n\n${query}`);
 		// console.log("");

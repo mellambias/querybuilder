@@ -22,7 +22,7 @@ class MongodbDriver extends Driver {
 		try {
 			this.client = new this.library(this.params.getConnectionString());
 			await this.client.connect();
-			console.log(`Conectado a ${this.params.getConnectionString()}`);
+			// console.log(`Conectado a ${this.params.getConnectionString()}`);
 			return this;
 		} catch (error) {
 			throw new Error(
@@ -50,7 +50,7 @@ class MongodbDriver extends Driver {
 	async execute(query, options) {
 		try {
 			this.process++;
-			console.log("[driver][execute] \n>>>\n%o\n<<<\n", query);
+			// console.log("[driver][execute] \n>>>\n%o\n<<<\n", query);
 			if (this.client === null) {
 				await this.connect();
 			}
@@ -64,16 +64,16 @@ class MongodbDriver extends Driver {
 			}
 
 			if (query instanceof Command) {
-				console.log("Es un Commando");
+				// console.log("Es un Commando");
 				commands = query.commands;
 			}
-			console.log("ℹ  comandos a ejecutar >>>\n%o\n<<<", commands);
+			// console.log("ℹ  comandos a ejecutar >>>\n%o\n<<<", commands);
 			let response = null;
 			for await (const command of commands) {
 				response = await this.client.db(this.database).command(command);
-				console.log("ℹ Procesando el 'resultado'", response);
+				// console.log("ℹ Procesando el 'resultado'", response);
 				if (response?.cursor) {
-					console.log("ℹ cursor %o", response.cursor);
+					// console.log("ℹ cursor %o", response.cursor);
 					for await (const doc of response.cursor.firstBatch) {
 						this.queryRows.push(doc);
 					}
@@ -85,8 +85,8 @@ class MongodbDriver extends Driver {
 			this.process--;
 			return this;
 		} catch (error) {
-			console.log("[MongodbDriver][execute]", error);
-			console.error("[MongodbDriver][errorResponse]", error.errorResponse);
+			// console.log("[MongodbDriver][execute]", error);
+			// console.error("[MongodbDriver][errorResponse]", error.errorResponse);
 			this.process--;
 			await this.close(error);
 			return this;
@@ -94,7 +94,7 @@ class MongodbDriver extends Driver {
 	}
 
 	response() {
-		console.log("[response] resultados del comando: %o\n", this.queyResult);
+		// console.log("[response] resultados del comando: %o\n", this.queyResult);
 		const columns = [];
 		const rows = [];
 		const response = [];

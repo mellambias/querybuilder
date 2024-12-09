@@ -37,12 +37,12 @@ class Command {
 	toString() {
 		return this._commands
 			.map((command) => {
-				console.log("comando", command);
+				// console.log("comando", command);
 				this.evalCommand(command);
 				if (command instanceof Command) {
-					console.log("es un comando", command);
+					// console.log("es un comando", command);
 				}
-				console.log("typeof", typeof command);
+				// console.log("typeof", typeof command);
 				return JSON.stringify(command);
 			})
 			.join(";");
@@ -60,7 +60,7 @@ class Command {
 					this.evalCommand(command[item]);
 				} else if (command[item] instanceof QueryBuilder) {
 					const [subselect] = command[item].selectCommand.toJson();
-					console.log("El subselect es %o", subselect);
+					console.log("[Command][evalCommand]El subselect es %o", subselect);
 					command[item] = `${item}`;
 				} else {
 					this.evalCommand(command[item]);

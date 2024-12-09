@@ -150,7 +150,6 @@ class MongoDB extends Core {
 	}
 	alterTable(name) {
 		this._currentTable = name;
-		console.log("[MongoDB][alterTable]");
 		const alterTable = new Command({
 			update: "esquema",
 			updates: [],
@@ -456,7 +455,7 @@ The view definition is public; i.e. db.getCollectionInfos() and explain operatio
 		return selectCommand;
 	}
 	where(predicados, selectCommand) {
-		console.log("[MongoDB][where]predicados", predicados);
+		// console.log("[MongoDB][where]predicados", predicados);
 		selectCommand.where = predicados;
 		return selectCommand;
 	}
@@ -637,7 +636,7 @@ The view definition is public; i.e. db.getCollectionInfos() and explain operatio
 				column.constraint = rule;
 			}
 		}
-		console.log("La tabla '%s' esta decinida como:\n%o", table, tableDef);
+		// console.log("La tabla '%s' esta definida como:\n%o", table, tableDef);
 		return tableDef;
 	}
 
@@ -726,7 +725,7 @@ The view definition is public; i.e. db.getCollectionInfos() and explain operatio
 			update: table,
 			updates: [{ q: (ref) => ref.where, u: setStatements }],
 		});
-		console.log(updateCommand._commands[0]);
+		// console.log(updateCommand._commands[0]);
 		return updateCommand;
 	}
 	delete(from) {
