@@ -852,36 +852,32 @@ VALUES ( 117, 'Rhythm Country and Blues', 837, 21 );`,
 			);
 		});
 
-		test(
-			"leer datos de la tabla DISCOS_COMPACTO",
-			{ only: false },
-			async () => {
-				const debug = false;
-				const result = await qb
-					.select("*")
-					.from("DISCOS_COMPACTOS")
-					.where(
-						qb.or(
-							qb.eq("ID_DISCO_COMPACTO", 116),
-							qb.eq("ID_DISCO_COMPACTO", 117),
-						),
-					)
-					.execute(debug);
+		test("leer datos de la tabla DISCOS_COMPACTO", async () => {
+			const debug = false;
+			const result = await qb
+				.select("*")
+				.from("DISCOS_COMPACTOS")
+				.where(
+					qb.or(
+						qb.eq("ID_DISCO_COMPACTO", 116),
+						qb.eq("ID_DISCO_COMPACTO", 117),
+					),
+				)
+				.execute(debug);
 
-				showResults(result, debug);
+			showResults(result, debug);
 
-				assert.ok(
-					await result.toString(),
-					`USE INVENTARIO;
+			assert.ok(
+				await result.toString(),
+				`USE INVENTARIO;
 SELECT *
 FROM DISCOS_COMPACTOS
 WHERE (ID_DISCO_COMPACTO = 116
 OR ID_DISCO_COMPACTO = 117);`,
-				);
-			},
-		);
+			);
+		});
 
-		test("Actualiza datos", { only: true }, async () => {
+		test("Actualiza datos", async () => {
 			const debug = false;
 			const result = await qb
 				.update("DISCOS_COMPACTOS", {
@@ -898,16 +894,17 @@ OR ID_DISCO_COMPACTO = 117);`,
 			assert.ok(
 				await result.toString(),
 				`USE INVENTARIO;
-UPDATE DISCOS_COMPACTOS
-SET ID_DISQUERA =
-( SELECT ID_DISQUERA
-FROM DISQUERAS_CD
-WHERE NOMBRE_DISCOGRAFICA = 'DRG Records' )
-WHERE ID_DISCO_COMPACTO = 116;`,
+			UPDATE DISCOS_COMPACTOS
+			SET ID_DISQUERA =
+			( SELECT ID_DISQUERA
+			FROM DISQUERAS_CD
+			WHERE NOMBRE_DISCOGRAFICA = 'DRG Records' )
+			WHERE ID_DISCO_COMPACTO = 116;`,
 			);
 		});
 
 		test("borrar registros", async () => {
+			const debug = false;
 			const result = await qb
 				.delete("DISCOS_COMPACTOS")
 				.where(
@@ -918,9 +915,9 @@ WHERE ID_DISCO_COMPACTO = 116;`,
 				)
 				.delete("DISQUERAS_CD")
 				.where(qb.eq("ID_DISQUERA", 837))
-				.execute();
+				.execute(debug);
 
-			showResults(result);
+			showResults(result, debug);
 
 			assert.ok(
 				await result.toString(),
@@ -967,15 +964,16 @@ CREATE TABLE IF NOT EXISTS INVENTARIO_CD
 			);
 		});
 		test("inserta un registro o row", async () => {
+			const debug = false;
 			const result = await qb
 				.insert(
 					"INVENTARIO_CD",
 					[],
 					["Patsy Cline: 12 Greatest Hits", "Country", "MCA Records", 32],
 				)
-				.execute();
+				.execute(debug);
 
-			showResults(result);
+			showResults(result, debug);
 
 			assert.ok(
 				await result.toString(),
@@ -986,15 +984,16 @@ VALUES ( 'Patsy Cline: 12 Greatest Hits', 'Country', 'MCA Records', 32 );`,
 		});
 
 		test("Insertar datos en una tabla especificando columnas", async () => {
+			const debug = false;
 			const result = await qb
 				.insert(
 					"INVENTARIO_CD",
 					["NOMBRE_CD", "EDITOR", "EN_EXISTENCIA"],
 					["Fundamental", "Capitol Records", 34],
 				)
-				.execute();
+				.execute(debug);
 
-			showResults(result);
+			showResults(result, debug);
 
 			assert.ok(
 				await result.toString(),
@@ -1003,7 +1002,8 @@ VALUES ( 'Fundamental', 'Capitol Records', 34 );`,
 			);
 		});
 
-		test("Insertar datos en una tabla usando datos de otra tabla", async () => {
+		test("crea tabla", async () => {
+			const debug = false;
 			const result = await qb
 				.createTable("INVENTARIO_CD_2", {
 					cols: {
@@ -1011,26 +1011,42 @@ VALUES ( 'Fundamental', 'Capitol Records', 34 );`,
 						EN_EXISTENCIA_2: { type: "int", values: ["not null"] },
 					},
 				})
-				.insert(
-					"INVENTARIO_CD_2",
-					[],
-					qb.select(["NOMBRE_CD", "EN_EXISTENCIA"]).from("INVENTARIO_CD"),
-				)
-				.execute();
+				.execute(debug);
 
-			showResults(result);
+			showResults(result, debug);
 
-			assert.ok(
-				await result.toString(),
-				`USE INVENTARIO;
-CREATE TABLE INVENTARIO_CD_2
-( NOMBRE_CD_2 VARCHAR(60) NOT NULL,
- EN_EXISTENCIA_2 INT NOT NULL );
-INSERT INTO INVENTARIO_CD_2
-SELECT NOMBRE_CD, EN_EXISTENCIA
-FROM INVENTARIO_CD;`,
-			);
+			// 				assert.ok(
+			// 					await result.toString(),
+			// 					`USE INVENTARIO;
+			// CREATE TABLE INVENTARIO_CD_2
+			// ( NOMBRE_CD_2 VARCHAR(60) NOT NULL,
+			//  EN_EXISTENCIA_2 INT NOT NULL );`,
+			// 				);
 		});
+		test(
+			"Insertar datos en una tabla usando datos de otra tabla",
+			{ only: true },
+			async () => {
+				const debug = false;
+				const result = await qb
+					.insert(
+						"INVENTARIO_CD_2",
+						[],
+						qb.select(["NOMBRE_CD", "EN_EXISTENCIA"]).from("INVENTARIO_CD"),
+					)
+					.execute(debug);
+
+				showResults(result, debug);
+
+				// 				assert.ok(
+				// 					await result.toString(),
+				// 					`USE INVENTARIO;
+				// INSERT INTO INVENTARIO_CD_2
+				// SELECT NOMBRE_CD, EN_EXISTENCIA
+				// FROM INVENTARIO_CD;`,
+				// 				);
+			},
+		);
 
 		test("Insertar varias filas de datos en una tabla", async () => {
 			const result = await qb

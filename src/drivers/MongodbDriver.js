@@ -67,7 +67,7 @@ class MongodbDriver extends Driver {
 				// console.log("Es un Commando");
 				commands = query.commands;
 			}
-			// console.log("ℹ  comandos a ejecutar >>>\n%o\n<<<", commands);
+			console.log("ℹ  comandos a ejecutar >>>\n%o\n<<<", commands);
 			let response = null;
 			for await (const command of commands) {
 				response = await this.client.db(this.database).command(command);
@@ -94,17 +94,19 @@ class MongodbDriver extends Driver {
 	}
 
 	response() {
-		// console.log("[response] resultados del comando: %o\n", this.queyResult);
+		//console.log("[response] resultados del comando: %o\n", this.queyResult);
 		const columns = [];
 		const rows = [];
 		const response = [];
 
 		if (Array.isArray(this.queyResult)) {
-			rows.push(this.queryRows || []);
-			columns.push(Object.keys(this.queryRows[0] || {}));
-			response.push({
-				...this.queyResult,
-			});
+			for (const result of this.queyResult) {
+				rows.push(this.queryRows || []);
+				columns.push(Object.keys(this.queryRows[0] || {}));
+				response.push({
+					...result,
+				});
+			}
 		} else {
 			response.push(this.queyResult);
 		}

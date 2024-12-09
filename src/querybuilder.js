@@ -662,6 +662,10 @@ class QueryBuilder {
 				}
 				this.query.push(this.selectCommand);
 			}
+			if (this.selectCommand instanceof Command) {
+				this.selectCommand.toJson();
+				this.query.push(this.selectCommand.toString());
+			}
 			this.selectCommand = this.language.delete(from);
 		} catch (error) {
 			this.error = error.message;
@@ -797,6 +801,11 @@ class QueryBuilder {
 			this.selectStack = [];
 		}
 		if (this.selectCommand instanceof Command) {
+			console.log(
+				"[queryJoin] el comando select \n>>> %o \n <<<",
+				this.selectCommand,
+			);
+			await this.selectCommand.toJson(); // evaluara el comando
 			this.query.push(this.selectCommand);
 			this.selectCommand = undefined;
 		}
@@ -805,9 +814,6 @@ class QueryBuilder {
 			const data = await Promise.all(this.query);
 			const send = data
 				.filter((item) => item !== null)
-				.map((item) => {
-					return item;
-				})
 				.join(";\n")
 				.concat(";")
 				.replace(";;", ";");

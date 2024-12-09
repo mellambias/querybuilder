@@ -437,12 +437,15 @@ The view definition is public; i.e. db.getCollectionInfos() and explain operatio
 		let projection;
 		if (!/^(\*|all)$/i.test(columns)) {
 			if (Array.isArray(columns)) {
-				projection = columns.reduce((fields, col) => {
-					fields[col] = 1;
-					return fields;
-				}, {});
+				projection = columns.reduce(
+					(fields, col) => {
+						fields[col] = 1;
+						return fields;
+					},
+					{ _id: 0 },
+				);
 			} else {
-				projection = { [columns]: 1 };
+				projection = { _id: 0, [columns]: 1 };
 			}
 			select.projection = projection;
 		}
@@ -622,22 +625,26 @@ The view definition is public; i.e. db.getCollectionInfos() and explain operatio
 
 	// Mofificacion de Datos
 	async getTableDef(table) {
-		const [findTable] = await new Command({
+		const { rows } = await new Command({
 			find: "esquema",
 			filter: { _id: "table" },
 		}).execute(this.qb.driverDB);
+		const [findTable] = rows[0];
 		const tableDef = findTable.tables.find((item) => item.name === table);
-		if (tableDef?.constraints) {
-			// se aplican las "constraints" a los campos
-			for (const rule of tableDef.constraints) {
-				const column = tableDef.cols.find((col) =>
-					rule.cols.includes(col.name),
-				);
-				column.constraint = rule;
+		if (tableDef) {
+			if (tableDef?.constraints) {
+				// se aplican las "constraints" a los campos
+				for (const rule of tableDef.constraints) {
+					const column = tableDef.cols.find((col) =>
+						rule.cols.includes(col.name),
+					);
+					column.constraint = rule;
+				}
 			}
+			console.log("La tabla '%s' esta definida como:\n%o", table, tableDef);
+			return tableDef;
 		}
-		// console.log("La tabla '%s' esta definida como:\n%o", table, tableDef);
-		return tableDef;
+		return { rows: [] };
 	}
 
 	apliConstraints(field, val) {
@@ -680,9 +687,22 @@ The view definition is public; i.e. db.getCollectionInfos() and explain operatio
 	async insert(table, columns, datas) {
 		// Primero recuperar la definicion de la tabla
 		const { cols } = await this.getTableDef(table);
+		if (!cols) {
+			throw new Error("No se puede insertar documentos sin una colección");
+		}
 		const fields = columns.length > 0 ? columns : cols.map((item) => item.name);
-		const values = Array.isArray(datas[0]) ? datas : [datas];
-
+		let values = Array.isArray(datas[0]) ? datas : [datas];
+		if (datas instanceof QueryBuilder) {
+			// console.log("Debemos resolver la subquery");
+			const { rows } = await datas.selectCommand.execute(datas.driverDB);
+			values = rows[0].map((row) => {
+				const values = Object.values(row);
+				if (values.length > 1) {
+					return values;
+				}
+				return values[0];
+			});
+		}
 		const documents = values.map((item, rowNumber) =>
 			item.reduce((row, val, index, elements) => {
 				const field = cols.find((item) => item.name === fields[index]);
@@ -690,7 +710,7 @@ The view definition is public; i.e. db.getCollectionInfos() and explain operatio
 					field,
 					val,
 				);
-				if (error.length > 0) {
+				if (error?.length > 0) {
 					throw new Error(
 						`❌ En ${values[rowNumber]} el valor '${elements[index]}'`,
 						{
@@ -729,7 +749,11 @@ The view definition is public; i.e. db.getCollectionInfos() and explain operatio
 		return updateCommand;
 	}
 	delete(from) {
-		return null;
+		const deleteCommand = new Command({
+			delete: from,
+			deletes: [{ q: (ref) => ref.where, limit: 0 }],
+		});
+		return deleteCommand;
 	}
 
 	// Funciones SET

@@ -37,37 +37,46 @@ class Command {
 	toString() {
 		return this._commands
 			.map((command) => {
-				// console.log("comando", command);
-				this.evalCommand(command);
-				if (command instanceof Command) {
-					// console.log("es un comando", command);
-				}
-				// console.log("typeof", typeof command);
 				return JSON.stringify(command);
 			})
 			.join(";");
 	}
-	toJson() {
-		return this._commands.map((command) => {
-			this.evalCommand(command);
-			return command;
-		});
+	async toJson() {
+		return await Promise.all(
+			this._commands.map(async (command) => {
+				await this.evalCommand(command);
+				return command;
+			}),
+		);
 	}
-	evalCommand(command) {
+	async evalCommand(command) {
 		for (const item in command) {
 			if (typeof command[item] === "object") {
 				if (Array.isArray(command[item])) {
-					this.evalCommand(command[item]);
+					await this.evalCommand(command[item]);
 				} else if (command[item] instanceof QueryBuilder) {
-					const [subselect] = command[item].selectCommand.toJson();
-					console.log("[Command][evalCommand]El subselect es %o", subselect);
-					command[item] = `${item}`;
+					const { rows } = await command[item].selectCommand.execute(
+						command[item].driverDB,
+					);
+					const data = rows[0].map((row) => {
+						const values = Object.values(row);
+						if (values.length > 1) {
+							return values;
+						}
+						return values[0];
+					});
+					command[item] = data.length > 1 ? data : data[0];
 				} else {
-					this.evalCommand(command[item]);
+					await this.evalCommand(command[item]);
 				}
 			}
 			if (typeof command[item] === "function") {
-				command[item] = command[item](this);
+				const result = command[item](this);
+				if (result) {
+					command[item] = result;
+				} else {
+					delete command[item];
+				}
 			}
 		}
 		return command;
