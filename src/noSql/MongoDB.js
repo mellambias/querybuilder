@@ -6,6 +6,7 @@ import mongo from "../comandos/mongoDB.js";
 import Command from "./Command.js";
 import QueryBuilder from "../querybuilder.js";
 import util from "node:util";
+import { type } from "node:os";
 class MongoDB extends Core {
 	constructor(qbuilder) {
 		super();
@@ -158,11 +159,24 @@ class MongoDB extends Core {
 	}
 	addColumn(name, options, alterTable) {
 		const { updates } = alterTable.commands[0];
+		let colDef = {};
+		if (typeof options === "string") {
+			colDef = {
+				name,
+				type: options.toDataType(this.dataType),
+			};
+		} else {
+			colDef = {
+				name,
+				...options,
+				type: options?.type.toDataType(this.dataType),
+			};
+		}
 		updates.push({
 			q: { "tables.name": this._currentTable },
 			u: {
 				$addToSet: {
-					"tables.$[elem].cols": { name, ...options },
+					"tables.$[elem].cols": colDef,
 				},
 			},
 			arrayFilters: [{ "elem.name": this._currentTable }],
@@ -459,6 +473,9 @@ The view definition is public; i.e. db.getCollectionInfos() and explain operatio
 	}
 	where(predicados, selectCommand) {
 		// console.log("[MongoDB][where]predicados", predicados);
+		if (Array.isArray(predicados)) {
+			throw new Error("La clausula where esta mal formada");
+		}
 		selectCommand.where = predicados;
 		return selectCommand;
 	}
@@ -743,7 +760,7 @@ The view definition is public; i.e. db.getCollectionInfos() and explain operatio
 		}, []);
 		const updateCommand = new Command({
 			update: table,
-			updates: [{ q: (ref) => ref.where, u: setStatements }],
+			updates: [{ q: (ref) => ref.where || {}, u: setStatements, multi: true }],
 		});
 		// console.log(updateCommand._commands[0]);
 		return updateCommand;
