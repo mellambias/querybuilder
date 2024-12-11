@@ -405,7 +405,7 @@ class Core {
 			distinct: "DISTINCT",
 		};
 		for (const oper in logicos) {
-			if (/^(AND|OR)$/i.test(oper)) {
+			if (/^(and|or)$/i.test(oper)) {
 				this[oper] = (...predicados) => {
 					if (predicados.length > 1) {
 						return `(${predicados.join(`\n${logicos[oper].toUpperCase()} `)})`;
@@ -413,7 +413,7 @@ class Core {
 					return `\n${logicos[oper].toUpperCase()} ${predicados}`;
 				};
 			}
-			if (/^(NOT)$/i.test(oper)) {
+			if (/^(not)$/i.test(oper)) {
 				this[oper] = (...predicados) => {
 					if (predicados.length > 1) {
 						return `(${predicados.join(`\n${logicos[oper].toUpperCase()} `)})`;
@@ -422,18 +422,18 @@ class Core {
 				};
 			}
 
-			if (/^(LIKE|NOT LIKE)$/i.test(oper)) {
+			if (/^(like|notLike)$/i.test(oper)) {
 				this[oper] = (...predicados) =>
 					`${predicados[0]} ${logicos[oper].toUpperCase()} ('${predicados[1]}')`;
 			}
-			if (/^(DISTINCT)$/i.test(oper)) {
+			if (/^(distinct)$/i.test(oper)) {
 				this[oper] = (...predicados) =>
 					`${logicos[oper].toUpperCase()} ${predicados}`;
 			}
 		}
 		const operTreeArg = { between: "BETWEEN", notBetween: "NOT BETWEEN" };
 		for (const oper in operTreeArg) {
-			if (/^(BETWEEN|NOT BETWEEN)$/i.test(operTreeArg[oper])) {
+			if (/^(between|notBetween)$/i.test(oper)) {
 				this[oper] = (campo, min, max) => {
 					return `${campo} ${operTreeArg[oper].toUpperCase()} ${min} AND ${max}`;
 				};

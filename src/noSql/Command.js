@@ -1,4 +1,5 @@
 import QueryBuilder from "../querybuilder.js";
+import { jsonReplacer } from "./mongoUtils.js";
 class Command {
 	constructor(command, driverDB) {
 		this._commands = command !== undefined ? [command] : [];
@@ -59,12 +60,14 @@ class Command {
 			return this._commands
 				.map((command) => {
 					if (command?.results) {
-						const { cols, agregaciones } = command.results;
+						const { agregaciones } = command.results;
 						if (agregaciones.length === 1) {
-							return JSON.stringify(agregaciones[0]);
+							return JSON.stringify(agregaciones[0], jsonReplacer);
 						}
+						const { results, ...withOutResults } = command;
+						return JSON.stringify(withOutResults, jsonReplacer);
 					}
-					return JSON.stringify(command);
+					return JSON.stringify(command, jsonReplacer);
 				})
 				.join(";");
 		}
@@ -77,10 +80,12 @@ class Command {
 				await this.evalCommand(command, this);
 				console.log("toJson", command);
 				if (command?.results) {
-					const { cols, agregaciones } = command.results;
+					const { agregaciones } = command.results;
 					if (agregaciones.length) {
 						return agregaciones;
 					}
+					const { results, ...withOutResults } = command;
+					return withOutResults;
 				}
 				return command;
 			}),

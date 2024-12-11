@@ -6,6 +6,7 @@
 import Driver from "./Driver.js";
 import { MongoClient } from "mongodb";
 import Command from "../noSql/Command.js";
+import { jsonReviver } from "../noSql/mongoUtils.js";
 
 class MongodbDriver extends Driver {
 	constructor(params) {
@@ -60,7 +61,7 @@ class MongodbDriver extends Driver {
 				commands = query
 					.split(";")
 					.filter((q) => q.length > 0)
-					.map((command) => JSON.parse(command));
+					.map((command) => JSON.parse(command, jsonReviver));
 			}
 
 			if (query instanceof Command) {

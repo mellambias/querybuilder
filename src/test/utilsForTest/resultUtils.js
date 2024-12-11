@@ -1,3 +1,4 @@
+import { jsonReviver } from "../../noSql/mongoUtils.js";
 export function tableFormat(columns, rows, responses, query) {
 	// console.log(
 	// 	"columns %o\nrows %o\nresponses %o\n query %o",
@@ -13,12 +14,18 @@ export function tableFormat(columns, rows, responses, query) {
 		if (Array.isArray(responses)) {
 			console.log(`${textCenter("RESULTADO", 60, " -")}`);
 			for (let Ci = 0; Ci < responses.length; Ci++) {
-				console.log(
-					"\n#%s query:\n%s;\nrespuesta:\n%o",
-					Ci + 1,
-					queryList[Ci],
-					responses[Ci],
-				);
+				// si es un objeto json lo hidrata
+				const jsonObj = JSON.parse(query.replace(";", ""), jsonReviver);
+				if (typeof jsonObj === "object") {
+					console.dir(jsonObj, { depth: null });
+				} else {
+					console.log(
+						"\n#%s query:\n%s;\nrespuesta:\n%o",
+						Ci + 1,
+						queryList[Ci],
+						responses[Ci],
+					);
+				}
 
 				if (
 					rows[Ci] === undefined ||
@@ -114,6 +121,8 @@ export async function showResults(datos, debug) {
 			console.log("<<");
 		} else {
 			console.log("✔ queryString>>\n %o\n<<", query);
+			const jsonObj = JSON.parse(query.replace(";", ""), jsonReviver);
+			console.dir(jsonObj, { depth: null });
 		}
 		console.log("******* END DEBUG INFO *********\n");
 	}

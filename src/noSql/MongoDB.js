@@ -5,6 +5,7 @@ import Core from "../core.js";
 import mongo from "../comandos/mongoDB.js";
 import Command from "./Command.js";
 import QueryBuilder from "../querybuilder.js";
+
 class MongoDB extends Core {
 	constructor(qbuilder) {
 		super();
@@ -577,12 +578,12 @@ The view definition is public; i.e. db.getCollectionInfos() and explain operatio
 			and: "$and",
 			or: "$or",
 			not: "$not",
-			like: "LIKE",
-			notLike: "NOT LIKE",
+			like: "$regex",
+			notLike: "$regex",
 			distinct: "$nor",
 		};
 		for (const oper in logicos) {
-			if (/^(AND|OR)$/i.test(oper)) {
+			if (/^(and|or)$/i.test(oper)) {
 				this[oper] = (...predicados) => {
 					if (predicados.length > 1) {
 						return {
@@ -592,7 +593,7 @@ The view definition is public; i.e. db.getCollectionInfos() and explain operatio
 					return { [`${logicos[oper]}`]: predicados };
 				};
 			}
-			if (/^(NOT)$/i.test(oper)) {
+			if (/^(not)$/i.test(oper)) {
 				this[oper] = (...predicados) => {
 					if (predicados.length > 1) {
 						return {
@@ -603,11 +604,26 @@ The view definition is public; i.e. db.getCollectionInfos() and explain operatio
 				};
 			}
 
-			if (/^(LIKE|NOT LIKE)$/i.test(oper)) {
-				this[oper] = (...predicados) =>
-					`${predicados[0]} ${logicos[oper]} ('${predicados[1]}')`;
+			if (/^(like)$/i.test(oper)) {
+				this[oper] = (...predicados) => {
+					const expresion = this.likeToRegex(predicados[1]);
+					return {
+						[predicados[0]]: {
+							[logicos[oper]]: this.likeToRegex(predicados[1]),
+						},
+					};
+				};
 			}
-			if (/^(DISTINCT)$/i.test(oper)) {
+			if (/^(|notLike)$/i.test(oper)) {
+				this[oper] = (...predicados) => ({
+					[predicados[0]]: {
+						$not: {
+							[logicos[oper]]: this.likeToRegex(predicados[1]),
+						},
+					},
+				});
+			}
+			if (/^(distinct)$/i.test(oper)) {
 				this[oper] = (...predicados) => {
 					return { [`${logicos[oper]}`]: predicados };
 				};
@@ -615,14 +631,30 @@ The view definition is public; i.e. db.getCollectionInfos() and explain operatio
 		}
 		const operTreeArg = { between: "BETWEEN", notBetween: "NOT BETWEEN" };
 		for (const oper in operTreeArg) {
-			if (/^(BETWEEN|NOT BETWEEN)$/i.test(operTreeArg[oper])) {
-				this[oper] = (campo, min, max) => {
-					return JSON.stringify(
-						`${campo} ${operTreeArg[oper].toUpperCase()} ${min} AND ${max}`,
-					);
-				};
+			if (/^(between)$/i.test(oper)) {
+				this[oper] = (campo, min, max) => ({
+					[campo]: { $gte: min, $lte: max },
+				});
+			}
+			if (/^(notBetween)$/i.test(oper)) {
+				this[oper] = (campo, min, max) => ({
+					$or: [{ [campo]: { $lt: min } }, { [campo]: { $gt: max } }],
+				});
 			}
 		}
+	}
+
+	likeToRegex(likePattern) {
+		// Escapar caracteres especiales de regex
+		const escaped = likePattern.replace(/[-[\]/{}()*+?.\\^$|]/g, "\\$&");
+
+		// Reemplazar los caracteres especiales de LIKE con los de regex
+		const regexPattern = escaped
+			.replace(/%/g, ".*") // % en LIKE equivale a .* en regex
+			.replace(/_/g, "."); // _ en LIKE equivale a . en regex
+
+		// Retornar el patrón como una expresión regular
+		return new RegExp(`^${regexPattern}$`, "i"); // ^ y $ aseguran coincidencia exacta
 	}
 
 	in(columna, ...values) {
@@ -786,7 +818,7 @@ The view definition is public; i.e. db.getCollectionInfos() and explain operatio
 	delete(from) {
 		const deleteCommand = new Command({
 			delete: from,
-			deletes: [{ q: (ref) => ref.where, limit: 0 }],
+			deletes: [{ q: (ref) => ref.where || {}, limit: 0 }],
 		});
 		return deleteCommand;
 	}

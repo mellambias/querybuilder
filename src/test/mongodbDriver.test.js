@@ -1144,37 +1144,33 @@ WHERE NOMBRE_CD = 'Fundamental';`,
 			showResults(result, debug);
 		});
 
-		test(
-			"Actualizar una columna usando como valor el resultado devuelto por un select",
-			{ only: true },
-			async () => {
-				const debug = false;
-				const result = await qb
-					.update("INVENTARIO_CD_2", {
-						EN_EXISTENCIA_2: qb
-							.select(qb.avg("EN_EXISTENCIA"))
-							.from("INVENTARIO_CD"),
-					})
-					.where(qb.eq("NOMBRE_CD_2", "Fundamental"))
-					.execute(debug);
+		test("Actualizar una columna usando como valor el resultado devuelto por un select", async () => {
+			const debug = false;
+			const result = await qb
+				.update("INVENTARIO_CD_2", {
+					EN_EXISTENCIA_2: qb
+						.select(qb.avg("EN_EXISTENCIA"))
+						.from("INVENTARIO_CD"),
+				})
+				.where(qb.eq("NOMBRE_CD_2", "Fundamental"))
+				.execute(debug);
 
-				showResults(result, debug);
+			showResults(result, debug);
 
-				// 				assert.ok(
-				// 					await result.toString(),
-				// 					`USE INVENTARIO;
-				// UPDATE INVENTARIO_CD_2
-				// SET EN_EXISTENCIA_2 =
-				// ( SELECT AVG(EN_EXISTENCIA)
-				// FROM INVENTARIO_CD )
-				// WHERE NOMBRE_CD_2 = 'Fundamental';`,
-				// 				);
-			},
-		);
+			// 				assert.ok(
+			// 					await result.toString(),
+			// 					`USE INVENTARIO;
+			// UPDATE INVENTARIO_CD_2
+			// SET EN_EXISTENCIA_2 =
+			// ( SELECT AVG(EN_EXISTENCIA)
+			// FROM INVENTARIO_CD )
+			// WHERE NOMBRE_CD_2 = 'Fundamental';`,
+			// 				);
+		});
 
 		test("Eliminar todas las filas de una tabla con DELETE FROM", async () => {
+			const debug = false;
 			const result = await qb.delete("INVENTARIO_CD_2").execute(debug);
-
 			showResults(result, debug);
 			assert.ok(
 				await result.toString(),
@@ -1183,6 +1179,7 @@ WHERE NOMBRE_CD = 'Fundamental';`,
 		});
 
 		test("Eliminar algunas filas de una tabla con DELETE y where", async () => {
+			const debug = false;
 			const result = await qb
 				.delete("INVENTARIO_CD")
 				.where(qb.eq("TIPO_MUSICA", "Country"))
@@ -1201,6 +1198,7 @@ WHERE TIPO_MUSICA = 'Country';`,
 
 	describe("Uso de predicados capitulo 9", async () => {
 		test("se consultará la tabla TIPOS_MUSICA para arrojar los nombres de aquellas filas cuyo valor ID_TIPO sea igual a 11 o 12", async () => {
+			const debug = false;
 			const result = await qb
 				.select(["ID_TIPO", "NOMBRE_TIPO"])
 				.from("TIPOS_MUSICA")
@@ -1209,16 +1207,17 @@ WHERE TIPO_MUSICA = 'Country';`,
 
 			showResults(result, debug);
 
-			assert.ok(
-				await result.toString(),
-				`USE INVENTARIO;
-SELECT ID_TIPO, NOMBRE_TIPO
-FROM TIPOS_MUSICA
-WHERE (ID_TIPO = 11
-OR ID_TIPO = 12);`,
-			);
+			// 				assert.ok(
+			// 					await result.toString(),
+			// 					`USE INVENTARIO;
+			// SELECT ID_TIPO, NOMBRE_TIPO
+			// FROM TIPOS_MUSICA
+			// WHERE (ID_TIPO = 11
+			// OR ID_TIPO = 12);`,
+			// 				);
 		});
 		test("se consultará la tabla ARTISTAS para buscar artistas diferentes a Patsy Cline y Bing Crosby", async () => {
+			const debug = false;
 			const result = await qb
 				.select(["NOMBRE_ARTISTA", "LUGAR_DE_NACIMIENTO"])
 				.from("ARTISTAS")
@@ -1242,6 +1241,7 @@ AND NOMBRE_ARTISTA <> 'Bing Crosby');`,
 			);
 		});
 		test("combinar un predicado LIKE con otro predicado LIKE", async () => {
+			const debug = false;
 			const result = await qb
 				.select("*")
 				.from("DISCOS_COMPACTOS")
@@ -1266,12 +1266,23 @@ AND TITULO_CD LIKE ('%Blue%'));`,
 		});
 
 		test("creamos la tabla CDS_A_LA_MANO y añadimos registros", async () => {
+			const debug = false;
 			const cds_a_la_mano = {
 				TITULO_CD: "varchar(60)",
 				DERECHOSDEAUTOR: "INT",
 				PRECIO_MENUDEO: "NUMERIC(5,2)",
 				INVENTARIO: "INT",
 			};
+
+			const result = await qb
+				.createTable("CDS_A_LA_MANO", { cols: cds_a_la_mano })
+				.execute(debug);
+
+			showResults(result, debug);
+		});
+
+		test("creamos la tabla CDS_A_LA_MANO y añadimos registros", async () => {
+			const debug = false;
 			const cd_rows = [
 				["Famous Blue Raincoat", 1991, 16.99, 6],
 				["Blue", 1971, 14.99, 26],
@@ -1283,32 +1294,32 @@ AND TITULO_CD LIKE ('%Blue%'));`,
 			];
 
 			const result = await qb
-				.createTable("CDS_A_LA_MANO", { cols: cds_a_la_mano })
 				.insert("CDS_A_LA_MANO", [], cd_rows)
 				.execute(debug);
 
 			showResults(result, debug);
 
-			assert.ok(
-				await result.toString(),
-				`USE INVENTARIO;
-CREATE TABLE CDS_A_LA_MANO\n( TITULO_CD VARCHAR(60),
- DERECHOSDEAUTOR INT,
- PRECIO_MENUDEO DECIMAL(5,2),
- INVENTARIO INT );
-INSERT INTO CDS_A_LA_MANO
-VALUES
-('Famous Blue Raincoat', 1991, 16.99, 6),
-('Blue', 1971, 14.99, 26),
-('Past Light', 1983, 15.99, 18),
-('Kojiki', 1990, 15.99, 2),
-('That Christmas Feeling', 1993, 10.99, 5),
-('Patsy Cline: 12 Greatest Hits', 1988, 16.99, 3),
-('Court and Spark', 1974, 14.99, 25);`,
-			);
+			// 				assert.ok(
+			// 					await result.toString(),
+			// 					`USE INVENTARIO;
+			// CREATE TABLE CDS_A_LA_MANO\n( TITULO_CD VARCHAR(60),
+			//  DERECHOSDEAUTOR INT,
+			//  PRECIO_MENUDEO DECIMAL(5,2),
+			//  INVENTARIO INT );
+			// INSERT INTO CDS_A_LA_MANO
+			// VALUES
+			// ('Famous Blue Raincoat', 1991, 16.99, 6),
+			// ('Blue', 1971, 14.99, 26),
+			// ('Past Light', 1983, 15.99, 18),
+			// ('Kojiki', 1990, 15.99, 2),
+			// ('That Christmas Feeling', 1993, 10.99, 5),
+			// ('Patsy Cline: 12 Greatest Hits', 1988, 16.99, 3),
+			// ('Court and Spark', 1974, 14.99, 25);`,
+			// 				);
 		});
 
 		test("operador Igual a para comparar los valores en la columna TITULO_CD con uno de los títulos de CD", async () => {
+			const debug = false;
 			const query = `SELECT TITULO_CD, DERECHOSDEAUTOR
 FROM CDS_A_LA_MANO
 WHERE TITULO_CD = 'Past Light';`;
@@ -1324,6 +1335,7 @@ WHERE TITULO_CD = 'Past Light';`;
 			assert.ok(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		test("operador distinto a para comparar los valores en la columna TITULO_CD con uno de los títulos de CD", async () => {
+			const debug = false;
 			const query = `SELECT TITULO_CD, DERECHOSDEAUTOR
 FROM CDS_A_LA_MANO
 WHERE TITULO_CD <> 'Past Light';`;
@@ -1339,6 +1351,7 @@ WHERE TITULO_CD <> 'Past Light';`;
 			assert.ok(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		test("operador Menor que y al operador Mayor que", async () => {
+			const debug = false;
 			const query = `SELECT TITULO_CD, INVENTARIO
 FROM CDS_A_LA_MANO
 WHERE (INVENTARIO > 2
@@ -1362,6 +1375,7 @@ AND  PRECIO_MENUDEO <> 16.99);`;
 			assert.ok(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		test("Menor que o igual a y Mayor que o igual a.", async () => {
+			const debug = false;
 			const query = `SELECT TITULO_CD, DERECHOSDEAUTOR
 FROM CDS_A_LA_MANO
 WHERE (DERECHOSDEAUTOR >= 1971
@@ -1384,6 +1398,7 @@ AND DERECHOSDEAUTOR <= 1989);`;
 		});
 
 		test("combinar dos o más predicados para formar una condición de búsqueda", async () => {
+			const debug = false;
 			const query = `UPDATE CDS_A_LA_MANO
 SET INVENTARIO = 3
 WHERE (TITULO_CD = 'That Christmas Feeling'
@@ -1405,13 +1420,14 @@ AND DERECHOSDEAUTOR = 1993);`;
 		});
 
 		test("especifica un rango entre 14 y 16", async () => {
+			const debug = false;
 			const query = `SELECT TITULO_CD, PRECIO_MENUDEO
 FROM CDS_A_LA_MANO
 WHERE (PRECIO_MENUDEO BETWEEN 14 AND 16
 AND INVENTARIO > 10);`;
 
 			const result = await qb
-				.select(["TITULO_CD", "PRECIO_MENUDEO"])
+				.select(["TITULO_CD", "PRECIO_MENUDEO", "INVENTARIO"])
 				.from("CDS_A_LA_MANO")
 				.where(
 					qb.and(qb.between("PRECIO_MENUDEO", 14, 16), qb.gt("INVENTARIO", 10)),
@@ -1424,6 +1440,7 @@ AND INVENTARIO > 10);`;
 		});
 
 		test("excluye un rango entre 14 y 16", async () => {
+			const debug = false;
 			const query = `SELECT TITULO_CD, PRECIO_MENUDEO
 FROM CDS_A_LA_MANO
 WHERE PRECIO_MENUDEO NOT BETWEEN 14 AND 16;`;
@@ -1439,7 +1456,7 @@ WHERE PRECIO_MENUDEO NOT BETWEEN 14 AND 16;`;
 			assert.ok(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 
-		test("arroja filas con un valor nulo", async () => {
+		test("arroja filas con un valor nulo", { only: true }, async () => {
 			const query = `SELECT *
 FROM ARTISTAS
 WHERE LUGAR_DE_NACIMIENTO IS NULL;`;

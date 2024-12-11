@@ -90,4 +90,26 @@ function check(format, values) {
 	}
 	return errors.length > 1 ? errors.join("\n") : "";
 }
-export { dataTypes, Types, privilegios, objectTypes, splitCommand, check };
+
+function jsonReplacer(key, value) {
+	if (value instanceof RegExp) {
+		return { __regex: true, pattern: value.source, flags: value.flags };
+	}
+	return value;
+}
+function jsonReviver(key, value) {
+	if (value?.__regex) {
+		return new RegExp(value.pattern, value.flags);
+	}
+	return value;
+}
+export {
+	dataTypes,
+	Types,
+	privilegios,
+	objectTypes,
+	splitCommand,
+	check,
+	jsonReplacer,
+	jsonReviver,
+};
