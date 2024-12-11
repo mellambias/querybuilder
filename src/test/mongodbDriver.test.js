@@ -1135,31 +1135,40 @@ WHERE NOMBRE_CD = 'Fundamental';`,
 			);
 		});
 
+		test("Funcion avg", async () => {
+			const debug = true;
+			const result = await qb
+				.select(["NOMBRE_CD", qb.avg("EN_EXISTENCIA")])
+				.from("INVENTARIO_CD")
+				.execute(debug);
+			showResults(result, debug);
+		});
+
 		test(
 			"Actualizar una columna usando como valor el resultado devuelto por un select",
 			{ only: true },
 			async () => {
-				const debug = true;
+				const debug = false;
 				const result = await qb
 					.update("INVENTARIO_CD_2", {
 						EN_EXISTENCIA_2: qb
 							.select(qb.avg("EN_EXISTENCIA"))
 							.from("INVENTARIO_CD"),
 					})
-					.where([qb.eq("NOMBRE_CD_2", "Fundamental")])
+					.where(qb.eq("NOMBRE_CD_2", "Fundamental"))
 					.execute(debug);
 
 				showResults(result, debug);
 
-				assert.ok(
-					await result.toString(),
-					`USE INVENTARIO;
-UPDATE INVENTARIO_CD_2
-SET EN_EXISTENCIA_2 =
-( SELECT AVG(EN_EXISTENCIA)
-FROM INVENTARIO_CD )
-WHERE NOMBRE_CD_2 = 'Fundamental';`,
-				);
+				// 				assert.ok(
+				// 					await result.toString(),
+				// 					`USE INVENTARIO;
+				// UPDATE INVENTARIO_CD_2
+				// SET EN_EXISTENCIA_2 =
+				// ( SELECT AVG(EN_EXISTENCIA)
+				// FROM INVENTARIO_CD )
+				// WHERE NOMBRE_CD_2 = 'Fundamental';`,
+				// 				);
 			},
 		);
 

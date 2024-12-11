@@ -67,9 +67,13 @@ class MongodbDriver extends Driver {
 				// console.log("Es un Commando");
 				commands = query.commands;
 			}
-			console.log("ℹ  comandos a ejecutar >>>\n%o\n<<<", commands);
+			// console.log("ℹ  comandos a ejecutar >>>");
+			// console.dir(commands, { depth: 3 });
+			// console.log("\n<<<");
 			let response = null;
 			for await (const command of commands) {
+				// console.log("Current command");
+				// console.dir(command, { depth: 4 });
 				response = await this.client.db(this.database).command(command);
 				// console.log("ℹ Procesando el 'resultado'", response);
 				if (response?.cursor) {

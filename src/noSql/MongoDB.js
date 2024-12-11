@@ -5,8 +5,6 @@ import Core from "../core.js";
 import mongo from "../comandos/mongoDB.js";
 import Command from "./Command.js";
 import QueryBuilder from "../querybuilder.js";
-import util from "node:util";
-import { type } from "node:os";
 class MongoDB extends Core {
 	constructor(qbuilder) {
 		super();
@@ -444,27 +442,47 @@ The view definition is public; i.e. db.getCollectionInfos() and explain operatio
 	//Comandos DQL
 	// SELECT [ DISTINCT | ALL ] { * | < selección de lista > }
 	select(columns, options) {
+		const selectCommand = new Command();
 		const select = {
 			find: (ref) => ref.from,
 			filter: (ref) => ref.where,
 		};
 		let projection;
+		const cols = [];
+		const agregaciones = [];
 		if (!/^(\*|all)$/i.test(columns)) {
 			if (Array.isArray(columns)) {
 				projection = columns.reduce(
 					(fields, col) => {
-						fields[col] = 1;
+						if (typeof col === "object") {
+							const [key] = Object.keys(col);
+							fields[key] = 1;
+							agregaciones.push(col[key]);
+							cols.push(key);
+						} else {
+							fields[col] = 1;
+							cols.push(col);
+						}
 						return fields;
 					},
 					{ _id: 0 },
 				);
 			} else {
-				projection = { _id: 0, [columns]: 1 };
+				if (typeof columns === "object") {
+					const [key] = Object.keys(columns);
+					projection = { _id: 0, [key]: 1 };
+					agregaciones.push(columns[key]);
+					cols.push(key);
+				} else {
+					projection = { _id: 0, [columns]: 1 };
+					cols.push(columns);
+				}
 			}
 			select.projection = projection;
+			select.results = { cols, agregaciones };
 		}
 
-		const selectCommand = new Command(select);
+		selectCommand.set(select);
 		return selectCommand;
 	}
 	from(tables, alias, selectCommand) {
@@ -785,8 +803,31 @@ The view definition is public; i.e. db.getCollectionInfos() and explain operatio
 			 * @argument {string|column} column - Nombre de la columna sobre la funcion
 			 * @argument {string} alias - alias de la columna AS
 			 */
-			this[name] = (column, alias) =>
-				`${name.toUpperCase()}(${column})${typeof alias !== "undefined" ? ` AS ${alias}` : ""}`;
+			this[name] = (column, alias) => {
+				const aggregate = new Command(
+					{
+						aggregate: (ref) => ref.from,
+						pipeline: [
+							{
+								$group: {
+									_id: null, // Agrupación global (sin separar por grupos)
+									[alias || column]: {
+										[`$${name.toLowerCase()}`]: `$${column}`,
+									},
+								},
+							},
+							{
+								$project: {
+									_id: 0,
+								},
+							},
+						],
+						cursor: {},
+					},
+					this.qb.driverDB,
+				);
+				return { [alias || column]: aggregate };
+			};
 		}
 	}
 
