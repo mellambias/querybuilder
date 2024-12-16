@@ -345,13 +345,17 @@ class Core {
 		}
 		return `${sql.join(union).replaceAll(";", "")}`;
 	}
-	where(predicados) {
+	async where(predicados) {
 		const sql = "WHERE";
-		if (typeof predicados === "string") {
-			return `${sql} ${predicados}`;
+		if (predicados instanceof QueryBuilder) {
+			return this.promiseResult;
 		}
-
-		return `${sql} ${predicados.join("\n")}`;
+		// if (typeof predicados === "string") {
+		// return `${sql} ${predicados}`;
+		// }
+		// const where = await Promise.all(predicados);
+		// console.log("predicados:", where);
+		// return `${sql} ${where.join("\n")}`;
 	}
 
 	whereCursor(cursorName) {
@@ -393,6 +397,7 @@ class Core {
 				if (Array.isArray(a)) {
 					return `${a.join(` ${operadores[oper]}\nAND `)} ${operadores[oper]}`;
 				}
+				console.log("[predicados]", oper);
 				return `${a} ${operadores[oper]}`;
 			};
 		}
@@ -441,29 +446,34 @@ class Core {
 		}
 	}
 
-	getListValues(...values) {
+	async getListValues(...values) {
 		let arrayValues = [];
 		if (Array.isArray(values[0])) {
-			arrayValues = values[0].map((value) =>
-				typeof value === "string"
-					? `'${value}'`
-					: value instanceof QueryBuilder
-						? value.toString({ as: "subselect" })
-						: value,
+			arrayValues = await Promise.all(
+				values[0].map(async (value) =>
+					typeof value === "string"
+						? `'${value}'`
+						: value instanceof QueryBuilder
+							? await value.toString({ as: "subselect" })
+							: value,
+				),
 			);
 		} else {
-			arrayValues = values.map((value) =>
-				typeof value === "string"
-					? `'${value}'`
-					: value instanceof QueryBuilder
-						? value.toString({ as: "subselect" })
-						: value,
+			arrayValues = await Promise.all(
+				values.map(async (value) =>
+					typeof value === "string"
+						? `'${value}'`
+						: value instanceof QueryBuilder
+							? await value.toString({ as: "subselect" })
+							: value,
+				),
 			);
 		}
 		return arrayValues;
 	}
 	in(columna, ...values) {
-		return `${columna} IN ( ${this.getListValues(...values).join(", ")} )`;
+		// return `${columna} IN ( ${this.getListValues(...values).join(", ")} )`;
+		return `${columna} IN`;
 	}
 	notIn(columna, ...values) {
 		return `${columna} NOT IN ( ${this.getListValues(...values).join(", ")} )`;
@@ -475,8 +485,10 @@ class Core {
 		return `NOT EXISTS ( ${this.getListValues(subSelect).join(", ")} )`;
 	}
 
-	any(subSelect) {
-		return `ANY ( ${this.getListValues(subSelect).join(", ")} )`;
+	async any(subSelect) {
+		const subselect = await this.getListValues(subSelect);
+		console.log("any", subselect);
+		return `ANY ( ${subselect.join(", ")} )`;
 	}
 	some(subSelect) {
 		return `SOME ( ${this.getListValues(subSelect).join(", ")} )`;

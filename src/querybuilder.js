@@ -38,6 +38,80 @@ class QueryBuilder {
 		this.functionDate();
 		this.joins();
 		this.prevInstance = null;
+		this.queue = [];
+		this.driverDB = undefined;
+		this.promise = Promise.resolve([]);
+		this.promiseStack = [];
+		this.promiseResult = null;
+		// biome-ignore lint/correctness/noConstructorReturn: <explanation>
+		return new Proxy(this, {
+			get(target, prop, receiver) {
+				if (prop === "catch") {
+					// Permite registrar un manejador de errores
+					return (handler) => {
+						errorHandler = handler;
+						return receiver; // Para encadenar
+					};
+				}
+				const original = Reflect.get(target, prop, receiver);
+				if (prop === "getAll") {
+					return original;
+				}
+				if (prop === "promise") {
+					for (const index in target.promiseStack.reverse()) {
+						const { prop, original, args } = target.promiseStack[index];
+						target.promise = target.promise.then((query) => {
+							console.log("[%s]", prop, original, target.promiseResult);
+							let response;
+							if (args instanceof QueryBuilder) {
+								response = original.apply(receiver, target.promiseResult);
+							} else {
+								response = original.apply(receiver, args);
+							}
+							if (response !== null && response !== undefined) {
+								target.promiseResult = response;
+								query.push(response);
+							}
+							return query;
+						});
+					}
+					//Procesa el resultado final
+					// target.promise = target.promise.then((process) => {
+					// 	return process.reverse().join("\n");
+					// });
+					return target.promise;
+				}
+				if (typeof original === "function") {
+					const nData = target.promiseStack.push({});
+					return (...args) => {
+						target.promiseStack[nData - 1] = { prop, original, args };
+						return receiver; // Para encadenar
+					};
+				}
+				// Si no es una función, simplemente devolvemos la propiedad
+				return original;
+			},
+		});
+	}
+	cola(operation) {
+		this.count++;
+		this.queue.push(operation);
+		return this; // Permite encadenamiento
+	}
+	async addTo(valor) {
+		await new Promise((resolve) => setTimeout(resolve, 1000));
+		console.log("Async addTo executed", valor);
+		return this;
+	}
+	getAll() {
+		const promise = this.queue.reduce((previusPromise, currentFunction) => {
+			const { original, target, args } = currentFunction;
+			const nextPromise = previusPromise.then((previusResponse) =>
+				original.apply(target, args),
+			);
+			return nextPromise;
+		}, Promise.resolve());
+		return promise;
 	}
 	/**
 	 * Añade una instancia del controlador para ejecutar los comandos y
@@ -50,7 +124,7 @@ class QueryBuilder {
 		this.driverDB = new driverClass(params);
 		this.params = params;
 		this.close = async () => this.driverDB.close();
-		return this;
+		return;
 	}
 	use(database) {
 		this.commandStack.push("use");
@@ -62,7 +136,7 @@ class QueryBuilder {
 		} else {
 			this.query.push(command);
 		}
-		return this;
+		return command;
 	}
 	/** 
 	@param {string} name - Nombre de la base de datos
@@ -310,19 +384,31 @@ class QueryBuilder {
 	 * @param {{[unique:boolean],[ all:boolean]} options - opciones
 	 * @returns
 	 */
+	// select(columns, options) {
+	// 	try {
+	// 		const nuevoSelect = new QueryBuilder(this.languageClass, this.options);
+	// 		nuevoSelect.selectCommand = nuevoSelect.language.select(columns, options);
+	// 		console.log("[select] selectCommand", nuevoSelect.selectCommand);
+	// 		nuevoSelect.commandStack.push("select");
+	// 		nuevoSelect.prevInstance = this;
+	// 		nuevoSelect.driverDB = this?.driverDB;
+	// 		console.log("[select]");
+	// 		return nuevoSelect;
+	// 	} catch (error) {
+	// 		this.error = error.message;
+	// 	}
+	// }
+
+	// Version con la misma instancia
 	select(columns, options) {
 		try {
-			const nuevoSelect = new QueryBuilder(this.languageClass, this.options);
-			nuevoSelect.selectCommand = nuevoSelect.language.select(columns, options);
-			nuevoSelect.commandStack.push("select");
-			nuevoSelect.prevInstance = this;
-			nuevoSelect.driverDB = this?.driverDB;
-			return nuevoSelect;
+			this.selectCommand = this.language.select(columns, options);
+			this.commandStack.push("select");
+			return "SELECT";
 		} catch (error) {
 			this.error = error.message;
 		}
 	}
-
 	checkFrom(tables, alias) {
 		const error = check("From(tables:string|array, alias:string|array)", [
 			tables,
@@ -353,9 +439,9 @@ class QueryBuilder {
 				this.selectCommand,
 			);
 		} else {
-			this.error = "No es posible aplicar, falta el comando 'select'";
+			this.error = "[from] No es posible aplicar, falta el comando 'select'";
 		}
-		return this;
+		return this.selectCommand;
 	}
 
 	joins() {
@@ -425,16 +511,18 @@ class QueryBuilder {
 		this.query.push(this.language.union(...selects, { all: true }));
 		return this;
 	}
-	where(predicados) {
-		this.commandStack.push("where");
-		if (this.selectCommand?.length > 0) {
-			this.selectStack.push(this.language.where(predicados));
-		} else if (this.selectCommand instanceof Command) {
-			this.selectCommand = this.language.where(predicados, this.selectCommand);
-		} else {
-			this.error = "No es posible aplicar, falta el comando 'select|delete'";
-		}
-		return this;
+	async where(predicados) {
+		// if (this.selectCommand?.length > 0) {
+		// 	this.selectStack.push(this.language.where(predicados));
+		// }
+		// if (this.selectCommand instanceof Command) {
+		// 	this.selectCommand = this.language.where(predicados, this.selectCommand);
+		// }
+		this.selectCommand = await this.language.where(
+			predicados,
+			this.selectCommand,
+		);
+		return this.selectCommand;
 	}
 	whereCursor(cursorName) {
 		this.commandStack.push("whereCursor");
@@ -486,7 +574,11 @@ class QueryBuilder {
 
 		const logicos = ["and", "or", "not", "distinct"];
 		for (const operTwo of operTwoCols) {
-			this[operTwo] = (a, b) => this.language[operTwo](a, b);
+			this[operTwo] = (a, b) => {
+				const result = this.language[operTwo](a, b);
+				console.log("[logicos]", operTwo, result);
+				return result;
+			};
 		}
 		for (const operOne of operOneCol) {
 			this[operOne] = (a) => this.language[operOne](a);
@@ -647,10 +739,10 @@ class QueryBuilder {
 			}
 
 			this.selectCommand = this.language.update(table, sets);
+			return this.selectCommand;
 		} catch (error) {
 			this.error = error.message;
 		}
-		return this;
 	}
 	delete(from) {
 		this.commandStack.push("delete");

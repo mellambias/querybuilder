@@ -1,4 +1,5 @@
 import { jsonReviver } from "../../noSql/mongoUtils.js";
+import QueryBuilder from "../../querybuilder.js";
 export function tableFormat(columns, rows, responses, query) {
 	// console.log(
 	// 	"columns %o\nrows %o\nresponses %o\n query %o",
@@ -14,18 +15,17 @@ export function tableFormat(columns, rows, responses, query) {
 		if (Array.isArray(responses)) {
 			console.log(`${textCenter("RESULTADO", 60, " -")}`);
 			for (let Ci = 0; Ci < responses.length; Ci++) {
-				// si es un objeto json lo hidrata
-				const jsonObj = JSON.parse(query.replace(";", ""), jsonReviver);
-				if (typeof jsonObj === "object") {
-					console.dir(jsonObj, { depth: null });
-				} else {
-					console.log(
-						"\n#%s query:\n%s;\nrespuesta:\n%o",
-						Ci + 1,
-						queryList[Ci],
-						responses[Ci],
-					);
+				if (typeof query === "object") {
+					// si es un objeto json lo hidrata
+					// const jsonObj = JSON.parse(query.replaceAll(";", ""), jsonReviver);
+					// console.dir(jsonObj, { depth: null });
 				}
+				console.log(
+					"\n#%s query:\n%s;\nrespuesta:\n%o",
+					Ci + 1,
+					queryList[Ci],
+					responses[Ci],
+				);
 
 				if (
 					rows[Ci] === undefined ||
@@ -117,7 +117,11 @@ export async function showResults(datos, debug) {
 		console.log("el tipo de query es", typeof query);
 		if (typeof query === "object") {
 			console.log("✔ queryObject>>\n");
-			console.dir(query, { depth: null, colors: true });
+			if (query instanceof QueryBuilder) {
+				console.log("❌ Es una instancia de QueyBuilder");
+			} else {
+				console.dir(query, { depth: null, colors: true });
+			}
 			console.log("<<");
 		} else {
 			console.log("✔ queryString>>\n %o\n<<", query);

@@ -543,8 +543,6 @@ The view definition is public; i.e. db.getCollectionInfos() and explain operatio
 			gte: "$gte",
 			lt: "$lt",
 			lte: "$lte",
-			isNull: "$eg:null",
-			isNotNull: "$ne:null",
 		};
 		for (const oper in operadores) {
 			if (typeof this[oper] === "function") {
@@ -581,6 +579,8 @@ The view definition is public; i.e. db.getCollectionInfos() and explain operatio
 			like: "$regex",
 			notLike: "$regex",
 			distinct: "$nor",
+			isNull: "null",
+			isNotNull: "null",
 		};
 		for (const oper in logicos) {
 			if (/^(and|or)$/i.test(oper)) {
@@ -614,13 +614,23 @@ The view definition is public; i.e. db.getCollectionInfos() and explain operatio
 					};
 				};
 			}
-			if (/^(|notLike)$/i.test(oper)) {
+			if (/^(notLike)$/i.test(oper)) {
 				this[oper] = (...predicados) => ({
 					[predicados[0]]: {
 						$not: {
 							[logicos[oper]]: this.likeToRegex(predicados[1]),
 						},
 					},
+				});
+			}
+			if (/^(isNull)$/i.test(oper)) {
+				this[oper] = (campo) => ({
+					[campo]: null,
+				});
+			}
+			if (/^(isNotNull)$/i.test(oper)) {
+				this[oper] = (campo) => ({
+					[campo]: { $ne: null },
 				});
 			}
 			if (/^(distinct)$/i.test(oper)) {
@@ -671,7 +681,14 @@ The view definition is public; i.e. db.getCollectionInfos() and explain operatio
 	}
 
 	any(subSelect) {
-		return null;
+		const anyCommand = new Command();
+		if (Array.isArray(subSelect)) {
+			//{campo: { $in: [valores]}}
+		}
+		if (subSelect instanceof QueryBuilder) {
+			//{from : { $elemMatch: { edad: { $gt:18}}}}
+		}
+		return anyCommand;
 	}
 	some(subSelect) {
 		return null;

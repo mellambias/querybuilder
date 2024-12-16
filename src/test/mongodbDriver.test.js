@@ -1456,7 +1456,8 @@ WHERE PRECIO_MENUDEO NOT BETWEEN 14 AND 16;`;
 			assert.ok(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 
-		test("arroja filas con un valor nulo", { only: true }, async () => {
+		test("arroja filas con un valor nulo", async () => {
+			const debug = false;
 			const query = `SELECT *
 FROM ARTISTAS
 WHERE LUGAR_DE_NACIMIENTO IS NULL;`;
@@ -1473,6 +1474,7 @@ WHERE LUGAR_DE_NACIMIENTO IS NULL;`;
 		});
 		//fin test
 		test("arroja filas con un valor no nulo", async () => {
+			const debug = false;
 			const query = `SELECT *
 FROM ARTISTAS
 WHERE LUGAR_DE_NACIMIENTO IS NOT NULL;`;
@@ -1489,6 +1491,7 @@ WHERE LUGAR_DE_NACIMIENTO IS NOT NULL;`;
 		});
 		//fin test
 		test("encontrar cualquier CD que no contenga la palabra Christmas y si la palabra Blue en el título", async () => {
+			const debug = false;
 			const query = `SELECT *
 FROM DISCOS_COMPACTOS
 WHERE (TITULO_CD NOT LIKE ('%Christmas%')
@@ -1511,6 +1514,7 @@ AND TITULO_CD LIKE ('%Blue%'));`;
 		});
 		//fin test
 		test("Crea las tablas MENUDEO_CD y REBAJA_CD", async () => {
+			const debug = false;
 			const menudeo_cd = {
 				NOMBRE_CD: "VARCHAR(60)",
 				MENUDEO: "NUMERIC(5,2)",
@@ -1520,6 +1524,26 @@ AND TITULO_CD LIKE ('%Blue%'));`;
 				TITULO: "VARCHAR(60)",
 				VENTA: "NUMERIC(5,2)",
 			};
+			const query = `CREATE TABLE IF NOT EXISTS MENUDEO_CD
+( NOMBRE_CD VARCHAR(60),
+ MENUDEO DECIMAL(5,2),
+ EN_EXISTENCIA INT );
+CREATE TABLE IF NOT EXISTS REBAJA_CD
+( TITULO VARCHAR(60),
+ VENTA DECIMAL(5,2) );`;
+
+			const result = await qb
+				.createTable("MENUDEO_CD", { secure: true, cols: menudeo_cd })
+				.createTable("REBAJA_CD", { secure: true, cols: rebaja_cd })
+				.execute(debug);
+
+			showResults(result, debug);
+
+			assert.ok(await result.toString(), `USE INVENTARIO;\n${query}`);
+		});
+		//fin test
+		test("añadir documentos a MENUDEO_CD y REBAJA_CD", async () => {
+			const debug = false;
 			const menudeo_cd_rows = [
 				["Famous Blue Raincoat", 16.99, 5],
 				["Blue", 14.99, 10],
@@ -1538,14 +1562,7 @@ AND TITULO_CD LIKE ('%Blue%'));`;
 				["That Christmas Feeling", 10.99],
 				["Patsy Cline: 12 Greatest Hits", 16.99],
 			];
-			const query = `CREATE TABLE IF NOT EXISTS MENUDEO_CD
-( NOMBRE_CD VARCHAR(60),
- MENUDEO DECIMAL(5,2),
- EN_EXISTENCIA INT );
-CREATE TABLE IF NOT EXISTS REBAJA_CD
-( TITULO VARCHAR(60),
- VENTA DECIMAL(5,2) );
-INSERT INTO MENUDEO_CD
+			const query = `INSERT INTO MENUDEO_CD
 VALUES
 ('Famous Blue Raincoat', 16.99, 5),
 ('Blue', 14.99, 10),
@@ -1565,8 +1582,6 @@ VALUES
 ('Patsy Cline: 12 Greatest Hits', 16.99);`;
 
 			const result = await qb
-				.createTable("MENUDEO_CD", { secure: true, cols: menudeo_cd })
-				.createTable("REBAJA_CD", { secure: true, cols: rebaja_cd })
 				.insert("MENUDEO_CD", [], menudeo_cd_rows)
 				.insert("REBAJA_CD", [], rebaja_cd_rows)
 				.execute(debug);
@@ -1582,7 +1597,8 @@ otras palabras, la consulta deberá arrojar solamente aquellos CD cuyo precio re
 sea menor que algun precio de lista (MENUDEO) en aquellos CD que haya una existencia
 mayor a nueve.
 		 */
-		test("uso de ANY", async () => {
+		test("uso de ANY", { only: true }, async () => {
+			const debug = true;
 			const query = `SELECT TITULO, VENTA
 FROM REBAJA_CD
 WHERE VENTA < ANY ( SELECT MENUDEO

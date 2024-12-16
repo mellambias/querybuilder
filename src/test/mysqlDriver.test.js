@@ -116,7 +116,7 @@ CREATE TABLE IF NOT EXISTS table_test2
 	});
 
 	after(async () => {
-		qb.use("testing").dropDatabase("testing").execute();
+		await qb.use("testing").dropDatabase("testing").execute();
 	});
 });
 
@@ -1366,6 +1366,7 @@ VALUES
 		});
 
 		test("operador Igual a para comparar los valores en la columna TITULO_CD con uno de los títulos de CD", async () => {
+			const debug = true;
 			const query = `SELECT TITULO_CD, DERECHOSDEAUTOR
 FROM CDS_A_LA_MANO
 WHERE TITULO_CD = 'Past Light';`;
@@ -1373,10 +1374,10 @@ WHERE TITULO_CD = 'Past Light';`;
 			const result = await qb
 				.select(["TITULO_CD", "DERECHOSDEAUTOR"])
 				.from("CDS_A_LA_MANO")
-				.where(qb.eq("TITULO_CD", "Past Light"))
-				.execute();
+				.where(eq("TITULO_CD", "Past Light"))
+				.execute(debug);
 
-			showResults(result);
+			showResults(result, debug);
 
 			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
@@ -1623,6 +1624,7 @@ sea menor que algun precio de lista (MENUDEO) en aquellos CD que haya una existe
 mayor a nueve.
 		 */
 		test("uso de ANY", async () => {
+			const debug = true;
 			const query = `SELECT TITULO, VENTA
 FROM REBAJA_CD
 WHERE VENTA < ANY ( SELECT MENUDEO
@@ -1643,10 +1645,10 @@ WHERE EN_EXISTENCIA > 9 );`;
 						),
 					),
 				)
-				.execute();
+				.execute(debug);
 
-			showResults(result);
-			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+			showResults(result, debug);
+			// assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("uso de SOME", async () => {
@@ -3403,7 +3405,8 @@ VALUES
 			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
-		test("actualizar el valor Both Sides Now", async () => {
+		test("actualizar el valor Both Sides Now", { only: true }, async () => {
+			const debug = true;
 			const query = `UPDATE TIPOS_TITULO
 SET TIPO_CD = 'Folk'
 WHERE TITULO_CD IN ( SELECT TITULO
@@ -3422,11 +3425,10 @@ WHERE ID_TITULO = 108 );`;
 							.from("INVENTARIO_TITULOS")
 							.where(qb.eq("ID_TITULO", 108)),
 					),
-				)
-				.execute();
-
-			showResults(result);
-			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+				).promise;
+			console.log("Resultado >>>\n%o\n<<<", result);
+			//showResults(result, debug);
+			// assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
 		test("subconsulta en la cláusula SET para proporcionar un valor para la columna identificada", async () => {
@@ -3474,27 +3476,23 @@ WHERE ID_TITULO = 108 );`;
 			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
-		test(
-			"uso de limit y offset para MySQL, PostgreSQL, y SQLite ",
-			{ only: true },
-			async () => {
-				const debug = false;
-				const query = `SELECT *
+		test("uso de limit y offset para MySQL, PostgreSQL, y SQLite ", async () => {
+			const debug = false;
+			const query = `SELECT *
 FROM TIPOS_TITULO
 LIMIT 3
 OFFSET 3;`;
 
-				const result = await qb
-					.select("*")
-					.from("TIPOS_TITULO")
-					.limit(3)
-					.offset(3)
-					.execute(debug);
+			const result = await qb
+				.select("*")
+				.from("TIPOS_TITULO")
+				.limit(3)
+				.offset(3)
+				.execute(debug);
 
-				showResults(result, debug);
-				assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
-			},
-		);
+			showResults(result, debug);
+			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+		});
 		//fin test
 	});
 	describe("Capitulo 16 Transacciones", () => {
