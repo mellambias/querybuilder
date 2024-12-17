@@ -37,12 +37,14 @@ class QueryBuilder {
 		this.functionOneParam();
 		this.functionDate();
 		this.joins();
+		this.alterTableComands();
 		this.prevInstance = null;
 		this.queue = [];
 		this.driverDB = undefined;
-		this.promise = Promise.resolve([]);
+		this.promise = Promise.resolve({});
 		this.promiseStack = [];
 		this.promiseResult = null;
+		this.returnOriginal = ["getAll", "execute", "toString", "toNext"];
 		// biome-ignore lint/correctness/noConstructorReturn: <explanation>
 		return new Proxy(this, {
 			get(target, prop, receiver) {
@@ -54,37 +56,36 @@ class QueryBuilder {
 					};
 				}
 				const original = Reflect.get(target, prop, receiver);
-				if (prop === "getAll") {
-					return original;
-				}
+
 				if (prop === "promise") {
 					for (const index in target.promiseStack.reverse()) {
-						const { prop, original, args } = target.promiseStack[index];
-						target.promise = target.promise.then((query) => {
-							console.log("[%s]", prop, original, target.promiseResult);
-							let response;
-							if (args instanceof QueryBuilder) {
-								response = original.apply(receiver, target.promiseResult);
-							} else {
-								response = original.apply(receiver, args);
+						const { prop, original, args, numeroArgumentos } =
+							target.promiseStack[index];
+						// console.log("[Proxy] cola <<<", prop);
+						target.promise = target.promise.then((next) => {
+							// console.log("[Proxy] %s <<< %o", prop, next);
+							while (args.length < numeroArgumentos - 1) {
+								args.push(undefined);
 							}
-							if (response !== null && response !== undefined) {
-								target.promiseResult = response;
-								query.push(response);
-							}
-							return query;
+							args.push({ ...next });
+							const response = original.apply(receiver, args);
+							return response;
 						});
 					}
-					//Procesa el resultado final
-					// target.promise = target.promise.then((process) => {
-					// 	return process.reverse().join("\n");
-					// });
 					return target.promise;
 				}
 				if (typeof original === "function") {
+					if (target.returnOriginal.indexOf(prop) >= 0) {
+						return original;
+					}
 					const nData = target.promiseStack.push({});
 					return (...args) => {
-						target.promiseStack[nData - 1] = { prop, original, args };
+						target.promiseStack[nData - 1] = {
+							prop,
+							original,
+							args,
+							numeroArgumentos: original.length,
+						};
 						return receiver; // Para encadenar
 					};
 				}
@@ -113,6 +114,34 @@ class QueryBuilder {
 		}, Promise.resolve());
 		return promise;
 	}
+	toNext(data, stringJoin = "") {
+		if (Array.isArray(data)) {
+			const datas = data.reduce((prev, curr) => {
+				// console.log("[toNext] prev %o\n current %o", prev, curr);
+				if (typeof curr === "object") {
+					const { q, ...resto } = curr;
+					// console.log("es un objeto", q, resto);
+					if (q !== undefined) {
+						return {
+							q: [prev.q, q]
+								.filter((item) => item !== undefined)
+								.join(stringJoin),
+							...resto,
+						};
+					}
+					return { q: prev.q, ...resto };
+				}
+				return {
+					q: [prev.q, curr]
+						.filter((item) => item !== undefined)
+						.join(stringJoin),
+				};
+			}, {});
+			// console.log("[toNext] revuelve", datas);
+			return datas;
+		}
+		return data;
+	}
 	/**
 	 * Añade una instancia del controlador para ejecutar los comandos y
 	 * enviarlos a una base de datos
@@ -120,58 +149,56 @@ class QueryBuilder {
 	 * @param {Object} params - objeto con los parametros enviados al controlador
 	 * @returns
 	 */
-	driver(driverClass, params) {
+	driver(driverClass, params, next) {
 		this.driverDB = new driverClass(params);
 		this.params = params;
 		this.close = async () => this.driverDB.close();
-		return;
+		return next;
 	}
-	use(database) {
-		this.commandStack.push("use");
+
+	/**
+	 * Selecciona la base de datos
+	 */
+	use(database, next) {
 		const command = this.language.use(database);
 		if (command === null) {
 			if (this.driverDB !== undefined) {
 				this.driverDB.use(database);
+			} else {
+				return next;
 			}
-		} else {
-			this.query.push(command);
 		}
-		return command;
+		return this.toNext([command, next], ";\n");
 	}
 	/** 
 	@param {string} name - Nombre de la base de datos
  */
-	createDatabase(name, options) {
-		this.commandStack.push("createDatabase");
+	createDatabase(name, options, next) {
 		try {
-			const response = this.language.createDatabase(name.validSqlId(), options);
-			this.query.push(response);
+			const command = this.language.createDatabase(name.validSqlId(), options);
+			return this.toNext([command, next], ";\n");
+		} catch (error) {
+			this.error = error.message;
+			return next;
+		}
+	}
+	dropDatabase(name, options, next) {
+		const command = this.language.dropDatabase(name, options);
+		return this.toNext([command, next]);
+	}
+	createSchema(name, options, next) {
+		try {
+			const command = this.language.createSchema(name.validSqlId(), options);
+			return this.toNext([command, next]);
 		} catch (error) {
 			this.error = error.message;
 		}
-		return this;
-	}
-	dropDatabase(name, options) {
-		this.commandStack.push("dropDatabase");
-		this.query.push(`${this.language.dropDatabase(name, options)}`);
-		return this;
-	}
-	createSchema(name, options) {
-		this.commandStack.push("createSchema");
-		try {
-			this.query.push(
-				`${this.language.createSchema(name.validSqlId(), options)}`,
-			);
-		} catch (error) {
-			this.error = error.message;
-		}
-		return this;
+		return next;
 	}
 
-	dropSchema(name, options) {
-		this.commandStack.push("dropSchema");
-		this.query.push(`${this.language.dropSchema(name, options)}`);
-		return this;
+	dropSchema(name, options, next) {
+		const command = this.language.dropSchema(name, options);
+		return this.toNext([command, next]);
 	}
 
 	/**
@@ -186,195 +213,191 @@ class QueryBuilder {
 	 *
 	 * @returns {QueryBuilder}
 	 */
-	createTable(name, options) {
-		this.commandStack.push("createTable");
+	createTable(name, options, next) {
 		try {
 			if (options?.cols === undefined) {
 				this.error = "Tiene que especificar como mínimo una columna";
 			}
-			const sql = `${this.language.createTable(name.validSqlId(), options)}`;
-			this.query.push(sql);
+			const command = this.language.createTable(name.validSqlId(), options);
+			return this.toNext([command, next], ";\n");
 		} catch (error) {
 			this.error = error.message;
 		}
-		return this;
+		return next;
 	}
-	alterTable(name) {
-		this.commandStack = ["alterTable"];
-		if (this.alterTableCommand?.length > 0) {
-			this.query.push(this.alterTableCommand);
-			this.alterTableCommand = undefined;
+	alterTable(name, next) {
+		const command = this.language.alterTable(name);
+		const alterCols = [];
+		for (const column in next.AlterColumns.reverse()) {
+			alterCols.push(this.toNext([command, next.AlterColumns[column]]));
 		}
-		this.alterTableCommand = this.language.alterTable(name);
-		this.alterTableStack = [];
-		this.alterTableComands();
-		return this;
+		next.AlterColumns = [];
+		alterCols.push(next);
+
+		return this.toNext(alterCols, ";\n");
 	}
 
 	alterTableComands() {
 		const comands = ["addColumn", "alterColumn", "dropColumn", "addConstraint"];
 		for (const comand of comands) {
-			this[comand] = (name, options) => {
-				this.commandStack.push(comand);
-				const alterTablePos = this.commandStack.indexOf("alterTable");
-				if (alterTablePos !== -1) {
-					this.alterTableStack.push(
-						`${this.alterTableCommand}${this.language[comand](name, options, this.alterTableCommand)}`,
+			this[comand] = (name, options, next) => {
+				const alterTablePos = this.promiseStack.find(
+					(item) => item.prop === "alterTable",
+				);
+				if (alterTablePos !== undefined) {
+					if (next?.AlterColumns === undefined) {
+						next.AlterColumns = [];
+					}
+					next.AlterColumns.push(
+						this.toNext([this.language[comand](name, options, "valor"), next]),
 					);
-					return this;
+					next.q = "";
+					return next;
 				}
 				this.error = `No se pueden añadir columnas sin un 'ALTER TABLE'`;
+				return next;
 			};
 		}
 		const alterColums = ["setDefault", "dropDefault"];
 		for (const comand of alterColums) {
-			this[comand] = (value) => {
-				const alterColumnPos = this.commandStack.lastIndexOf("alterColumn");
-				if (alterColumnPos !== -1) {
-					this.alterTableStack[alterColumnPos - 1] += this.language[comand](
-						value,
-						this.alterTableCommand,
-					);
-				} else {
-					this.error = "No es posible aplicar, falta el comando 'alterColumn'";
+			this[comand] = (value, next) => {
+				console.log("[alterColums][%s] value:%o next: %o", comand, value, next);
+				const alterColumnPos = this.promiseStack.find(
+					(item) => item.prop === "alterColumn",
+				);
+				if (alterColumnPos !== undefined) {
+					const command = this.language[comand](value, alterColumnPos.args[0]);
+					return this.toNext([command, next]);
 				}
-				return this;
+				this.error = "No es posible aplicar, falta el comando 'alterColumn'";
+				return next;
 			};
 		}
 	}
 
-	dropTable(name, option) {
-		this.commandStack.push("dropTable");
-		const response = this.language.dropTable(name, option);
-		this.query.push(response);
-		return this;
+	dropTable(name, option, next) {
+		const command = this.language.dropTable(name, option);
+		return this.toNext([command, next]);
 	}
-	createType(name, options) {
-		this.commandStack.push("createType");
+	createType(name, options, next) {
 		try {
-			const response = this.language.createType(name.validSqlId(), options);
-			this.query.push(response);
+			const command = this.language.createType(name.validSqlId(), options);
+			return this.toNext([command, next]);
 		} catch (error) {
 			this.error = error.message;
 		}
-		return this;
+		return next;
 	}
-	dropType(name, options) {
-		this.commandStack.push("dropType");
+	dropType(name, options, next) {
 		try {
-			const response = this.language.dropType(name, options);
-			this.query.push(response);
+			const command = this.language.dropType(name, options);
+			return this.toNext([command, next]);
 		} catch (error) {
 			this.error = error.message;
 		}
-		return this;
+		return next;
 	}
 
-	createAssertion(name, assertion) {
-		this.commandStack.push("createAssertion");
+	createAssertion(name, assertion, next) {
 		try {
-			this.query.push(
-				`${this.language.createAssertion(name.validSqlId(), assertion)}`,
+			const command = this.language.createAssertion(
+				name.validSqlId(),
+				assertion,
 			);
+			return this.toNext([command, next]);
 		} catch (error) {
 			this.error = error.message;
 		}
-		return this;
+		return next;
 	}
 
-	createDomain(name, options) {
-		this.commandStack.push("createDomain");
+	createDomain(name, options, next) {
 		try {
-			this.query.push(
-				`${this.language.createDomain(name.validSqlId(), options)}`,
-			);
+			const command = this.language.createDomain(name.validSqlId(), options);
+			return this.toNext([command, next]);
 		} catch (error) {
 			this.error = error.message;
 		}
-		return this;
+		return next;
 	}
 
-	createView(name, options) {
-		this.commandStack.push("createView");
+	createView(name, options, next) {
 		try {
-			this.query.push(
-				`${this.language.createView(name.validSqlId(), options)}`,
-			);
+			const command = this.language.createView(name.validSqlId(), options);
+			return this.toNext([command, next]);
 		} catch (error) {
 			this.error = error.message;
 		}
 		return this;
 	}
-	dropView(name) {
-		this.commandStack.push("dropView");
+	dropView(name, next) {
 		try {
-			this.query.push(`${this.language.dropView(name)}`);
+			const command = this.language.dropView(name);
+			return this.toNext([command, next]);
 		} catch (error) {
 			this.error = error.message;
 		}
-		return this;
+		return next;
 	}
 
 	// Seguridad
 
-	createRoles(names, options) {
-		this.commandStack.push("createRoles");
+	createRoles(names, options, next) {
 		try {
-			this.query.push(`${this.language.createRoles(names, options)}`);
+			const command = this.language.createRoles(names, options);
+			return this.toNext([command, next]);
 		} catch (error) {
 			this.error = error.message;
 		}
-		return this;
+		return next;
 	}
-	dropRoles(names, options) {
-		this.commandStack.push("dropRoles");
+	dropRoles(names, options, next) {
 		try {
-			this.query.push(`${this.language.dropRoles(names, options)}`);
+			const command = this.language.dropRoles(names, options);
+			return this.toNext([command, next]);
 		} catch (error) {
 			this.error = error.message;
 		}
-		return this;
-	}
-
-	grant(privilegios, on, to, options) {
-		this.commandStack.push("grant");
-		try {
-			this.query.push(`${this.language.grant(privilegios, on, to, options)}`);
-		} catch (error) {
-			this.error = error.message;
-		}
-		return this;
+		return next;
 	}
 
-	revoke(privilegios, on, from, options) {
-		this.commandStack.push("revoke");
+	grant(privilegios, on, to, options, next) {
 		try {
-			this.query.push(
-				`${this.language.revoke(privilegios, on, from, options)}`,
-			);
+			const command = this.language.grant(privilegios, on, to, options);
+			return this.toNext([command, next]);
 		} catch (error) {
 			this.error = error.message;
 		}
-		return this;
+		return next;
 	}
 
-	grantRoles(roles, users, options) {
-		this.commandStack.push("grantRoles");
+	revoke(privilegios, on, from, options, next) {
 		try {
-			this.query.push(`${this.language.grantRoles(roles, users, options)}`);
+			const command = this.language.revoke(privilegios, on, from, options);
+			return this.toNext([command, next]);
 		} catch (error) {
 			this.error = error.message;
 		}
-		return this;
+		return next;
 	}
-	revokeRoles(roles, from, options) {
-		this.commandStack.push("revokeRoles");
+
+	grantRoles(roles, users, options, next) {
 		try {
-			this.query.push(`${this.language.revokeRoles(roles, from, options)}`);
+			const command = this.language.grantRoles(roles, users, options);
+			return this.toNext([command, next]);
 		} catch (error) {
 			this.error = error.message;
 		}
-		return this;
+		return next;
+	}
+	revokeRoles(roles, from, options, next) {
+		try {
+			const command = this.language.revokeRoles(roles, from, options);
+			return this.toNext([command, next]);
+		} catch (error) {
+			this.error = error.message;
+		}
+		return next;
 	}
 
 	//Consulta de datos SQL
@@ -384,30 +407,14 @@ class QueryBuilder {
 	 * @param {{[unique:boolean],[ all:boolean]} options - opciones
 	 * @returns
 	 */
-	// select(columns, options) {
-	// 	try {
-	// 		const nuevoSelect = new QueryBuilder(this.languageClass, this.options);
-	// 		nuevoSelect.selectCommand = nuevoSelect.language.select(columns, options);
-	// 		console.log("[select] selectCommand", nuevoSelect.selectCommand);
-	// 		nuevoSelect.commandStack.push("select");
-	// 		nuevoSelect.prevInstance = this;
-	// 		nuevoSelect.driverDB = this?.driverDB;
-	// 		console.log("[select]");
-	// 		return nuevoSelect;
-	// 	} catch (error) {
-	// 		this.error = error.message;
-	// 	}
-	// }
-
-	// Version con la misma instancia
-	select(columns, options) {
+	select(columns, options, next) {
 		try {
-			this.selectCommand = this.language.select(columns, options);
-			this.commandStack.push("select");
-			return "SELECT";
+			const command = this.language.select(columns, options);
+			return this.toNext([command, next]);
 		} catch (error) {
 			this.error = error.message;
 		}
+		return next;
 	}
 	checkFrom(tables, alias) {
 		const error = check("From(tables:string|array, alias:string|array)", [
@@ -427,11 +434,10 @@ class QueryBuilder {
 			);
 		}
 	}
-	from(tables, alias) {
+	from(tables, alias, next) {
 		this.checkFrom(tables, alias);
-		this.commandStack.push("from");
+		const response = this.language.from(tables, alias);
 		if (this.selectCommand?.length > 0) {
-			this.selectStack.push(this.language.from(tables, alias));
 		} else if (this.selectCommand instanceof Command) {
 			this.selectCommand = this.language.from(
 				tables,
@@ -441,7 +447,7 @@ class QueryBuilder {
 		} else {
 			this.error = "[from] No es posible aplicar, falta el comando 'select'";
 		}
-		return this.selectCommand;
+		return `${response}\n${next}`;
 	}
 
 	joins() {
@@ -511,18 +517,21 @@ class QueryBuilder {
 		this.query.push(this.language.union(...selects, { all: true }));
 		return this;
 	}
-	async where(predicados) {
+	async where(predicados, next) {
+		let whereCommand;
 		// if (this.selectCommand?.length > 0) {
 		// 	this.selectStack.push(this.language.where(predicados));
 		// }
 		// if (this.selectCommand instanceof Command) {
 		// 	this.selectCommand = this.language.where(predicados, this.selectCommand);
 		// }
-		this.selectCommand = await this.language.where(
-			predicados,
-			this.selectCommand,
-		);
-		return this.selectCommand;
+		if (predicados instanceof QueryBuilder) {
+			whereCommand = await this.language.where(next, this.selectCommand);
+		} else {
+			whereCommand = await this.language.where(predicados, this.selectCommand);
+		}
+
+		return `${whereCommand}`;
 	}
 	whereCursor(cursorName) {
 		this.commandStack.push("whereCursor");
@@ -575,9 +584,7 @@ class QueryBuilder {
 		const logicos = ["and", "or", "not", "distinct"];
 		for (const operTwo of operTwoCols) {
 			this[operTwo] = (a, b) => {
-				const result = this.language[operTwo](a, b);
-				console.log("[logicos]", operTwo, result);
-				return result;
+				return this.language[operTwo](a, b);
 			};
 		}
 		for (const operOne of operOneCol) {
@@ -599,7 +606,7 @@ class QueryBuilder {
 	 */
 
 	in(columna, ...values) {
-		this.commandStack.push("in");
+		// this.commandStack.push("in");
 		return this.language.in(columna, ...values);
 	}
 	notIn(columna, ...values) {
@@ -724,22 +731,22 @@ class QueryBuilder {
 		}
 		return this;
 	}
-	update(table, sets) {
-		this.commandStack.push("update");
+	update(table, sets, next) {
+		// this.commandStack.push("update");
 		try {
 			if (Array.isArray(sets)) {
 				this.error = "El argumento debe ser un objeto JSON";
 			}
-			if (this.selectCommand?.length > 0) {
-				if (this.selectStack.length) {
-					this.selectCommand += `\n${this.selectStack.join("\n")}`;
-					this.selectStack = [];
-				}
-				this.query.push(this.selectCommand);
-			}
+			// if (this.selectCommand?.length > 0) {
+			// 	if (this.selectStack.length) {
+			// 		this.selectCommand += `\n${this.selectStack.join("\n")}`;
+			// 		this.selectStack = [];
+			// 	}
+			// 	this.query.push(this.selectCommand);
+			// }
 
-			this.selectCommand = this.language.update(table, sets);
-			return this.selectCommand;
+			const updateCommand = this.language.update(table, sets);
+			return `${updateCommand}\n${next}`;
 		} catch (error) {
 			this.error = error.message;
 		}
@@ -917,11 +924,15 @@ class QueryBuilder {
 		return null;
 	}
 	async toString(options) {
-		let joinQuery = await this.queryJoin(options);
-		if (/^(subselect)$/i.test(options?.as)) {
-			joinQuery = joinQuery.replace(/;$/, "");
+		let joinQuery = await this.promise;
+		if (joinQuery.q === undefined) {
+			return joinQuery.q;
 		}
-		this.dropQuery();
+		if (joinQuery.q.lastIndexOf(";") !== joinQuery.q.length - 1) {
+			joinQuery = joinQuery.q.concat(";");
+		}
+		joinQuery = joinQuery.replace(/\n;$/, "");
+		console.log("[toString] joinQuery:\n%s\n", joinQuery);
 		return joinQuery;
 	}
 	dropQuery() {
@@ -940,19 +951,18 @@ class QueryBuilder {
 	async execute(testOnly = false) {
 		if (testOnly) {
 			console.log(">[QueryBuilder] [execute] en modo 'solo-test'\n");
-			await this.queryJoin();
-			return this;
+			return this.promise;
 		}
 		if (!this.driverDB) {
 			throw new Error("No ha establecido un driver.");
 		}
 
 		try {
-			const send = await this.queryJoin();
+			const send = await this.promise;
 			await this.driverDB.execute(send);
 			this.result = this.driverDB.response();
 			this.error = undefined;
-			this.commandStack.push("execute");
+			// this.commandStack.push("execute");
 			return this;
 		} catch (error) {
 			this.error = `Capture on QueryBuilder [execute] ${error.message} ${this.commandStack.join("->")}`;

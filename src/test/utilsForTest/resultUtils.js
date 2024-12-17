@@ -102,17 +102,18 @@ function justifica(valor, width, fill) {
  * @param {Bollean} query - true muestra la consulta si no existen resultados
  */
 export async function showResults(datos, debug) {
+	console.log("[showResults]", datos, debug);
 	if (datos?.result) {
 		const { response, columns, rows } = datos.result;
-		tableFormat(columns, rows, response, await datos.queryJoin());
+		tableFormat(columns, rows, response, await datos.promise);
 	} else if (debug) {
 		console.log("******* DEBUG INFO *********\n");
 		let query;
 
-		if (typeof query === "string") {
+		if (typeof datos === "string") {
 			query = datos;
 		} else {
-			query = await datos.queryJoin();
+			query = await datos.promise;
 		}
 		console.log("el tipo de query es", typeof query);
 		if (typeof query === "object") {
@@ -124,9 +125,9 @@ export async function showResults(datos, debug) {
 			}
 			console.log("<<");
 		} else {
-			console.log("✔ queryString>>\n %o\n<<", query);
-			const jsonObj = JSON.parse(query.replace(";", ""), jsonReviver);
-			console.dir(jsonObj, { depth: null });
+			console.log("✔ queryString >>\n %s\n<<", query);
+			// const jsonObj = JSON.parse(query.replace(";", ""), jsonReviver);
+			// console.dir(jsonObj, { depth: null });
 		}
 		console.log("******* END DEBUG INFO *********\n");
 	}

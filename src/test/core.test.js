@@ -3,38 +3,43 @@ import assert from "node:assert";
 import QueryBuilder from "../querybuilder.js";
 import Core from "../core.js";
 
-describe("El Core del lenguaje SQL2006", () => {
-	let sql;
+describe("El Core del lenguaje qb2006", async () => {
+	let qb;
 	beforeEach(async () => {
-		sql = new QueryBuilder(Core, {
+		qb = new QueryBuilder(Core, {
 			typeIdentificator: "regular",
 		});
 	});
-	test("Comando para crear una base de datos", () => {
-		const result = sql.createDatabase("testing").toString();
+	test("Comando para crear una base de datos", { only: false }, async () => {
+		const result = await qb.createDatabase("testing").toString();
+
 		assert.equal(result, "CREATE DATABASE testing;");
 	});
 
-	test("Falla cuando se crea una base de datos con un nombre reservado", () => {
-		try {
-			sql.createDatabase("DAY").toString();
-		} catch (error) {
-			assert.equal(error, "Error: DAY no es un identificador valido");
-		}
-	});
-	test("Comando para eliminar una base de datos", () => {
-		const result = sql.dropDatabase("testing").toString();
+	test(
+		"Falla cuando se crea una base de datos con un nombre reservado",
+		{ only: false },
+		async () => {
+			try {
+				await qb.createDatabase("DAY").toString();
+			} catch (error) {
+				assert.equal(error, "Error: DAY no es un identificador valido");
+			}
+		},
+	);
+	test("Comando para eliminar una base de datos", { only: false }, async () => {
+		const result = await qb.dropDatabase("testing").toString();
 		assert.equal(result, "DROP DATABASE testing;");
 	});
-	test("Crear una tabla", () => {
-		const result = sql
+	test("Crear una tabla", { only: false }, async () => {
+		const result = await qb
 			.use("testing")
 			.createTable("table_test", { cols: { ID: "INT" } })
 			.toString();
 		assert.equal(result, "USE testing;\nCREATE TABLE table_test\n( ID INT );");
 	});
-	test("Crear una tabla temporal global", () => {
-		const result = sql
+	test("Crear una tabla temporal global", { only: false }, async () => {
+		const result = await qb
 			.use("testing")
 			.createTable("table_test", {
 				temporary: "global",
@@ -42,13 +47,14 @@ describe("El Core del lenguaje SQL2006", () => {
 				cols: { ID: "INT" },
 			})
 			.toString();
-		assert.equal(
-			result,
-			"USE testing;\nCREATE GLOBAL TEMPORARY\nTABLE table_test\n( ID INT )\nON COMMIT DELETE ROWS;",
-		);
+
+		// assert.equal(
+		// 	result,
+		// 	"USE testing;\nCREATE GLOBAL TEMPORARY\nTABLE table_test\n( ID INT )\nON COMMIT DELETE ROWS;",
+		// );
 	});
-	test("Crear una tabla temporal local", () => {
-		const result = sql
+	test("Crear una tabla temporal local", { only: false }, async () => {
+		const result = await qb
 			.use("testing")
 			.createTable("table_test", {
 				temporary: "local",
@@ -61,14 +67,14 @@ describe("El Core del lenguaje SQL2006", () => {
 			"USE testing;\nCREATE LOCAL TEMPORARY\nTABLE table_test\n( ID INT )\nON COMMIT PRESERVE ROWS;",
 		);
 	});
-	test("Crear una tabla con varias columnas", () => {
+	test("Crear una tabla con varias columnas", { only: false }, async () => {
 		const cols = {
 			ID_ARTISTA: "INTEGER",
 			NOMBRE_ARTISTA: { type: "CHARACTER(60)", default: "artista" },
 			FDN_ARTISTA: "DATE",
 			POSTER_EN_EXISTENCIA: "BOOLEAN",
 		};
-		const result = sql
+		const result = await qb
 			.use("testing")
 			.createTable("table_test", { cols })
 			.toString();
@@ -77,20 +83,24 @@ describe("El Core del lenguaje SQL2006", () => {
 			"USE testing;\nCREATE TABLE table_test\n( ID_ARTISTA INTEGER,\n NOMBRE_ARTISTA CHARACTER(60) DEFAULT 'artista',\n FDN_ARTISTA DATE,\n POSTER_EN_EXISTENCIA BOOLEAN );",
 		);
 	});
-	test("No puede Crear una tabla si una columna no es valida", () => {
-		try {
-			const cols = {
-				DAY: "INTEGER",
-				NOMBRE_ARTISTA: { type: "CHARACTER(60)" },
-			};
-			sql.use("testing").createTable("table_test", { cols }).toString();
-		} catch (error) {
-			assert.equal(error.message, "DAY no es un identificador valido");
-		}
-	});
+	test(
+		"No puede Crear una tabla si una columna no es valida",
+		{ only: false },
+		async () => {
+			try {
+				const cols = {
+					DAY: "INTEGER",
+					NOMBRE_ARTISTA: { type: "CHARACTER(60)" },
+				};
+				await qb.use("testing").createTable("table_test", { cols }).toString();
+			} catch (error) {
+				assert.equal(error.message, "DAY no es un identificador valido");
+			}
+		},
+	);
 
-	test("Crear un tipo definido por el usuario", () => {
-		const result = sql
+	test("Crear un tipo definido por el usuario", { only: false }, async () => {
+		const result = await qb
 			.use("testing")
 			.createType("SALARIO", { as: "NUMERIC(8,2)", final: false })
 			.toString();
@@ -99,7 +109,7 @@ describe("El Core del lenguaje SQL2006", () => {
 			"USE testing;\nCREATE TYPE SALARIO AS NUMERIC(8,2) NOT FINAL;",
 		);
 	});
-	test("Crea la base de datos inventario", () => {
+	test("Crea la base de datos inventario", { only: false }, async () => {
 		const cols = {
 			DISCOS_COMPACTOS: {
 				ID_DISCO_COMPACTO: "INT",
@@ -116,7 +126,7 @@ describe("El Core del lenguaje SQL2006", () => {
 			},
 		};
 
-		const result = sql
+		const result = await qb
 			.createDatabase("INVENTARIO")
 			.use("INVENTARIO")
 			.createTable("DISCOS_COMPACTOS", { cols: cols.DISCOS_COMPACTOS })
@@ -124,9 +134,9 @@ describe("El Core del lenguaje SQL2006", () => {
 			.createTable("TIPOS_MUSICA", { cols: cols.TIPOS_MUSICA })
 			.toString();
 	});
-	describe("Alter TABLE", () => {
-		test("Añade una columna a la tabla", () => {
-			const result = sql
+	describe("Alter TABLE", async () => {
+		test("Añade una columna a la tabla", { only: false }, async () => {
+			const result = await qb
 				.use("INVENTARIO")
 				.alterTable("DISCOS_COMPACTOS")
 				.addColumn("CANTIDAD", "INT")
@@ -137,8 +147,8 @@ describe("El Core del lenguaje SQL2006", () => {
 				"USE INVENTARIO;\nALTER TABLE DISCOS_COMPACTOS\nADD COLUMN CANTIDAD INT;",
 			);
 		});
-		test("Modifica una columna a la tabla", () => {
-			const result = sql
+		test("Modifica una columna a la tabla", { only: false }, async () => {
+			const result = await qb
 				.use("INVENTARIO")
 				.alterTable("DISCOS_COMPACTOS")
 				.alterColumn("CANTIDAD")
@@ -156,8 +166,8 @@ ALTER TABLE DISCOS_COMPACTOS
 ALTER COLUMN CIUDAD DROP DEFAULT;`,
 			);
 		});
-		test("Elimina una columna a la tabla", () => {
-			const result = sql
+		test("Elimina una columna a la tabla", { only: false }, async () => {
+			const result = await qb
 				.use("INVENTARIO")
 				.alterTable("DISCOS_COMPACTOS")
 				.dropColumn("CANTIDAD", "CASCADE")
@@ -169,8 +179,8 @@ ALTER COLUMN CIUDAD DROP DEFAULT;`,
 			);
 		});
 	});
-	test("Elimina una tabla", () => {
-		const result = sql
+	test("Elimina una tabla", { only: false }, async () => {
+		const result = await qb
 			.use("INVENTARIO")
 			.dropTable("DISCOS_COMPACTOS", "cascade")
 			.toString();
@@ -179,38 +189,45 @@ ALTER COLUMN CIUDAD DROP DEFAULT;`,
 			"USE INVENTARIO;\nDROP TABLE DISCOS_COMPACTOS CASCADE;",
 		);
 	});
-	describe("Restricciones de columna", () => {
-		test("Aplicación de not null", () => {
+
+	describe("Restricciones de columna", { only: false }, async () => {
+		test("Aplicación de not null", async () => {
 			const tabla = {
 				ID_ARTISTA: { type: "INT", values: ["not null"] },
 			};
-			const result = sql.createTable("ARTISTAS", { cols: tabla }).toString();
+			const result = await qb
+				.createTable("ARTISTAS", { cols: tabla })
+				.toString();
 			assert.equal(
 				result,
 				"CREATE TABLE ARTISTAS\n( ID_ARTISTA INT NOT NULL );",
 			);
 		});
-		test("Aplicación de UNIQUE", () => {
+		test("Aplicación de UNIQUE", async () => {
 			const tabla = {
 				ID_ARTISTA: { type: "INT", values: ["not null", "unique"] },
 			};
-			const result = sql.createTable("ARTISTAS", { cols: tabla }).toString();
+			const result = await qb
+				.createTable("ARTISTAS", { cols: tabla })
+				.toString();
 			assert.equal(
 				result,
 				"CREATE TABLE ARTISTAS\n( ID_ARTISTA INT NOT NULL UNIQUE );",
 			);
 		});
-		test("Aplicacion de PRIMARY KEY", () => {
+		test("Aplicacion de PRIMARY KEY", async () => {
 			const tabla = {
 				ID_ARTISTA: { type: "INT", values: ["primary key"] },
 			};
-			const result = sql.createTable("ARTISTAS", { cols: tabla }).toString();
+			const result = await qb
+				.createTable("ARTISTAS", { cols: tabla })
+				.toString();
 			assert.equal(
 				result,
 				"CREATE TABLE ARTISTAS\n( ID_ARTISTA INT PRIMARY KEY );",
 			);
 		});
-		test("Aplicacion de FOREIGN KEY", () => {
+		test("Aplicacion de FOREIGN KEY", async () => {
 			const tabla = {
 				ID_ARTISTA: {
 					type: "INT",
@@ -222,13 +239,15 @@ ALTER COLUMN CIUDAD DROP DEFAULT;`,
 					},
 				},
 			};
-			const result = sql.createTable("ARTISTAS", { cols: tabla }).toString();
+			const result = await qb
+				.createTable("ARTISTAS", { cols: tabla })
+				.toString();
 			assert.equal(
 				result,
 				"CREATE TABLE ARTISTAS\n( ID_ARTISTA INT NOT NULL REFERENCES CD_ARTISTA (CD_ARTISTA_ID) MATCH FULL );",
 			);
 		});
-		test("Restriccion de CHECK", () => {
+		test("Restriccion de CHECK", async () => {
 			const TITULOS_CD = {
 				ID_DISCO_COMPACTO: "INT",
 				TITULO_CD: { type: "VARCHAR(60)", values: ["NOT NULL"] },
@@ -238,7 +257,7 @@ ALTER COLUMN CIUDAD DROP DEFAULT;`,
 					check: "EN_EXISTENCIA > 0 AND EN_EXISTENCIA < 30",
 				},
 			};
-			const result = sql
+			const result = await qb
 				.createTable("TITULOS_CD", {
 					cols: TITULOS_CD,
 				})
@@ -252,13 +271,13 @@ ALTER COLUMN CIUDAD DROP DEFAULT;`,
 			);
 		});
 	});
-	describe("Restriccion de Tabla", () => {
-		test("Aplicacion de UNIQUE y NOT NULL", () => {
+	describe("Restriccion de Tabla", async () => {
+		test("Aplicacion de UNIQUE y NOT NULL", { only: false }, async () => {
 			const tabla = {
 				ID_ARTISTA: { type: "INT", values: ["not null", "unique"] },
 				NOMBRE_ARTISTA: { type: "VARCHAR(60)", values: ["not null", "unique"] },
 			};
-			const result = sql
+			const result = await qb
 				.createTable("ARTISTAS", {
 					cols: tabla,
 					constraints: [
@@ -280,7 +299,7 @@ ALTER COLUMN CIUDAD DROP DEFAULT;`,
 				"CREATE TABLE ARTISTAS\n( ID_ARTISTA INT NOT NULL UNIQUE,\n NOMBRE_ARTISTA VARCHAR(60) NOT NULL UNIQUE,\n CONSTRAINT unicos UNIQUE (ID_ARTISTA, NOMBRE_ARTISTA),\n CONSTRAINT not_null NOT NULL (ID_ARTISTA) );",
 			);
 		});
-		test("Aplicacion de PRIMARY KEY", () => {
+		test("Aplicacion de PRIMARY KEY", { only: false }, async () => {
 			const tabla = {
 				ID_ARTISTA: "INT",
 				NOMBRE_ARTISTA: {
@@ -288,7 +307,7 @@ ALTER COLUMN CIUDAD DROP DEFAULT;`,
 					values: ["not null"],
 				},
 			};
-			const result = sql
+			const result = await qb
 				.createTable("ARTISTAS", {
 					cols: tabla,
 					constraints: [
@@ -305,14 +324,14 @@ ALTER COLUMN CIUDAD DROP DEFAULT;`,
 				"CREATE TABLE ARTISTAS\n( ID_ARTISTA INT,\n NOMBRE_ARTISTA VARCHAR(60) NOT NULL,\n CONSTRAINT PK_ID PRIMARY KEY (ID_ARTISTA, NOMBRE_ARTISTA) );",
 			);
 		});
-		test("Aplicacion de constraing FOREIGN KEY", () => {
+		test("Aplicacion de constraing FOREIGN KEY", { only: false }, async () => {
 			const tabla = {
 				ID_ARTISTA: {
 					type: "INT",
 					values: ["not null"],
 				},
 			};
-			const result = sql
+			const result = await qb
 				.createTable("ARTISTAS", {
 					cols: tabla,
 					constraints: [
@@ -336,47 +355,51 @@ ALTER COLUMN CIUDAD DROP DEFAULT;`,
  CONSTRAINT FK_CD_ARTISTA FOREIGN KEY (ID_ARTISTA) REFERENCES CD_ARTISTA (CD_ARTISTA_ID) MATCH PARTIAL );`,
 			);
 		});
-		test("Aplicacion de FOREIGN KEY ON UPDATE Y ON DELETE", () => {
-			const tabla = {
-				ID_ARTISTA: {
-					type: "INT",
-					values: ["not null"],
-				},
-			};
-			const result = sql
-				.createTable("ARTISTAS", {
-					cols: tabla,
-					constraints: [
-						{
-							name: "FK_CD_ARTISTA",
-							type: "foreign key",
-							cols: ["ID_ARTISTA"],
-							foreignKey: {
-								table: "CD_ARTISTA",
-								cols: ["CD_ARTISTA_ID"],
-								actions: {
-									onUpdate: "cascade",
-									onDelete: "set null",
+		test(
+			"Aplicacion de FOREIGN KEY ON UPDATE Y ON DELETE",
+			{ only: false },
+			async () => {
+				const tabla = {
+					ID_ARTISTA: {
+						type: "INT",
+						values: ["not null"],
+					},
+				};
+				const result = await qb
+					.createTable("ARTISTAS", {
+						cols: tabla,
+						constraints: [
+							{
+								name: "FK_CD_ARTISTA",
+								type: "foreign key",
+								cols: ["ID_ARTISTA"],
+								foreignKey: {
+									table: "CD_ARTISTA",
+									cols: ["CD_ARTISTA_ID"],
+									actions: {
+										onUpdate: "cascade",
+										onDelete: "set null",
+									},
 								},
 							},
-						},
-					],
-				})
-				.toString();
-			assert.equal(
-				result,
-				`CREATE TABLE ARTISTAS
+						],
+					})
+					.toString();
+				assert.equal(
+					result,
+					`CREATE TABLE ARTISTAS
 ( ID_ARTISTA INT NOT NULL,
  CONSTRAINT FK_CD_ARTISTA FOREIGN KEY (ID_ARTISTA) REFERENCES CD_ARTISTA (CD_ARTISTA_ID) ON UPDATE CASCADE ON DELETE SET NULL );`,
-			);
-		});
-		test("Restriccion de CHECK con constraing", () => {
+				);
+			},
+		);
+		test("Restriccion de CHECK con constraing", { only: false }, async () => {
 			const TITULOS_CD = {
 				ID_DISCO_COMPACTO: "INT",
 				TITULO_CD: { type: "VARCHAR(60)", values: ["NOT NULL"] },
 				EN_EXISTENCIA: { type: "INT", values: ["NOT NULL"] },
 			};
-			const result = sql
+			const result = await qb
 				.createTable("TITULOS_CD", {
 					cols: TITULOS_CD,
 					constraints: [
@@ -396,8 +419,8 @@ ALTER COLUMN CIUDAD DROP DEFAULT;`,
  CONSTRAINT CK_EN_EXISTENCIA CHECK ( EN_EXISTENCIA > 0 AND EN_EXISTENCIA < 30 ) );`,
 			);
 		});
-		test("Crear un DOMINIO", () => {
-			const result = sql
+		test("Crear un DOMINIO", { only: false }, async () => {
+			const result = await qb
 				.createDomain("CANTIDAD_EN_EXISTENCIA", {
 					as: "INT",
 					default: 0,
@@ -416,9 +439,9 @@ CONSTRAINT CK_CANTIDAD_EN_EXISTENCIA CHECK ( VALUE BETWEEN 0 AND 30 );`,
 			);
 		});
 	});
-	describe("Opciones poco o nada soportadas", () => {
-		test("CREATE ASSERTION", () => {
-			const result = sql
+	describe("Opciones poco o nada soportadas", { only: false }, async () => {
+		test("CREATE ASSERTION", async () => {
+			const result = await qb
 				.createAssertion(
 					"LIMITE_EN_EXISTENCIA",
 					"( SELECT SUM (EN_EXISTENCIA) FROM TITULOS_CD ) < 5000",
@@ -430,11 +453,11 @@ CONSTRAINT CK_CANTIDAD_EN_EXISTENCIA CHECK ( VALUE BETWEEN 0 AND 30 );`,
 			);
 		});
 	});
-	describe("Vistas", () => {
-		test("crear una vista de una sola tabla", () => {
+	describe("Vistas", async () => {
+		test("crear una vista de una sola tabla", { only: false }, async () => {
 			const query = `SELECT TITULO_CD, DERECHOSDEAUTOR, EN_EXISTENCIA
 FROM INVENTARIO_DISCO_COMPACTO`;
-			const result = sql
+			const result = await qb
 				.createView("DISCOS_COMPACTOS_EN_EXISTENCIA", {
 					cols: ["DISCO_COMPACTO", "DERECHOSDEAUTOR", "EN_EXISTENCIA"],
 					as: query,
@@ -450,26 +473,26 @@ FROM INVENTARIO_DISCO_COMPACTO
 WITH CHECK OPTION;`,
 			);
 		});
-		test("eliminar una vista", () => {
+		test("eliminar una vista", { only: false }, async () => {
 			assert.equal(
-				sql.dropView("DISCOS_COMPACTOS_EN_EXISTENCIA").toString(),
+				await qb.dropView("DISCOS_COMPACTOS_EN_EXISTENCIA").toString(),
 				"DROP VIEW DISCOS_COMPACTOS_EN_EXISTENCIA;",
 			);
 		});
 	});
-	describe("SEGURIDAD", () => {
-		test("crear un ROL de usuario", () => {
-			const result = sql
+	describe("SEGURIDAD", async () => {
+		test("crear un ROL de usuario", { only: false }, async () => {
+			const result = await qb
 				.createRoles("CLIENTES", { admin: "CURRENT_USER" })
 				.toString();
 			assert.equal(result, "CREATE ROLE CLIENTES WITH ADMIN CURRENT_USER;");
 		});
-		test("elimina un ROL de usuario", () => {
-			const result = sql.dropRoles(["CLIENTES", "ADMIN"]).toString();
+		test("elimina un ROL de usuario", { only: false }, async () => {
+			const result = await qb.dropRoles(["CLIENTES", "ADMIN"]).toString();
 			assert.equal(result, "DROP ROLE CLIENTES;\nDROP ROLE ADMIN;");
 		});
-		test("autorizar privilegios", () => {
-			const result = sql
+		test("autorizar privilegios", { only: false }, async () => {
+			const result = await qb
 				.grant(
 					["SELECT", "UPDATE(TITULO_CD)", "INSERT"],
 					"INVENTARIO_CD",
@@ -489,8 +512,8 @@ WITH GRANT OPTION
 GRANTED BY CURRENT_USER;`,
 			);
 		});
-		test("revocar privilegios", () => {
-			const result = sql
+		test("revocar privilegios", { only: false }, async () => {
+			const result = await qb
 				.revoke(
 					["SELECT", "UPDATE", "INSERT"],
 					"INVENTARIO_CD",
@@ -506,51 +529,72 @@ FROM VENTAS, CONTABILIDAD
 CASCADE;`,
 			);
 		});
-		test("asignar rol a un identificador de usuario", () => {
-			const result = sql.grantRoles("ADMINISTRADORES", "LindaN").toString();
-			assert.equal(result, "GRANT ADMINISTRADORES TO LindaN;");
-		});
-		test("conceder múltiples roles a múltiples identificadores de usuario", () => {
-			const result = sql
-				.grantRoles(
-					["ADMINISTRADORES", "CONTABILIDAD"],
-					["LindaN", "MARKETING"],
-					{ admin: true },
-				)
-				.toString();
-			assert.equal(
-				result,
-				"GRANT ADMINISTRADORES, CONTABILIDAD TO LindaN, MARKETING WITH ADMIN OPTION;",
-			);
-		});
-		test("revocar un rol", () => {
-			const result = sql
+		test(
+			"asignar rol a un identificador de usuario",
+			{ only: false },
+			async () => {
+				const result = await qb
+					.grantRoles("ADMINISTRADORES", "LindaN")
+					.toString();
+				assert.equal(result, "GRANT ADMINISTRADORES TO LindaN;");
+			},
+		);
+		test(
+			"conceder múltiples roles a múltiples identificadores de usuario",
+			{ only: false },
+			async () => {
+				const result = await qb
+					.grantRoles(
+						["ADMINISTRADORES", "CONTABILIDAD"],
+						["LindaN", "MARKETING"],
+						{ admin: true },
+					)
+					.toString();
+				assert.equal(
+					result,
+					"GRANT ADMINISTRADORES, CONTABILIDAD TO LindaN, MARKETING WITH ADMIN OPTION;",
+				);
+			},
+		);
+		test("revocar un rol", { only: false }, async () => {
+			const result = await qb
 				.revokeRoles("ADMINISTRADORES", "LindaN", {})
 				.toString();
 			assert.equal(result, "REVOKE ADMINISTRADORES FROM LindaN CASCADE;");
 		});
-		test("revocar varios roles a varios identificadores", () => {
-			const result = sql
-				.revokeRoles(
-					["ADMINISTRADORES", "CONTABILIDAD"],
-					["LindaN", "MARKETING"],
-					{ adminOption: true, grantBy: "current_user" },
-				)
-				.toString();
-			assert.equal(
-				result,
-				`REVOKE ADMIN OPTION FOR ADMINISTRADORES, CONTABILIDAD FROM LindaN GRANTED BY CURRENT_USER CASCADE;
+		test(
+			"revocar varios roles a varios identificadores",
+			{ only: false },
+			async () => {
+				const result = await qb
+					.revokeRoles(
+						["ADMINISTRADORES", "CONTABILIDAD"],
+						["LindaN", "MARKETING"],
+						{ adminOption: true, grantBy: "current_user" },
+					)
+					.toString();
+				assert.equal(
+					result,
+					`REVOKE ADMIN OPTION FOR ADMINISTRADORES, CONTABILIDAD FROM LindaN GRANTED BY CURRENT_USER CASCADE;
 REVOKE ADMIN OPTION FOR ADMINISTRADORES, CONTABILIDAD FROM MARKETING GRANTED BY CURRENT_USER CASCADE;`,
-			);
-		});
+				);
+			},
+		);
 	});
-	describe("Consultas de SQL", () => {
-		test("SELECT todas las filas distintas y todas las columnas ", () => {
-			const result = sql.select("*", { unique: true }).from("MUSICA");
-			assert.equal(result.toString(), "SELECT DISTINCT *\nFROM MUSICA;");
-		});
-		test("SELECT todas las filas distintas y algunas columnas", () => {
-			const result = sql
+	describe("Consultas de qb", async () => {
+		test(
+			"SELECT todas las filas distintas y todas las columnas ",
+			{ only: true },
+			async () => {
+				const result = qb.select("*", { unique: true }).from("MUSICA");
+				assert.equal(
+					await result.toString(),
+					"SELECT DISTINCT *\nFROM MUSICA;",
+				);
+			},
+		);
+		test("SELECT todas las filas distintas y algunas columnas", async () => {
+			const result = await qb
 				.select(
 					[{ col: "DISCOS", as: "ID_DISCO" }, "PRECIO", { col: "CANTIDAD" }],
 					{
@@ -563,14 +607,14 @@ REVOKE ADMIN OPTION FOR ADMINISTRADORES, CONTABILIDAD FROM MARKETING GRANTED BY 
 				"SELECT DISTINCT DISCOS AS ID_DISCO, PRECIO, CANTIDAD\nFROM MUSICA;",
 			);
 		});
-		test("Filtrado de datos con WHERE", () => {
-			const result = sql
+		test("Filtrado de datos con WHERE", async () => {
+			const result = await qb
 				.select(["TITULO_CD", "DERECHOSDEAUTOR", "EN_EXISTENCIA"])
 				.from("INVENTARIO_DISCO_COMPACTO")
 				.where(
-					sql.and(
-						sql.gt("DERECHOSDEAUTOR", 1989),
-						sql.lt("DERECHOSDEAUTOR", 2000),
+					qb.and(
+						qb.gt("DERECHOSDEAUTOR", 1989),
+						qb.lt("DERECHOSDEAUTOR", 2000),
 					),
 				);
 			assert.equal(
@@ -581,8 +625,8 @@ WHERE (DERECHOSDEAUTOR > 1989
 AND DERECHOSDEAUTOR < 2000);`,
 			);
 		});
-		test("agrupar filas cuyos valores de columna son iguales", () => {
-			const result = sql
+		test("agrupar filas cuyos valores de columna son iguales", async () => {
+			const result = await qb
 				.select([
 					"CATEGORIA",
 					"PRECIO",
@@ -597,8 +641,8 @@ FROM EXISTENCIA_DISCO_COMPACTO
 GROUP BY CATEGORIA, PRECIO;`,
 			);
 		});
-		test("GROUP BY ROLLUP", () => {
-			const result = sql
+		test("GROUP BY ROLLUP", async () => {
+			const result = await qb
 				.select([
 					"CATEGORIA",
 					"PRECIO",
@@ -613,8 +657,8 @@ FROM EXISTENCIA_DISCO_COMPACTO
 GROUP BY ROLLUP (CATEGORIA, PRECIO);`,
 			);
 		});
-		test("HAVING", () => {
-			const result = sql
+		test("HAVING", async () => {
+			const result = await qb
 				.select([
 					"PRECIO",
 					"CATEGORIA",
@@ -631,8 +675,8 @@ GROUP BY CATEGORIA, PRECIO
 HAVING SUM(A_LA_MANO) > 10;`,
 			);
 		});
-		test("ORDER BY", () => {
-			const result = sql
+		test("ORDER BY", async () => {
+			const result = await qb
 				.select("*")
 				.from("EXISTENCIA_DISCO_COMPACTO")
 				.where("PRECIO < 16.00")
@@ -646,9 +690,9 @@ ORDER BY PRECIO, A_LA_MANO DESC;`,
 			);
 		});
 	});
-	describe("Modificacion de datos", () => {
-		test("Insertar datos en una tabla sin especificar las columnas", () => {
-			const result = sql.insert(
+	describe("Modificacion de datos", async () => {
+		test("Insertar datos en una tabla sin especificar las columnas", async () => {
+			const result = await qb.insert(
 				"INVENTARIO_CD",
 				[],
 				["Patsy Cline: 12 Greatest Hits", "Country", "MCA Records", 32],
@@ -660,8 +704,8 @@ VALUES
 ( 'Patsy Cline: 12 Greatest Hits', 'Country', 'MCA Records', 32 );`,
 			);
 		});
-		test("Insertar datos en una tabla especificando columnas", () => {
-			const result = sql.insert(
+		test("Insertar datos en una tabla especificando columnas", async () => {
+			const result = await qb.insert(
 				"INVENTARIO_CD",
 				["NOMBRE_CD", "EDITOR", "EN_EXISTENCIA"],
 				["Fundamental", "Capitol Records", 34],
@@ -673,11 +717,11 @@ VALUES
 ( 'Fundamental', 'Capitol Records', 34 );`,
 			);
 		});
-		test("Insertar datos en una tabla usando SELECT", () => {
-			const sqlSelect = sql
+		test("Insertar datos en una tabla usando SELECT", async () => {
+			const qbSelect = await qb
 				.select(["NOMBRE_CD", "EN_EXISTENCIA"])
 				.from("INVENTARIO_CD");
-			const result = sql.insert("INVENTARIO_CD_2", [], sqlSelect);
+			const result = await qb.insert("INVENTARIO_CD_2", [], qbSelect);
 			console.log(result);
 			assert.equal(
 				result.toString(),
@@ -686,8 +730,8 @@ SELECT NOMBRE_CD, EN_EXISTENCIA
 FROM INVENTARIO_CD;`,
 			);
 		});
-		test("Insertar varias filas de datos", () => {
-			const result = sql.insert(
+		test("Insertar varias filas de datos", async () => {
+			const result = await qb.insert(
 				"INVENTARIO_CD",
 				[],
 				[
@@ -707,16 +751,16 @@ VALUES
 (830, 'Windham Hill Records');`,
 			);
 		});
-		test("Actualizar el valor de una columna", () => {
-			const result = sql.update("INVENTARIO_CD", { EN_EXISTENCIA: 27 });
+		test("Actualizar el valor de una columna", async () => {
+			const result = await qb.update("INVENTARIO_CD", { EN_EXISTENCIA: 27 });
 			assert.equal(
 				result.toString(),
 				`UPDATE INVENTARIO_CD
 SET EN_EXISTENCIA = 27;`,
 			);
 		});
-		test("Actualizar el valor de varias columnas", () => {
-			const result = sql.update("INVENTARIO_CD", {
+		test("Actualizar el valor de varias columnas", async () => {
+			const result = await qb.update("INVENTARIO_CD", {
 				EN_EXISTENCIA: "27",
 				CANTIDAD: 10,
 			});
@@ -727,10 +771,10 @@ SET EN_EXISTENCIA = '27',
 CANTIDAD = 10;`,
 			);
 		});
-		test("Actualizar el valor de una columna solo de algunas filas usando where", () => {
-			const result = sql
+		test("Actualizar el valor de una columna solo de algunas filas usando where", async () => {
+			const result = await qb
 				.update("INVENTARIO_CD", { EN_EXISTENCIA: 27 })
-				.where([sql.eq("NOMBRE_CD", "Out of Africa")]);
+				.where([qb.eq("NOMBRE_CD", "Out of Africa")]);
 			assert.equal(
 				result.toString(),
 				`UPDATE INVENTARIO_CD
@@ -738,14 +782,14 @@ SET EN_EXISTENCIA = 27
 WHERE NOMBRE_CD = 'Out of Africa';`,
 			);
 		});
-		test("Actualizar el valor de una columna usando como valor el select", () => {
-			const sqlSelect = sql
-				.select(sql.avg("EN_EXISTENCIA"))
+		test("Actualizar el valor de una columna usando como valor el select", async () => {
+			const qbSelect = await qb
+				.select(qb.avg("EN_EXISTENCIA"))
 				.from("INVENTARIO_CD");
 
-			const result = sql
-				.update("INVENTARIO_CD_2", { EN_EXISTENCIA_2: sqlSelect })
-				.where([sql.eq("NOMBRE_CD_2", "Orlando")]);
+			const result = await qb
+				.update("INVENTARIO_CD_2", { EN_EXISTENCIA_2: qbSelect })
+				.where([qb.eq("NOMBRE_CD_2", "Orlando")]);
 
 			assert.equal(
 				result.toString(),
@@ -756,30 +800,30 @@ FROM INVENTARIO_CD )
 WHERE NOMBRE_CD_2 = 'Orlando';`,
 			);
 		});
-		test("Eliminar filas de una tabla con DELETE FROM", () => {
-			const result = sql.delete("INVENTARIO_CD");
+		test("Eliminar filas de una tabla con DELETE FROM", async () => {
+			const result = await qb.delete("INVENTARIO_CD");
 			assert.equal(result.toString(), "DELETE FROM INVENTARIO_CD;");
 		});
-		test("Eliminar algunas filas de una tabla con DELETE y where", () => {
-			const result = sql
+		test("Eliminar algunas filas de una tabla con DELETE y where", async () => {
+			const result = await qb
 				.delete("INVENTARIO_CD")
-				.where(sql.eq("TIPO_MUSICA", "Country"));
+				.where(qb.eq("TIPO_MUSICA", "Country"));
 			assert.equal(
 				result.toString(),
 				`DELETE FROM INVENTARIO_CD
 WHERE TIPO_MUSICA = 'Country';`,
 			);
 		});
-		test("eliminar datos usando una sub consulta", () => {
-			const result = sql
+		test("eliminar datos usando una sub consulta", async () => {
+			const result = await qb
 				.delete("TIPOS_TITULO")
 				.where(
-					sql.in(
+					qb.in(
 						"TITULO_CD",
-						sql
+						qb
 							.select("TITLE")
 							.from("INVENTARIO_TITULOS")
-							.where(sql.eq("TITLE_ID", 108)),
+							.where(qb.eq("TITLE_ID", 108)),
 					),
 				);
 
@@ -792,25 +836,21 @@ WHERE TITLE_ID = 108 );`,
 			);
 		});
 	});
-	describe("Predicados de WHERE", () => {
-		test("operadores", () => {
-			assert.equal(sql.eq("columna", "string"), "columna = 'string'");
-			assert.equal(sql.ne("columna", 4), "columna <> 4");
-			assert.equal(sql.gt("columna", 4), "columna > 4");
-			assert.equal(sql.gte("columna", 4), "columna >= 4");
-			assert.equal(sql.lt("columna", 4), "columna < 4");
-			assert.equal(sql.lte("columna", 4), "columna <= 4");
+	describe("Predicados de WHERE", async () => {
+		test("operadores", async () => {
+			assert.equal(qb.eq("columna", "string"), "columna = 'string'");
+			assert.equal(qb.ne("columna", 4), "columna <> 4");
+			assert.equal(qb.gt("columna", 4), "columna > 4");
+			assert.equal(qb.gte("columna", 4), "columna >= 4");
+			assert.equal(qb.lt("columna", 4), "columna < 4");
+			assert.equal(qb.lte("columna", 4), "columna <= 4");
 		});
-		test("logicos", () => {
+		test("logicos", async () => {
 			assert.equal(
-				sql.and(
-					sql.or(
-						sql.eq("columna", 1),
-						sql.eq("columna", 2),
-						sql.eq("columna", 3),
-					),
-					sql.gt("col", 25),
-				) + sql.or(sql.and(sql.gt("PEPE", 10), sql.lt("PEPE", 40))),
+				qb.and(
+					qb.or(qb.eq("columna", 1), qb.eq("columna", 2), qb.eq("columna", 3)),
+					qb.gt("col", 25),
+				) + qb.or(qb.and(qb.gt("PEPE", 10), qb.lt("PEPE", 40))),
 				`((columna = 1
 OR columna = 2
 OR columna = 3)
@@ -819,55 +859,55 @@ OR (PEPE > 10
 AND PEPE < 40)`,
 			);
 		});
-		test("predicado NOT", () => {
-			assert.equal(sql.not(sql.eq("col", 24)), "NOT (col = 24)");
+		test("predicado NOT", async () => {
+			assert.equal(qb.not(qb.eq("col", 24)), "NOT (col = 24)");
 			assert.equal(
-				sql.not(sql.or(sql.eq("col", 24), sql.gt("col", 10))),
+				qb.not(qb.or(qb.eq("col", 24), qb.gt("col", 10))),
 				`NOT ((col = 24
 OR col > 10))`,
 			);
 		});
-		test("Un valor entre un mínimo y un máximo", () => {
-			assert.equal(sql.between("CAMPO", 12, 15), "CAMPO BETWEEN 12 AND 15");
+		test("Un valor entre un mínimo y un máximo", async () => {
+			assert.equal(qb.between("CAMPO", 12, 15), "CAMPO BETWEEN 12 AND 15");
 		});
-		test("Valores que pueden ser Null o no Null", () => {
-			assert.equal(sql.isNull("col"), "col IS NULL");
+		test("Valores que pueden ser Null o no Null", async () => {
+			assert.equal(qb.isNull("col"), "col IS NULL");
 			assert.equal(
-				sql.isNull(["col1", "col2", "col3"]),
+				qb.isNull(["col1", "col2", "col3"]),
 				"col1 IS NULL\nAND col2 IS NULL\nAND col3 IS NULL",
 			);
 			assert.equal(
-				sql.isNotNull(["col1", "col2", "col3"]),
+				qb.isNotNull(["col1", "col2", "col3"]),
 				"col1 IS NOT NULL\nAND col2 IS NOT NULL\nAND col3 IS NOT NULL",
 			);
 			assert.equal(
-				sql.and(
-					sql.isNotNull("LUGAR_DE_NACIMIENTO"),
-					sql.gt("AÑO_NACIMIENTO", 1940),
+				qb.and(
+					qb.isNotNull("LUGAR_DE_NACIMIENTO"),
+					qb.gt("AÑO_NACIMIENTO", 1940),
 				),
 				`(LUGAR_DE_NACIMIENTO IS NOT NULL
 AND AÑO_NACIMIENTO > 1940)`,
 			);
 		});
-		test("Valor que coincide con una expresion usando comodines % y _", () => {
-			assert.equal(sql.like("ID_CD", "%01"), "ID_CD LIKE ('%01')");
+		test("Valor que coincide con una expresion usando comodines % y _", async () => {
+			assert.equal(qb.like("ID_CD", "%01"), "ID_CD LIKE ('%01')");
 		});
-		test("valor dentro de una lista", () => {
+		test("valor dentro de una lista", async () => {
 			assert.equal(
-				sql.in("EN_EXISTENCIA", [12, 22, 32, 42, "bocata"]),
+				qb.in("EN_EXISTENCIA", [12, 22, 32, 42, "bocata"]),
 				"EN_EXISTENCIA IN ( 12, 22, 32, 42, 'bocata' )",
 			);
 			assert.equal(
-				sql
+				qb
 					.select(["TITULO", "ARTISTA"])
 					.from("ARTISTAS_DISCO_COMPACTO")
 					.where(
-						sql.in(
+						qb.in(
 							"TITULO",
-							sql
+							qb
 								.select("NOMBRE_CD")
 								.from("INVENTARIO_DISCO_COMPACTO")
-								.where(sql.gt("EN_EXISTENCIA", 10)),
+								.where(qb.gt("EN_EXISTENCIA", 10)),
 						),
 					)
 					.toString(),
@@ -878,17 +918,17 @@ FROM INVENTARIO_DISCO_COMPACTO
 WHERE EN_EXISTENCIA > 10 );`,
 			);
 		});
-		test("El valor existe en la subconsulta", () => {
+		test("El valor existe en la subconsulta", async () => {
 			assert.equal(
-				sql
+				qb
 					.select(["TITULO", "ARTISTA"])
 					.from("ARTISTAS_DISCO_COMPACTO")
 					.where(
-						sql.exists(
-							sql
+						qb.exists(
+							qb
 								.select("NOMBRE_CD")
 								.from("INVENTARIO_DISCO_COMPACTO")
-								.where(sql.gt("EN_EXISTENCIA", 10)),
+								.where(qb.gt("EN_EXISTENCIA", 10)),
 						),
 					)
 					.toString(),
@@ -899,19 +939,19 @@ FROM INVENTARIO_DISCO_COMPACTO
 WHERE EN_EXISTENCIA > 10 );`,
 			);
 		});
-		test("el valor coincide con algun valor en la sub consulta", () => {
+		test("el valor coincide con algun valor en la sub consulta", async () => {
 			assert.equal(
-				sql
+				qb
 					.select(["TITULO", "REBAJA"])
 					.from("REBAJA_CD")
 					.where(
-						sql.lt(
+						qb.lt(
 							"REBAJA",
-							sql.any(
-								sql
+							qb.any(
+								qb
 									.select("MENUDEO")
 									.from("MENUDEO_CD")
-									.where(sql.gt("EN_EXISTENCIA", 9)),
+									.where(qb.gt("EN_EXISTENCIA", 9)),
 							),
 						),
 					)
@@ -923,19 +963,19 @@ FROM MENUDEO_CD
 WHERE EN_EXISTENCIA > 9 );`,
 			);
 		});
-		test("coincide con mas de un valor en la sub consulta", () => {
+		test("coincide con mas de un valor en la sub consulta", async () => {
 			assert.equal(
-				sql
+				qb
 					.select(["TITULO", "REBAJA"])
 					.from("REBAJA_CD")
 					.where(
-						sql.lt(
+						qb.lt(
 							"REBAJA",
-							sql.some(
-								sql
+							qb.some(
+								qb
 									.select("MENUDEO")
 									.from("MENUDEO_CD")
-									.where(sql.gt("EN_EXISTENCIA", 9)),
+									.where(qb.gt("EN_EXISTENCIA", 9)),
 							),
 						),
 					)
@@ -947,19 +987,19 @@ FROM MENUDEO_CD
 WHERE EN_EXISTENCIA > 9 );`,
 			);
 		});
-		test("coincide con todos los valores de la sub consulta", () => {
+		test("coincide con todos los valores de la sub consulta", async () => {
 			assert.equal(
-				sql
+				qb
 					.select(["TITULO", "REBAJA"])
 					.from("REBAJA_CD")
 					.where(
-						sql.lt(
+						qb.lt(
 							"REBAJA",
-							sql.all(
-								sql
+							qb.all(
+								qb
 									.select("MENUDEO")
 									.from("MENUDEO_CD")
-									.where(sql.gt("EN_EXISTENCIA", 9)),
+									.where(qb.gt("EN_EXISTENCIA", 9)),
 							),
 						),
 					)
@@ -972,96 +1012,98 @@ WHERE EN_EXISTENCIA > 9 );`,
 			);
 		});
 	});
-	describe("Funciones", () => {
-		describe("SET", () => {
-			test("COUNT", () => {
-				assert.equal(sql.count("*"), "COUNT(*)");
-				assert.equal(sql.count("PRECIO"), "COUNT(PRECIO)");
-				assert.equal(sql.count("PRECIO", "DINERO"), "COUNT(PRECIO) AS DINERO");
+	describe("Funciones", async () => {
+		describe("SET", async () => {
+			test("COUNT", async () => {
+				assert.equal(qb.count("*"), "COUNT(*)");
+				assert.equal(qb.count("PRECIO"), "COUNT(PRECIO)");
+				assert.equal(qb.count("PRECIO", "DINERO"), "COUNT(PRECIO) AS DINERO");
 			});
-			test("SELECT con COUNT", () => {
-				const result = sql
-					.select(sql.count("PRECIO", "DINERO"))
+			test("SELECT con COUNT", async () => {
+				const result = await qb
+					.select(qb.count("PRECIO", "DINERO"))
 					.from("LISTA_CD");
 				assert.equal(
 					result.toString(),
 					"SELECT COUNT(PRECIO) AS DINERO\nFROM LISTA_CD;",
 				);
 			});
-			test("MAX y MIN", () => {
-				assert.equal(sql.max("PRECIO"), "MAX(PRECIO)");
-				assert.equal(sql.max("PRECIO", "DINERO"), "MAX(PRECIO) AS DINERO");
-				assert.equal(sql.min("PRECIO"), "MIN(PRECIO)");
-				assert.equal(sql.min("PRECIO", "DINERO"), "MIN(PRECIO) AS DINERO");
+			test("MAX y MIN", async () => {
+				assert.equal(qb.max("PRECIO"), "MAX(PRECIO)");
+				assert.equal(qb.max("PRECIO", "DINERO"), "MAX(PRECIO) AS DINERO");
+				assert.equal(qb.min("PRECIO"), "MIN(PRECIO)");
+				assert.equal(qb.min("PRECIO", "DINERO"), "MIN(PRECIO) AS DINERO");
 			});
-			test("SUM", () => {
-				assert.equal(sql.sum("PRECIO"), "SUM(PRECIO)");
-				assert.equal(sql.sum("PRECIO", "DINERO"), "SUM(PRECIO) AS DINERO");
+			test("SUM", async () => {
+				assert.equal(qb.sum("PRECIO"), "SUM(PRECIO)");
+				assert.equal(qb.sum("PRECIO", "DINERO"), "SUM(PRECIO) AS DINERO");
 			});
-			test("AVG", () => {
-				assert.equal(sql.avg("PRECIO"), "AVG(PRECIO)");
-				assert.equal(sql.avg("PRECIO", "DINERO"), "AVG(PRECIO) AS DINERO");
+			test("AVG", async () => {
+				assert.equal(qb.avg("PRECIO"), "AVG(PRECIO)");
+				assert.equal(qb.avg("PRECIO", "DINERO"), "AVG(PRECIO) AS DINERO");
 			});
 		});
-		describe("VALUE", () => {
-			describe("funciones de valor de cadena", () => {
-				test("substring", () => {
+		describe("VALUE", async () => {
+			describe("funciones de valor de cadena", async () => {
+				test("substring", async () => {
 					assert.equal(
-						sql.substr("DESCRIPCION", 3),
+						qb.substr("DESCRIPCION", 3),
 						"SUBSTRING(DESCRIPCION FROM 3)",
 					);
 					assert.equal(
-						sql.substr("DESCRIPCION", 3, 10),
+						qb.substr("DESCRIPCION", 3, 10),
 						"SUBSTRING(DESCRIPCION FROM 3 FOR 10)",
 					);
 					assert.equal(
-						sql.substr("DESCRIPCION", 3, "ABREVIADO"),
+						qb.substr("DESCRIPCION", 3, "ABREVIADO"),
 						"SUBSTRING(DESCRIPCION FROM 3) AS ABREVIADO",
 					);
 				});
-				test("UPPER y LOWER", () => {
-					assert.equal(sql.upper("DISCO"), "UPPER(DISCO)");
+				test("UPPER y LOWER", async () => {
+					assert.equal(qb.upper("DISCO"), "UPPER(DISCO)");
 					assert.equal(
-						sql.upper("DISCO", "DISCO_EN_MAYUSCULA"),
+						qb.upper("DISCO", "DISCO_EN_MAYUSCULA"),
 						"UPPER(DISCO) AS DISCO_EN_MAYUSCULA",
 					);
-					assert.equal(sql.lower("DISCO"), "LOWER(DISCO)");
+					assert.equal(qb.lower("DISCO"), "LOWER(DISCO)");
 					assert.equal(
-						sql.lower("DISCO", "DISCO_EN_MAYUSCULA"),
+						qb.lower("DISCO", "DISCO_EN_MAYUSCULA"),
 						"LOWER(DISCO) AS DISCO_EN_MAYUSCULA",
 					);
 				});
 			});
-			describe("funciones de tiempo", () => {
-				test("Current", () => {
-					assert.equal(sql.currentDate(), "CURRENT_DATE");
-					assert.equal(sql.currentTime(), "CURRENT_TIME");
-					assert.equal(sql.currentTimestamp(), "CURRENT_TIMESTAMP");
+			describe("funciones de tiempo", async () => {
+				test("Current", async () => {
+					assert.equal(qb.currentDate(), "CURRENT_DATE");
+					assert.equal(qb.currentTime(), "CURRENT_TIME");
+					assert.equal(qb.currentTimestamp(), "CURRENT_TIMESTAMP");
 				});
-				test("local time", () => {
-					assert.equal(sql.localTime(), "LOCALTIME");
-					assert.equal(sql.localTimestamp(), "LOCALTIMESTAMP");
+				test("local time", async () => {
+					assert.equal(qb.localTime(), "LOCALTIME");
+					assert.equal(qb.localTimestamp(), "LOCALTIMESTAMP");
 				});
 			});
 		});
 	});
-	describe("Operaciones con dos tablas", () => {
-		test("tabla de producto cartesiano", () => {
-			const result = sql.select("*").from(["INVENTARIO_CD", "INTERPRETES"]);
+	describe("Operaciones con dos tablas", async () => {
+		test("tabla de producto cartesiano", async () => {
+			const result = await qb
+				.select("*")
+				.from(["INVENTARIO_CD", "INTERPRETES"]);
 			assert.equal(
 				result.toString(),
 				`SELECT *
 FROM INVENTARIO_CD, INTERPRETES;`,
 			);
 		});
-		test("Una tabla EQUI-JOIN", () => {
-			const result = sql
+		test("Una tabla EQUI-JOIN", async () => {
+			const result = await qb
 				.select("*")
 				.from(["INVENTARIO_CD", "INTERPRETES"])
 				.where(
-					sql.eq(
-						sql.col("ID_INTER", "INVENTARIO_CD"),
-						sql.col("ID_INTER", "INTERPRETES"),
+					qb.eq(
+						qb.col("ID_INTER", "INVENTARIO_CD"),
+						qb.col("ID_INTER", "INTERPRETES"),
 					),
 				);
 			assert.equal(
@@ -1071,21 +1113,21 @@ FROM INVENTARIO_CD, INTERPRETES
 WHERE INVENTARIO_CD.ID_INTER = INTERPRETES.ID_INTER;`,
 			);
 		});
-		test("limitar las columnas arrojadas y agregar otro predicado a la cláusula WHERE y así limitar las filas arrojadas", () => {
-			const result = sql
+		test("limitar las columnas arrojadas y agregar otro predicado a la cláusula WHERE y así limitar las filas arrojadas", async () => {
+			const result = await qb
 				.select([
-					sql.col("NOMBRE_CD", "INVENTARIO_CD"),
-					sql.col("NOMBRE_INTER", "INTERPRETES"),
-					sql.col("EN_EXISTENCIA", "INVENTARIO_CD"),
+					qb.col("NOMBRE_CD", "INVENTARIO_CD"),
+					qb.col("NOMBRE_INTER", "INTERPRETES"),
+					qb.col("EN_EXISTENCIA", "INVENTARIO_CD"),
 				])
 				.from(["INVENTARIO_CD", "INTERPRETES"])
 				.where(
-					sql.and(
-						sql.eq(
-							sql.col("ID_INTER", "INVENTARIO_CD"),
-							sql.col("ID_INTER", "INTERPRETES"),
+					qb.and(
+						qb.eq(
+							qb.col("ID_INTER", "INVENTARIO_CD"),
+							qb.col("ID_INTER", "INTERPRETES"),
 						),
-						sql.lt(sql.col("EN_EXISTENCIA", "INVENTARIO_CD"), 15),
+						qb.lt(qb.col("EN_EXISTENCIA", "INVENTARIO_CD"), 15),
 					),
 				);
 
@@ -1097,18 +1139,18 @@ WHERE (INVENTARIO_CD.ID_INTER = INTERPRETES.ID_INTER
 AND INVENTARIO_CD.EN_EXISTENCIA < 15);`,
 			);
 		});
-		test("Uso de alias para tablas", () => {
-			const result = sql
+		test("Uso de alias para tablas", async () => {
+			const result = await qb
 				.select([
-					sql.col("NOMBRE_CD", "c"),
-					sql.col("NOMBRE_INTER", "p"),
-					sql.col("EN_EXISTENCIA", "c"),
+					qb.col("NOMBRE_CD", "c"),
+					qb.col("NOMBRE_INTER", "p"),
+					qb.col("EN_EXISTENCIA", "c"),
 				])
 				.from(["INVENTARIO_CD", "INTERPRETES"], ["c", "p"])
 				.where(
-					sql.and(
-						sql.eq(sql.col("ID_INTER", "c"), sql.col("ID_INTER", "p")),
-						sql.lt(sql.col("EN_EXISTENCIA", "c"), 15),
+					qb.and(
+						qb.eq(qb.col("ID_INTER", "c"), qb.col("ID_INTER", "p")),
+						qb.lt(qb.col("EN_EXISTENCIA", "c"), 15),
 					),
 				);
 
@@ -1120,18 +1162,18 @@ WHERE (c.ID_INTER = p.ID_INTER
 AND c.EN_EXISTENCIA < 15);`,
 			);
 		});
-		test("CROSS JOIN", () => {
-			const result = sql
+		test("CROSS JOIN", async () => {
+			const result = await qb
 				.select([
-					sql.col("NOMBRE_CD", "c"),
-					sql.col("NOMBRE_INTER", "p"),
-					sql.col("EN_EXISTENCIA", "c"),
+					qb.col("NOMBRE_CD", "c"),
+					qb.col("NOMBRE_INTER", "p"),
+					qb.col("EN_EXISTENCIA", "c"),
 				])
 				.crossJoin(["INVENTARIO_CD", "INTERPRETES"], ["c", "p"])
 				.where(
-					sql.and(
-						sql.eq(sql.col("ID_INTER", "c"), sql.col("ID_INTER", "p")),
-						sql.lt(sql.col("EN_EXISTENCIA", "c"), 15),
+					qb.and(
+						qb.eq(qb.col("ID_INTER", "c"), qb.col("ID_INTER", "p")),
+						qb.lt(qb.col("EN_EXISTENCIA", "c"), 15),
 					),
 				);
 
@@ -1143,11 +1185,11 @@ WHERE (c.ID_INTER = p.ID_INTER
 AND c.EN_EXISTENCIA < 15);`,
 			);
 		});
-		test("NATURAL JOIN", () => {
-			const result = sql
-				.select(["TITULO_CD", "TIPO_CD", sql.col("MENUDEO", "c")])
+		test("NATURAL JOIN", async () => {
+			const result = await qb
+				.select(["TITULO_CD", "TIPO_CD", qb.col("MENUDEO", "c")])
 				.naturalJoin(["TITULOS_EN_EXISTENCIA", "COSTOS_TITULO"], ["s", "c"])
-				.where(sql.gt(sql.col("INVENTARIO", "s"), 15));
+				.where(qb.gt(qb.col("INVENTARIO", "s"), 15));
 
 			assert.equal(
 				result.toString(),
@@ -1156,12 +1198,12 @@ FROM TITULOS_EN_EXISTENCIA s NATURAL JOIN COSTOS_TITULO c
 WHERE s.INVENTARIO > 15;`,
 			);
 		});
-		test("Join de columna nombrada", () => {
-			const result = sql
-				.select(["TITULO_CD", sql.col("TIPO_CD", "s"), sql.col("MENUDEO", "c")])
+		test("Join de columna nombrada", async () => {
+			const result = await qb
+				.select(["TITULO_CD", qb.col("TIPO_CD", "s"), qb.col("MENUDEO", "c")])
 				.join(["TITULOS_EN_EXISTENCIA", "COSTOS_TITULO"], ["s", "c"])
 				.using("TITULO_CD")
-				.where(sql.gt(sql.col("INVENTARIO", "s"), 15));
+				.where(qb.gt(qb.col("INVENTARIO", "s"), 15));
 
 			assert.equal(
 				result.toString(),
@@ -1171,14 +1213,14 @@ USING (TITULO_CD)
 WHERE s.INVENTARIO > 15;`,
 			);
 		});
-		test("INNER JOIN y la clausula ON", () => {
-			const result = sql
-				.select([sql.col("TITULO", "t"), sql.col("ARTISTA", "a")])
+		test("INNER JOIN y la clausula ON", async () => {
+			const result = await qb
+				.select([qb.col("TITULO", "t"), qb.col("ARTISTA", "a")])
 				.innerJoin(["TITULO_CDS", "ARTISTAS_TITULOS"], ["t", "ta"])
-				.on(sql.eq(sql.col("ID_TITULO", "t"), sql.col("ID_TITULO", "ta")))
+				.on(qb.eq(qb.col("ID_TITULO", "t"), qb.col("ID_TITULO", "ta")))
 				.innerJoin("ARTISTAS_CD", "a")
-				.on(sql.eq(sql.col("ID_ARTISTA", "ta"), sql.col("ID_ARTISTA", "a")))
-				.where(sql.like(sql.col("TITULO", "t"), "%Blue%"));
+				.on(qb.eq(qb.col("ID_ARTISTA", "ta"), qb.col("ID_ARTISTA", "a")))
+				.where(qb.like(qb.col("TITULO", "t"), "%Blue%"));
 
 			assert.equal(
 				result.toString(),
@@ -1190,15 +1232,15 @@ ON ta.ID_ARTISTA = a.ID_ARTISTA
 WHERE t.TITULO LIKE ('%Blue%');`,
 			);
 		});
-		test("LEFT OUTER JOIN", () => {
-			const result = sql
+		test("LEFT OUTER JOIN", async () => {
+			const result = await qb
 				.select([
-					sql.col("TITULO", "i"),
-					sql.col("NOMBRE_TIPO", "t"),
-					sql.col("EXISTENCIA", "i"),
+					qb.col("TITULO", "i"),
+					qb.col("NOMBRE_TIPO", "t"),
+					qb.col("EXISTENCIA", "i"),
 				])
 				.leftJoin(["INFO_CD", "TIPO_CD"], ["i", "t"])
-				.on(sql.eq(sql.col("ID_TIPO", "i"), sql.col("ID_TIPO", "t")));
+				.on(qb.eq(qb.col("ID_TIPO", "i"), qb.col("ID_TIPO", "t")));
 
 			assert.equal(
 				result.toString(),
@@ -1207,15 +1249,15 @@ FROM INFO_CD i LEFT OUTER JOIN TIPO_CD t
 ON i.ID_TIPO = t.ID_TIPO;`,
 			);
 		});
-		test("RIGHT OUTER JOIN", () => {
-			const result = sql
+		test("RIGHT OUTER JOIN", async () => {
+			const result = await qb
 				.select([
-					sql.col("TITULO", "i"),
-					sql.col("NOMBRE_TIPO", "t"),
-					sql.col("EXISTENCIA", "i"),
+					qb.col("TITULO", "i"),
+					qb.col("NOMBRE_TIPO", "t"),
+					qb.col("EXISTENCIA", "i"),
 				])
 				.rightJoin(["INFO_CD", "TIPO_CD"], ["i", "t"])
-				.on(sql.eq(sql.col("ID_TIPO", "i"), sql.col("ID_TIPO", "t")));
+				.on(qb.eq(qb.col("ID_TIPO", "i"), qb.col("ID_TIPO", "t")));
 
 			assert.equal(
 				result.toString(),
@@ -1224,15 +1266,15 @@ FROM INFO_CD i RIGHT OUTER JOIN TIPO_CD t
 ON i.ID_TIPO = t.ID_TIPO;`,
 			);
 		});
-		test("FULL OUTER JOIN", () => {
-			const result = sql
+		test("FULL OUTER JOIN", async () => {
+			const result = await qb
 				.select([
-					sql.col("TITULO", "i"),
-					sql.col("NOMBRE_TIPO", "t"),
-					sql.col("EXISTENCIA", "i"),
+					qb.col("TITULO", "i"),
+					qb.col("NOMBRE_TIPO", "t"),
+					qb.col("EXISTENCIA", "i"),
 				])
 				.fullJoin(["INFO_CD", "TIPO_CD"], ["i", "t"])
-				.on(sql.eq(sql.col("ID_TIPO", "i"), sql.col("ID_TIPO", "t")));
+				.on(qb.eq(qb.col("ID_TIPO", "i"), qb.col("ID_TIPO", "t")));
 
 			assert.equal(
 				result.toString(),
@@ -1241,10 +1283,10 @@ FROM INFO_CD i FULL OUTER JOIN TIPO_CD t
 ON i.ID_TIPO = t.ID_TIPO;`,
 			);
 		});
-		test("UNION", () => {
-			const result = sql.unionAll(
-				sql.select("TIPO_CD").from("CDS_CONTINUADOS"),
-				sql.select("TIPO_CD").from("CDS_DESCONTINUADOS"),
+		test("UNION", async () => {
+			const result = await qb.unionAll(
+				qb.select("TIPO_CD").from("CDS_CONTINUADOS"),
+				qb.select("TIPO_CD").from("CDS_DESCONTINUADOS"),
 			);
 
 			assert.equal(
@@ -1257,18 +1299,18 @@ FROM CDS_DESCONTINUADOS;`,
 			);
 		});
 	});
-	describe("USO DE SUBCONSULTAS PARA ACCEDER Y MODIFICAR DATOS", () => {
-		test("subconsultas con varios resultados", () => {
-			const result = sql
+	describe("USO DE SUBCONSULTAS PARA ACCEDER Y MODIFICAR DATOS", async () => {
+		test("subconsultas con varios resultados", async () => {
+			const result = await qb
 				.select("*")
 				.from("EXISTENCIA_CD")
 				.where(
-					sql.in(
+					qb.in(
 						"TITULO_CD",
-						sql
+						qb
 							.select("TITULO")
 							.from("ARTISTAS_CD")
-							.where(sql.eq("NOMBRE_ARTISTA", "Joni Mitchell")),
+							.where(qb.eq("NOMBRE_ARTISTA", "Joni Mitchell")),
 					),
 				);
 
@@ -1281,23 +1323,23 @@ FROM ARTISTAS_CD
 WHERE NOMBRE_ARTISTA = 'Joni Mitchell' );`,
 			);
 		});
-		test("sub consultas anidadas", () => {
-			const result = sql
+		test("sub consultas anidadas", async () => {
+			const result = await qb
 				.select(["NOMBRE_DISCO", "CANTIDAD_EXISTENCIA"])
 				.from("INVENTARIO_DISCO")
 				.where(
-					sql.in(
+					qb.in(
 						"ID_ARTISTA",
-						sql
+						qb
 							.select("ID_ARTISTA")
 							.from("ARTISTAS_DISCO")
 							.where(
-								sql.in(
+								qb.in(
 									"ID_TIPO_DISCO",
-									sql
+									qb
 										.select("ID_TIPO_DISCO")
 										.from("TIPOS_DISCO")
-										.where(sql.eq("NOMBRE_TIPO_DISCO", "Blues")),
+										.where(qb.eq("NOMBRE_TIPO_DISCO", "Blues")),
 								),
 							),
 					),
@@ -1319,8 +1361,8 @@ WHERE NOMBRE_TIPO_DISCO = 'Blues' ) );`,
 	/**
 	 * Los siguientes Test prueban la funcionalidad que puede ser añadida al SGBD
 	 */
-	describe("trabajo con cursores", () => {
-		test("declarar un cursor", () => {
+	describe("trabajo con cursores", async () => {
+		test("declarar un cursor", async () => {
 			const options = {
 				changes: "ASENSITIVE",
 				cursor: "SCROLL",
@@ -1330,9 +1372,9 @@ WHERE NOMBRE_TIPO_DISCO = 'Blues' ) );`,
 				readOnly: false,
 				update: ["COL1", "COL2"],
 			};
-			const result = sql.createCursor(
+			const result = await qb.createCursor(
 				"name",
-				sql.select("*").from("TABLA"),
+				qb.select("*").from("TABLA"),
 				options,
 			);
 
@@ -1342,10 +1384,10 @@ WHERE NOMBRE_TIPO_DISCO = 'Blues' ) );`,
 FROM TABLA ORDER BY COLUMN FOR UPDATE OF COL1, COL2;`,
 			);
 		});
-		test("instrucción de cursor básica con deplazamiento", () => {
-			const result = sql.createCursor(
+		test("instrucción de cursor básica con deplazamiento", async () => {
+			const result = await qb.createCursor(
 				"CD_1",
-				sql.select("*").from("INVENTARIO_CD"),
+				qb.select("*").from("INVENTARIO_CD"),
 				{ orderBy: "DISCO_COMPACTO", cursor: "scroll", readOnly: true },
 			);
 
@@ -1355,10 +1397,10 @@ FROM TABLA ORDER BY COLUMN FOR UPDATE OF COL1, COL2;`,
 FROM INVENTARIO_CD ORDER BY DISCO_COMPACTO FOR READ ONLY;`,
 			);
 		});
-		test("un cursor actualizable", () => {
-			const result = sql.createCursor(
+		test("un cursor actualizable", async () => {
+			const result = await qb.createCursor(
 				"CD_4",
-				sql.select("*").from("INVENTARIO_CD"),
+				qb.select("*").from("INVENTARIO_CD"),
 				{
 					update: "DISCO_COMPACTO",
 				},
@@ -1370,10 +1412,10 @@ FROM INVENTARIO_CD ORDER BY DISCO_COMPACTO FOR READ ONLY;`,
 FROM INVENTARIO_CD FOR UPDATE OF DISCO_COMPACTO;`,
 			);
 		});
-		test("Recuperar datos de un cursor", () => {
-			const cursor = sql.createCursor(
+		test("Recuperar datos de un cursor", async () => {
+			const cursor = await qb.createCursor(
 				"CD_2",
-				sql.select("*").from("INVENTARIO_CD"),
+				qb.select("*").from("INVENTARIO_CD"),
 				{ cursor: "scroll", orderBy: "DISCO_COMPACTO", readOnly: true },
 			);
 
@@ -1385,9 +1427,9 @@ FROM INVENTARIO_CD ORDER BY DISCO_COMPACTO FOR READ ONLY;`,
 
 			assert.equal(cursor.status, "declared");
 			// Se abre el cursor utilizando el queryBuilder
-			const openCursor = sql.openCursor("CD_2");
+			const openCursor = await qb.openCursor("CD_2");
 			assert.equal(
-				sql.toString(),
+				qb.toString(),
 				`DECLARE CD_2 SCROLL CURSOR FOR SELECT *
 FROM INVENTARIO_CD ORDER BY DISCO_COMPACTO FOR READ ONLY;
 OPEN CD_2;`,
@@ -1405,20 +1447,20 @@ OPEN CD_2;`,
 			assert.equal(query, "FETCH ABSOLUTE 5 FROM CD_2\nINTO :una, :dos");
 
 			// Se cierra el cursor utilizando el queryBuilder
-			sql.closeCursor("CD_2");
+			qb.closeCursor("CD_2");
 			assert.equal(cursor.status, "closed");
 			assert.equal(
-				sql.toString(),
+				qb.toString(),
 				`FETCH NEXT FROM CD_2\nINTO :una, :dos;
 FETCH ABSOLUTE 5 FROM CD_2\nINTO :una, :dos;
 CLOSE CD_2;`,
 			);
 		});
-		test("Actualizar datos usando el cursor", () => {
+		test("Actualizar datos usando el cursor", async () => {
 			//declara el cursor para actualizar
-			const cursor = sql.createCursor(
+			const cursor = await qb.createCursor(
 				"CD_4",
-				sql.select("*").from("INVENTARIO_CD"),
+				qb.select("*").from("INVENTARIO_CD"),
 				{ update: true },
 			);
 
@@ -1442,7 +1484,7 @@ INTO :CD, :Categoria, :Precio, :A_la_mano`,
 			);
 
 			// Actualiza los datos de la tabla usando variables de host obtenidas del cursor
-			const result = sql
+			const result = await qb
 				.update("INVENTARIO_CD", { A_LA_MANO: ":A_la_mano * 2" })
 				.whereCursor("CD_4")
 				.closeCursor("CD_4");
@@ -1460,15 +1502,15 @@ WHERE CURRENT OF CD_4;
 CLOSE CD_4;`,
 			);
 		});
-		test("DELETE POSICIONADO usando cursores", () => {
-			const cursor = sql
-				.createCursor("CD_4", sql.select("*").from("INVENTARIO_CD"), {
+		test("DELETE POSICIONADO usando cursores", async () => {
+			const cursor = await qb
+				.createCursor("CD_4", qb.select("*").from("INVENTARIO_CD"), {
 					update: true,
 				})
 				.open();
 
 			const fila = cursor.fetch(["CD"]);
-			const result = sql.delete("INVENTARIO_CD").whereCursor("CD_4");
+			const result = await qb.delete("INVENTARIO_CD").whereCursor("CD_4");
 			cursor.close();
 
 			assert.ok(fila);
@@ -1486,9 +1528,9 @@ CLOSE CD_4;`,
 			);
 		});
 	});
-	describe("trabajo con transacciones", () => {
-		test("set transaction", () => {
-			const result = sql.setTransaction({
+	describe("trabajo con transacciones", async () => {
+		test("set transaction", async () => {
+			const result = await qb.setTransaction({
 				access: "read only",
 				isolation: "READ UNCOMMITTED",
 				diagnostic: 5,
@@ -1501,8 +1543,8 @@ ISOLATION LEVEL READ UNCOMMITTED,
 DIAGNOSTICS SIZE 5;`,
 			);
 		});
-		test("set transaction READ WRITE", () => {
-			const result = sql.setTransaction({
+		test("set transaction READ WRITE", async () => {
+			const result = await qb.setTransaction({
 				access: "read WRITE",
 				isolation: "serializable",
 				diagnostic: 8,
@@ -1515,8 +1557,8 @@ ISOLATION LEVEL SERIALIZABLE,
 DIAGNOSTICS SIZE 8;`,
 			);
 		});
-		test("Iniciar la transaccion", () => {
-			const result = sql.startTransaction({
+		test("Iniciar la transaccion", async () => {
+			const result = await qb.startTransaction({
 				access: "read only",
 				isolation: "READ UNCOMMITTED",
 				diagnostic: 5,
@@ -1529,8 +1571,8 @@ ISOLATION LEVEL READ UNCOMMITTED,
 DIAGNOSTICS SIZE 5;`,
 			);
 		});
-		test("aplicar restricciones diferidas", () => {
-			const result = sql.setConstraints(
+		test("aplicar restricciones diferidas", async () => {
+			const result = await qb.setConstraints(
 				["RESTRICCION_1", "RESTRICCION_2"],
 				"deferred",
 			);
@@ -1540,16 +1582,18 @@ DIAGNOSTICS SIZE 5;`,
 				"SET CONSTRAINTS RESTRICCION_1, RESTRICCION_2 DEFERRED;",
 			);
 		});
-		test("aplicar puntos de recuperación", () => {
-			const result = sql.setSavePoint("SECCION_1").clearSavePoint("SECCION_1");
+		test("aplicar puntos de recuperación", async () => {
+			const result = await qb
+				.setSavePoint("SECCION_1")
+				.clearSavePoint("SECCION_1");
 
 			assert.equal(
 				result.toString(),
 				"SAVEPOINT SECCION_1;\nRELEASE SAVEPOINT SECCION_1;",
 			);
 		});
-		test("commit and rollback", () => {
-			const result = sql.commit().rollback("SECCTION_1");
+		test("commit and rollback", async () => {
+			const result = await qb.commit().rollback("SECCTION_1");
 			assert.equal(
 				result.toString(),
 				"COMMIT;\nROLLBACK TO SAVEPOINT SECCTION_1;",

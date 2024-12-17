@@ -350,9 +350,9 @@ class Core {
 		if (predicados instanceof QueryBuilder) {
 			return this.promiseResult;
 		}
-		// if (typeof predicados === "string") {
-		// return `${sql} ${predicados}`;
-		// }
+		if (typeof predicados === "string") {
+			return `${sql} ${predicados}`;
+		}
 		// const where = await Promise.all(predicados);
 		// console.log("predicados:", where);
 		// return `${sql} ${where.join("\n")}`;
@@ -446,34 +446,28 @@ class Core {
 		}
 	}
 
-	async getListValues(...values) {
+	getListValues(...values) {
+		const next = values.pop(); //extrae el último parametro de values
 		let arrayValues = [];
 		if (Array.isArray(values[0])) {
-			arrayValues = await Promise.all(
-				values[0].map(async (value) =>
-					typeof value === "string"
-						? `'${value}'`
-						: value instanceof QueryBuilder
-							? await value.toString({ as: "subselect" })
-							: value,
-				),
-			);
+			arrayValues = values[0].map((value) => {
+				if (value instanceof QueryBuilder) {
+					return next;
+				}
+				return value;
+			});
 		} else {
-			arrayValues = await Promise.all(
-				values.map(async (value) =>
-					typeof value === "string"
-						? `'${value}'`
-						: value instanceof QueryBuilder
-							? await value.toString({ as: "subselect" })
-							: value,
-				),
-			);
+			arrayValues = values.map((value) => {
+				if (value instanceof QueryBuilder) {
+					return next;
+				}
+				return value;
+			});
 		}
 		return arrayValues;
 	}
 	in(columna, ...values) {
-		// return `${columna} IN ( ${this.getListValues(...values).join(", ")} )`;
-		return `${columna} IN`;
+		return `${columna} IN ( ${this.getListValues(...values).join(", ")} )`;
 	}
 	notIn(columna, ...values) {
 		return `${columna} NOT IN ( ${this.getListValues(...values).join(", ")} )`;

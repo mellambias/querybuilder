@@ -3425,9 +3425,10 @@ WHERE ID_TITULO = 108 );`;
 							.from("INVENTARIO_TITULOS")
 							.where(qb.eq("ID_TITULO", 108)),
 					),
-				).promise;
-			console.log("Resultado >>>\n%o\n<<<", result);
-			//showResults(result, debug);
+				)
+				.execute(debug);
+			console.log("Resultado >>>\n%s\n<<<", result);
+			showResults(result, debug);
 			// assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test

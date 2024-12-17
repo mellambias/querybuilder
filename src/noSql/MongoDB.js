@@ -157,6 +157,7 @@ class MongoDB extends Core {
 		return alterTable;
 	}
 	addColumn(name, options, alterTable) {
+		console.log("[addColumn] alterTable value", alterTable);
 		const { updates } = alterTable.commands[0];
 		let colDef = {};
 		if (typeof options === "string") {
