@@ -2,6 +2,8 @@ import { dataTypes } from "../types/dataTypes.js";
 import Types from "../types/Type.js";
 import sqlReservedWords from "../types/reservedWords.js";
 import { privilegios, objectTypes } from "../types/privilegios.js";
+import QueryBuilder from "../querybuilder.js";
+import Command from "../noSql/Command.js";
 
 function splitCommand(value) {
 	const match = value.match(/\(([^)]+)\)/);
@@ -59,6 +61,7 @@ String.prototype.toCapital = function () {
 	return `${this.toString().charAt(0).toUpperCase()}${this.toString().slice(1).toLowerCase()}`;
 };
 function check(format, values) {
+	const clasesPosibles = { QueryBuilder, Command };
 	const ini = format.indexOf("(") + 1;
 	const fin = format.indexOf(")");
 	const datas = format
@@ -66,7 +69,10 @@ function check(format, values) {
 		.split(",")
 		.reduce((obj, item, index) => {
 			const [clave, valor] = item.split(":");
-			obj[clave.trim()] = { type: valor.trim(), value: values[index] };
+			obj[clave.trim()] = {
+				type: valor.trim(),
+				value: values[index],
+			};
 			return obj;
 		}, {});
 	const errors = [format];
@@ -82,10 +88,21 @@ function check(format, values) {
 				// biome-ignore lint/suspicious/useValidTypeof: <explanation>
 				return typeof value === String(type).toLowerCase();
 			}
-			return value.constructor.name === type;
+			if (/^(JSON|json)$/i.test(type)) {
+				return Object.prototype.toString(value) === "[object Object]";
+			}
+			if (typeof value === "object") {
+				if (Array.isArray(value)) {
+					return false;
+				}
+				return value instanceof clasesPosibles[type];
+			}
+			return false;
 		});
 		if (!exist && value !== undefined) {
-			errors.push(`> "${item}" tipo incorrecto '${value.constructor.name}' `);
+			errors.push(
+				`❌  El tipo de dato para '${item}' no coincide con es esperado '${type}'`,
+			);
 		}
 	}
 	return errors.length > 1 ? errors.join("\n") : "";
@@ -103,6 +120,13 @@ function jsonReviver(key, value) {
 	}
 	return value;
 }
+function isJSObject(target) {
+	if (typeof target !== "object") {
+		return false;
+	}
+	return Object.prototype.toString(target) === "[object Object]";
+}
+
 export {
 	dataTypes,
 	Types,
@@ -112,4 +136,5 @@ export {
 	check,
 	jsonReplacer,
 	jsonReviver,
+	isJSObject,
 };

@@ -254,13 +254,15 @@ class Core {
 
 	//Comandos DQL
 	// SELECT [ DISTINCT | ALL ] { * | < selección de lista > }
-	select(columns, options) {
+	select(columns, options, next) {
+		console.log("[Core][select]next", next);
 		return this.getStatement(
 			"SELECT",
 			sql2006.select,
 			{
 				columns,
 				options,
+				next,
 			},
 			" ",
 		);
@@ -345,17 +347,12 @@ class Core {
 		}
 		return `${sql.join(union).replaceAll(";", "")}`;
 	}
-	async where(predicados) {
+	where(predicados) {
 		const sql = "WHERE";
-		if (predicados instanceof QueryBuilder) {
-			return this.promiseResult;
+		if (Array.isArray(predicados)) {
+			return `${sql} ${predicados.join(", ")}`;
 		}
-		if (typeof predicados === "string") {
-			return `${sql} ${predicados}`;
-		}
-		// const where = await Promise.all(predicados);
-		// console.log("predicados:", where);
-		// return `${sql} ${where.join("\n")}`;
+		return `${sql} ${predicados}`;
 	}
 
 	whereCursor(cursorName) {
@@ -533,7 +530,7 @@ class Core {
 	}
 
 	// Mofificacion de Datos
-	insert(table, cols, values) {
+	insert(table, cols, values, next) {
 		let sql = "INSERT INTO";
 		if (table !== undefined) {
 			sql = `${sql} ${table}`;
@@ -556,7 +553,8 @@ class Core {
 										return `'${item}'`;
 									}
 									if (item instanceof QueryBuilder) {
-										return `( ${item.toString({ as: "subselect" }).replaceAll("\n", " ")} )`;
+										console.log("[Core][insert]next", next);
+										return `${next.q}`;
 									}
 									return item;
 								})
@@ -570,29 +568,38 @@ class Core {
 						return `'${value}'`;
 					}
 					if (value instanceof QueryBuilder) {
-						return `( ${value.toString({ as: "subselect" }).replaceAll("\n", " ")} )`;
+						return `${next.q}`;
 					}
 					return value;
 				})
 				.join(", ")} )`;
 		}
 		if (values instanceof QueryBuilder) {
-			sql = `${sql}\n${values.toString({ as: "subselect" })}`;
+			sql = `${sql}\n${next.q}`;
 		}
 		if (typeof values === "string") {
 			sql = `${sql}\n${values}`;
 		}
 		return sql;
 	}
-	update(table, sets) {
+	async update(table, sets) {
 		const sql = `UPDATE ${table}`;
 		const setStack = [];
 		for (const col in sets) {
+			console.log("[update] col", col);
 			if (typeof sets[col] === "string" && /(:)/.test(sets[col]) === false) {
 				setStack.push(`${col} = '${sets[col]}'`);
 			} else if (sets[col] instanceof QueryBuilder) {
-				const subSelect = sets[col].toString({ as: "subselect" });
-				setStack.push(`${col} =\n( ${subSelect} )`);
+				console.log("[async update] ES UNA INSTANCIA DE QB", col);
+				const handler = new QueryBuilder(
+					sets[col].languageClass,
+					sets[col].options,
+				);
+				console.log("[update] promiseStack:", handler.promiseStack);
+				const value = await handler.toString();
+				console.log("[update] valor:", value);
+				const subSelect = "";
+				setStack.push(`${col} =\n( ${subSelect} ${value} )`);
 			} else {
 				setStack.push(`${col} = ${sets[col]}`);
 			}

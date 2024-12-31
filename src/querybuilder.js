@@ -1,4 +1,4 @@
-import { Types, check } from "./utils/utils.js";
+import { Types, check, isJSObject } from "./utils/utils.js";
 import Column from "./column.js";
 import Cursor from "./cursor.js";
 import Transaction from "./transaction.js";
@@ -45,8 +45,7 @@ class QueryBuilder {
 		this.promiseStack = [];
 		this.promiseResult = null;
 		this.returnOriginal = ["getAll", "execute", "toString", "toNext"];
-		// biome-ignore lint/correctness/noConstructorReturn: <explanation>
-		return new Proxy(this, {
+		this.handler = {
 			get(target, prop, receiver) {
 				if (prop === "catch") {
 					// Permite registrar un manejador de errores
@@ -58,41 +57,57 @@ class QueryBuilder {
 				const original = Reflect.get(target, prop, receiver);
 
 				if (prop === "promise") {
-					for (const index in target.promiseStack.reverse()) {
+					/**
+					 * Cuando se llama a promise se encadenan las llamadas
+					 * en una sola promesa secuencia
+					 */
+
+					for (const index in target.promiseStack) {
 						const { prop, original, args, numeroArgumentos } =
 							target.promiseStack[index];
-						// console.log("[Proxy] cola <<<", prop);
+						console.log("[promise]prop", prop);
 						target.promise = target.promise.then((next) => {
-							// console.log("[Proxy] %s <<< %o", prop, next);
+							console.log("[Proxy] %o recibe:%o", prop, next);
+							// iguala el numero de argumentos que recibe la función
 							while (args.length < numeroArgumentos - 1) {
 								args.push(undefined);
 							}
-							args.push({ ...next });
-							const response = original.apply(receiver, args);
+							// añade el argumento a la función
+							args.push({ ...next, prop });
+							const response = original.apply(receiver, args); // ejecución del comando
 							return response;
 						});
 					}
+					//Devuelve la promesa final
 					return target.promise;
 				}
+
+				/**
+				 * Cuando se llama a una funcion
+				 */
 				if (typeof original === "function") {
 					if (target.returnOriginal.indexOf(prop) >= 0) {
 						return original;
 					}
-					const nData = target.promiseStack.push({});
+
 					return (...args) => {
-						target.promiseStack[nData - 1] = {
+						console.log("[Proxy] Se ha llamado a la funcion %o", prop);
+						target.promiseStack.push({
 							prop,
 							original,
 							args,
 							numeroArgumentos: original.length,
-						};
+						});
 						return receiver; // Para encadenar
 					};
 				}
+
 				// Si no es una función, simplemente devolvemos la propiedad
 				return original;
 			},
-		});
+		};
+		// biome-ignore lint/correctness/noConstructorReturn: <explanation>
+		return new Proxy(this, this.handler);
 	}
 	cola(operation) {
 		this.count++;
@@ -116,31 +131,74 @@ class QueryBuilder {
 	}
 	toNext(data, stringJoin = "") {
 		if (Array.isArray(data)) {
-			const datas = data.reduce((prev, curr) => {
-				// console.log("[toNext] prev %o\n current %o", prev, curr);
-				if (typeof curr === "object") {
-					const { q, ...resto } = curr;
-					// console.log("es un objeto", q, resto);
-					if (q !== undefined) {
-						return {
-							q: [prev.q, q]
-								.filter((item) => item !== undefined)
-								.join(stringJoin),
-							...resto,
-						};
+			let [valor, next] = data;
+			if (isJSObject(valor)) {
+				valor = Object.keys(valor).reduce((obj, key) => {
+					if (valor[key] instanceof QueryBuilder) {
+						obj[key] = next.q.shift();
+					} else {
+						obj[key] = valor[key];
 					}
-					return { q: prev.q, ...resto };
-				}
+					return obj;
+				}, {});
+			}
+			if (next.isQB) {
+				console.log(
+					"[QueryBuilder][toNext] El argumento de %o es una llamada a QB ",
+					data[1].prop,
+				);
+				next.q.push(valor);
+				console.log("[toNext] devuelve", next);
+				return next;
+			}
+			console.log("[toNext] valor: %o next:%o", valor, next);
+
+			const { q, ...resto } = next;
+			if (Array.isArray(q)) {
+				console.log("[toNext] q", q);
+				q.push(valor);
 				return {
-					q: [prev.q, curr]
-						.filter((item) => item !== undefined)
-						.join(stringJoin),
+					q,
+					...resto,
 				};
-			}, {});
-			// console.log("[toNext] revuelve", datas);
-			return datas;
+			}
+			console.log("[toNext] devuelve 2", { q: [valor], ...resto });
+			return { q: [valor], ...resto };
+		}
+		if (data instanceof QueryBuilder) {
+			console.log(
+				"[QueryBuilder][toNext] El objeto actual es una llamada interna ",
+			);
+			return {};
 		}
 		return data;
+	}
+	async hello(texto, next) {
+		next.isQB = texto instanceof QueryBuilder;
+		if (isJSObject(texto)) {
+			return this.toNext([texto, next], "\n");
+		}
+		if (texto instanceof QueryBuilder) {
+			const result = next.q.pop();
+			return this.toNext([`HELLO: ${result}`, next], "\n");
+		}
+		const nuevoTexto = `HELLO: ${texto}`;
+		return this.toNext([nuevoTexto, next], "\n");
+	}
+	say(texto, next) {
+		console.log(
+			"[say] next:%o type:%o isQB:%o",
+			next,
+			typeof texto,
+			texto instanceof QueryBuilder,
+		);
+		next.isQB = texto instanceof QueryBuilder;
+		if (texto instanceof QueryBuilder) {
+			const result = next.q.pop();
+			return this.toNext([`SAY: ${result}`, next], "\n");
+		}
+		const nuevoTexto = `SAY: ${texto}`;
+		return this.toNext([nuevoTexto, next], "\n");
 	}
 	/**
 	 * Añade una instancia del controlador para ejecutar los comandos y
@@ -231,8 +289,8 @@ class QueryBuilder {
 		for (const column in next.AlterColumns.reverse()) {
 			alterCols.push(this.toNext([command, next.AlterColumns[column]]));
 		}
-		next.AlterColumns = [];
-		alterCols.push(next);
+		const { AlterColumns, ...resto } = next;
+		alterCols.push(resto);
 
 		return this.toNext(alterCols, ";\n");
 	}
@@ -409,18 +467,17 @@ class QueryBuilder {
 	 */
 	select(columns, options, next) {
 		try {
-			const command = this.language.select(columns, options);
-			return this.toNext([command, next]);
+			const command = this.language.select(columns, options, next);
+			return this.toNext([command, next], "\n");
 		} catch (error) {
 			this.error = error.message;
 		}
 		return next;
 	}
 	checkFrom(tables, alias) {
-		const error = check("From(tables:string|array, alias:string|array)", [
-			tables,
-			alias,
-		]);
+		// biome-ignore lint/style/noArguments: <explanation>
+		const args = [...arguments];
+		const error = check("From(tables:string|array, alias:string|array)", args);
 		if (error) {
 			throw new Error(error);
 		}
@@ -435,19 +492,20 @@ class QueryBuilder {
 		}
 	}
 	from(tables, alias, next) {
-		this.checkFrom(tables, alias);
-		const response = this.language.from(tables, alias);
-		if (this.selectCommand?.length > 0) {
-		} else if (this.selectCommand instanceof Command) {
-			this.selectCommand = this.language.from(
-				tables,
-				alias,
-				this.selectCommand,
-			);
-		} else {
-			this.error = "[from] No es posible aplicar, falta el comando 'select'";
+		try {
+			const select = this.promiseStack.find((item) => item.prop === "select");
+			if (select === undefined) {
+				this.error =
+					"[from] No es posible usar 'FROM', falta el comando 'select'";
+				return next;
+			}
+			this.checkFrom(tables, alias);
+			const command = this.language.from(tables, alias);
+			return this.toNext([command, next], "\n");
+		} catch (error) {
+			this.error = error.message;
 		}
-		return `${response}\n${next}`;
+		return next;
 	}
 
 	joins() {
@@ -517,21 +575,27 @@ class QueryBuilder {
 		this.query.push(this.language.union(...selects, { all: true }));
 		return this;
 	}
-	async where(predicados, next) {
-		let whereCommand;
-		// if (this.selectCommand?.length > 0) {
-		// 	this.selectStack.push(this.language.where(predicados));
-		// }
-		// if (this.selectCommand instanceof Command) {
-		// 	this.selectCommand = this.language.where(predicados, this.selectCommand);
-		// }
+	where(predicados, next) {
+		console.log(
+			"[where] next:%o ¿Es un QueryBuilder?%s",
+			next,
+			predicados instanceof QueryBuilder,
+		);
+		let command;
 		if (predicados instanceof QueryBuilder) {
-			whereCommand = await this.language.where(next, this.selectCommand);
-		} else {
-			whereCommand = await this.language.where(predicados, this.selectCommand);
+			const { q, values, ...resto } = next;
+			const subquery = [q];
+			if (values) {
+				subquery.push(...values);
+			}
+			command = this.language.where(
+				subquery.filter((item) => item !== undefined),
+			);
+			return this.toNext([command, resto], "\n");
 		}
-
-		return `${whereCommand}`;
+		command = this.language.where(predicados);
+		console.log("[where]command", command);
+		return this.toNext([command, next], "\n");
 	}
 	whereCursor(cursorName) {
 		this.commandStack.push("whereCursor");
@@ -578,13 +642,25 @@ class QueryBuilder {
 			"like",
 			"notLike",
 		];
-
 		const operTreeArg = ["between", "notBetween"];
-
 		const logicos = ["and", "or", "not", "distinct"];
+
 		for (const operTwo of operTwoCols) {
-			this[operTwo] = (a, b) => {
-				return this.language[operTwo](a, b);
+			this[operTwo] = (a, b, next) => {
+				console.log(
+					"[operTwoCols][%s] a:%o, b:%o next:%o",
+					operTwo,
+					a,
+					b,
+					next,
+				);
+				const result = this.language[operTwo](a, b);
+				console.log("[QueryBuilder][%s] result next", operTwo, result, next);
+				if (next?.values === undefined) {
+					next.values = [];
+				}
+				next.values.push(result);
+				return next;
 			};
 		}
 		for (const operOne of operOneCol) {
@@ -595,7 +671,23 @@ class QueryBuilder {
 		}
 
 		for (const oper of logicos) {
-			this[oper] = (...predicados) => this.language[oper](...predicados);
+			this[oper] = (...predicados) => {
+				const next = predicados.pop();
+				console.log("[QueryBuilder][predicados][%s] next:", oper, next);
+				const valores = predicados
+					.reduce((acc, curr, index) => {
+						if (curr instanceof QueryBuilder) {
+							acc.push(next.values[index]);
+						} else {
+							acc.push(curr);
+						}
+						return acc;
+					}, [])
+					.reverse();
+				const { values, ...resto } = next;
+				const command = this.language[oper](...valores);
+				return this.toNext([command, resto]);
+			};
 		}
 	}
 	/**
@@ -621,9 +713,11 @@ class QueryBuilder {
 	 * @returns {Column}
 	 */
 	col(name, table) {
+		// biome-ignore lint/style/noArguments: <explanation>
+		const args = [...arguments];
 		const error = check(
 			"col(name:string|QueryBuilder|Expresion, table:string)",
-			[name, table],
+			args,
 		);
 		if (error) {
 			throw new Error(error);
@@ -638,9 +732,11 @@ class QueryBuilder {
 	 * @returns {Column}
 	 */
 	coltn(table, name) {
+		// biome-ignore lint/style/noArguments: <explanation>
+		const args = [...arguments];
 		const error = check(
 			"col(name:string|QueryBuilder|Expresion, table:string)",
-			[name, table],
+			args,
 		);
 		if (error) {
 			throw new Error(error);
@@ -653,32 +749,32 @@ class QueryBuilder {
 		return new Expresion(expresion);
 	}
 
-	groupBy(columns, options) {
-		this.commandStack.push("groupBy");
-		if (this.selectCommand?.length > 0) {
-			this.selectStack.push(this.language.groupBy(columns, options));
-		} else {
-			this.error = "No es posible aplicar, falta el comando 'select'";
+	groupBy(columns, options, next) {
+		const select = this.promiseStack.find((item) => item.prop === "select");
+		if (select !== undefined) {
+			const command = this.language.groupBy(columns, options);
+			return this.toNext([command, next], "\n");
 		}
-		return this;
+		this.error = "No es posible aplicar, falta el comando 'select'";
+		return next;
 	}
-	having(predicado, options) {
-		this.commandStack.push("having");
-		if (this.selectCommand?.length > 0) {
-			this.selectStack.push(this.language.having(predicado, options));
-		} else {
-			this.error = "No es posible aplicar, falta el comando 'select'";
+	having(predicado, options, next) {
+		const select = this.promiseStack.find((item) => item.prop === "select");
+		if (select !== undefined) {
+			const command = this.language.having(predicado, options);
+			return this.toNext([command, next], "\n");
 		}
-		return this;
+		this.error = "No es posible aplicar, falta el comando 'select'";
+		return next;
 	}
-	orderBy(columns) {
-		this.commandStack.push("orderBy");
-		if (this.selectCommand?.length > 0) {
-			this.selectStack.push(this.language.orderBy(columns));
-		} else {
-			this.error = "No es posible aplicar, falta el comando 'select'";
+	orderBy(columns, next) {
+		const select = this.promiseStack.find((item) => item.prop === "select");
+		if (select !== undefined) {
+			const command = this.language.orderBy(columns);
+			return this.toNext([command, next], "\n");
 		}
-		return this;
+		this.error = "No es posible aplicar, falta el comando 'select'";
+		return next;
 	}
 	//MySQL, PostgreSQL, y SQLite
 	limit(limit) {
@@ -714,39 +810,45 @@ class QueryBuilder {
 	 * @param {array<array<Value>>} values - Array de Arrays con los valores
 	 * @returns
 	 */
-	insert(table, cols, values) {
-		const error = check(
-			"insert(table:string, cols:array, values:array|QueryBuilder)",
-			[table, cols, values],
-		);
-		if (error) {
-			throw new Error(error);
-		}
-
-		this.commandStack.push("insert");
+	insert(table, cols, values, next) {
 		try {
-			this.query.push(this.language.insert(table, cols, values));
+			// biome-ignore lint/style/noArguments: <explanation>
+			const args = [...arguments];
+			const error = check(
+				"insert(table:string, cols:array, values:array|QueryBuilder)",
+				args,
+			);
+			if (error) {
+				this.error = error;
+				throw new Error(error);
+			}
+			let command;
+			if (values instanceof QueryBuilder) {
+				console.log("[insert]QueryBuilder... next", next);
+				command = this.language.insert(table, cols, values, next);
+				console.log("[insert] command ", command);
+				next.q = "";
+			} else {
+				command = this.language.insert(table, cols, values, next);
+			}
+			return this.toNext([command, next]);
 		} catch (error) {
 			this.error = error.message;
 		}
 		return this;
 	}
-	update(table, sets, next) {
-		// this.commandStack.push("update");
-		try {
-			if (Array.isArray(sets)) {
-				this.error = "El argumento debe ser un objeto JSON";
-			}
-			// if (this.selectCommand?.length > 0) {
-			// 	if (this.selectStack.length) {
-			// 		this.selectCommand += `\n${this.selectStack.join("\n")}`;
-			// 		this.selectStack = [];
-			// 	}
-			// 	this.query.push(this.selectCommand);
-			// }
 
-			const updateCommand = this.language.update(table, sets);
-			return `${updateCommand}\n${next}`;
+	async update(table, sets, next) {
+		try {
+			// biome-ignore lint/style/noArguments: <explanation>
+			const args = [...arguments];
+			const error = check("update(table:string, sets:json)", args);
+			if (error) {
+				this.error = error;
+				throw new Error(error);
+			}
+			const updateCommand = await this.language.update(table, sets);
+			return this.toNext([updateCommand, next], "\n");
 		} catch (error) {
 			this.error = error.message;
 		}
@@ -780,7 +882,15 @@ class QueryBuilder {
 	functionOneParam() {
 		const names = ["count", "max", "min", "sum", "avg", "upper", "lower"];
 		for (const name of names) {
-			this[name] = (column, alias) => this.language[name](column, alias);
+			this[name] = (column, alias, next) => {
+				console.log("[functionOneParam][%s] next.parent", name, next.parent);
+				const command = this.language[name](column, alias);
+				if (next.parent === "select") {
+					next.column = command;
+					return this.toNext([next], "\n");
+				}
+				return this.toNext([command, next], "\n");
+			};
 		}
 	}
 
@@ -925,14 +1035,8 @@ class QueryBuilder {
 	}
 	async toString(options) {
 		let joinQuery = await this.promise;
-		if (joinQuery.q === undefined) {
-			return joinQuery.q;
-		}
-		if (joinQuery.q.lastIndexOf(";") !== joinQuery.q.length - 1) {
-			joinQuery = joinQuery.q.concat(";");
-		}
-		joinQuery = joinQuery.replace(/\n;$/, "");
-		console.log("[toString] joinQuery:\n%s\n", joinQuery);
+		joinQuery = joinQuery.q.join(";\n").concat(";");
+		console.log("[toString]joinQuery\n", joinQuery);
 		return joinQuery;
 	}
 	dropQuery() {
@@ -941,6 +1045,7 @@ class QueryBuilder {
 		this.selectStack = [];
 		this.alterTableCommand = undefined;
 		this.alterTableStack = [];
+		this.promiseStack = Promise.resolve({});
 		return this;
 	}
 	/**

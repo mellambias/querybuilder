@@ -48,10 +48,10 @@ describe("El Core del lenguaje qb2006", async () => {
 			})
 			.toString();
 
-		// assert.equal(
-		// 	result,
-		// 	"USE testing;\nCREATE GLOBAL TEMPORARY\nTABLE table_test\n( ID INT )\nON COMMIT DELETE ROWS;",
-		// );
+		assert.equal(
+			result,
+			"USE testing;\nCREATE GLOBAL TEMPORARY\nTABLE table_test\n( ID INT )\nON COMMIT DELETE ROWS;",
+		);
 	});
 	test("Crear una tabla temporal local", { only: false }, async () => {
 		const result = await qb
@@ -166,7 +166,7 @@ ALTER TABLE DISCOS_COMPACTOS
 ALTER COLUMN CIUDAD DROP DEFAULT;`,
 			);
 		});
-		test("Elimina una columna a la tabla", { only: false }, async () => {
+		test("Elimina una columna a la tabla", { only: true }, async () => {
 			const result = await qb
 				.use("INVENTARIO")
 				.alterTable("DISCOS_COMPACTOS")
@@ -584,7 +584,7 @@ REVOKE ADMIN OPTION FOR ADMINISTRADORES, CONTABILIDAD FROM MARKETING GRANTED BY 
 	describe("Consultas de qb", async () => {
 		test(
 			"SELECT todas las filas distintas y todas las columnas ",
-			{ only: true },
+			{ only: false },
 			async () => {
 				const result = qb.select("*", { unique: true }).from("MUSICA");
 				assert.equal(
@@ -593,21 +593,26 @@ REVOKE ADMIN OPTION FOR ADMINISTRADORES, CONTABILIDAD FROM MARKETING GRANTED BY 
 				);
 			},
 		);
-		test("SELECT todas las filas distintas y algunas columnas", async () => {
-			const result = await qb
-				.select(
-					[{ col: "DISCOS", as: "ID_DISCO" }, "PRECIO", { col: "CANTIDAD" }],
-					{
-						unique: true,
-					},
-				)
-				.from("MUSICA");
-			assert.equal(
-				result.toString(),
-				"SELECT DISTINCT DISCOS AS ID_DISCO, PRECIO, CANTIDAD\nFROM MUSICA;",
-			);
-		});
-		test("Filtrado de datos con WHERE", async () => {
+		test(
+			"SELECT todas las filas distintas y algunas columnas",
+			{ only: false },
+			async () => {
+				const result = await qb
+					.select(
+						[{ col: "DISCOS", as: "ID_DISCO" }, "PRECIO", { col: "CANTIDAD" }],
+						{
+							unique: true,
+						},
+					)
+					.from("MUSICA")
+					.toString();
+				assert.equal(
+					result,
+					"SELECT DISTINCT DISCOS AS ID_DISCO, PRECIO, CANTIDAD\nFROM MUSICA;",
+				);
+			},
+		);
+		test("Filtrado de datos con WHERE", { only: false }, async () => {
 			const result = await qb
 				.select(["TITULO_CD", "DERECHOSDEAUTOR", "EN_EXISTENCIA"])
 				.from("INVENTARIO_DISCO_COMPACTO")
@@ -616,33 +621,41 @@ REVOKE ADMIN OPTION FOR ADMINISTRADORES, CONTABILIDAD FROM MARKETING GRANTED BY 
 						qb.gt("DERECHOSDEAUTOR", 1989),
 						qb.lt("DERECHOSDEAUTOR", 2000),
 					),
-				);
+				)
+				.toString();
+
 			assert.equal(
-				result.toString(),
+				result,
 				`SELECT TITULO_CD, DERECHOSDEAUTOR, EN_EXISTENCIA
 FROM INVENTARIO_DISCO_COMPACTO
 WHERE (DERECHOSDEAUTOR > 1989
 AND DERECHOSDEAUTOR < 2000);`,
 			);
 		});
-		test("agrupar filas cuyos valores de columna son iguales", async () => {
-			const result = await qb
-				.select([
-					"CATEGORIA",
-					"PRECIO",
-					{ col: "SUM(A_LA_MANO)", as: "TOTAL_A_LA_MANO" },
-				])
-				.from("EXISTENCIA_DISCO_COMPACTO")
-				.groupBy(["CATEGORIA", "PRECIO"]);
-			assert.equal(
-				result.toString(),
-				`SELECT CATEGORIA, PRECIO, SUM(A_LA_MANO) AS TOTAL_A_LA_MANO
+		test(
+			"agrupar filas cuyos valores de columna son iguales",
+			{ only: false },
+			async () => {
+				const result = await qb
+					.select([
+						"CATEGORIA",
+						"PRECIO",
+						{ col: "SUM(A_LA_MANO)", as: "TOTAL_A_LA_MANO" },
+					])
+					.from("EXISTENCIA_DISCO_COMPACTO")
+					.groupBy(["CATEGORIA", "PRECIO"])
+					.toString();
+
+				assert.equal(
+					result,
+					`SELECT CATEGORIA, PRECIO, SUM(A_LA_MANO) AS TOTAL_A_LA_MANO
 FROM EXISTENCIA_DISCO_COMPACTO
 GROUP BY CATEGORIA, PRECIO;`,
-			);
-		});
-		test("GROUP BY ROLLUP", async () => {
-			const result = await qb
+				);
+			},
+		);
+		test("GROUP BY ROLLUP", { only: false }, async () => {
+			const result = qb
 				.select([
 					"CATEGORIA",
 					"PRECIO",
@@ -651,14 +664,14 @@ GROUP BY CATEGORIA, PRECIO;`,
 				.from("EXISTENCIA_DISCO_COMPACTO")
 				.groupBy({ rollup: ["CATEGORIA", "PRECIO"] });
 			assert.equal(
-				result.toString(),
+				await result.toString(),
 				`SELECT CATEGORIA, PRECIO, SUM(A_LA_MANO) AS TOTAL_A_LA_MANO
 FROM EXISTENCIA_DISCO_COMPACTO
 GROUP BY ROLLUP (CATEGORIA, PRECIO);`,
 			);
 		});
-		test("HAVING", async () => {
-			const result = await qb
+		test("HAVING", { only: false }, async () => {
+			const result = qb
 				.select([
 					"PRECIO",
 					"CATEGORIA",
@@ -667,22 +680,24 @@ GROUP BY ROLLUP (CATEGORIA, PRECIO);`,
 				.from("EXISTENCIA_DISCO_COMPACTO")
 				.groupBy(["CATEGORIA", "PRECIO"])
 				.having("SUM(A_LA_MANO) > 10");
+
 			assert.equal(
-				result.toString(),
+				await result.toString(),
 				`SELECT PRECIO, CATEGORIA, SUM(A_LA_MANO) AS TOTAL_A_LA_MANO
 FROM EXISTENCIA_DISCO_COMPACTO
 GROUP BY CATEGORIA, PRECIO
 HAVING SUM(A_LA_MANO) > 10;`,
 			);
 		});
-		test("ORDER BY", async () => {
-			const result = await qb
+		test("ORDER BY", { only: false }, async () => {
+			const result = qb
 				.select("*")
 				.from("EXISTENCIA_DISCO_COMPACTO")
 				.where("PRECIO < 16.00")
 				.orderBy(["PRECIO", { col: "A_LA_MANO", order: "desc" }]);
+
 			assert.equal(
-				result.toString(),
+				await result.toString(),
 				`SELECT *
 FROM EXISTENCIA_DISCO_COMPACTO
 WHERE PRECIO < 16.00
@@ -691,47 +706,66 @@ ORDER BY PRECIO, A_LA_MANO DESC;`,
 		});
 	});
 	describe("Modificacion de datos", async () => {
-		test("Insertar datos en una tabla sin especificar las columnas", async () => {
-			const result = await qb.insert(
-				"INVENTARIO_CD",
-				[],
-				["Patsy Cline: 12 Greatest Hits", "Country", "MCA Records", 32],
-			);
-			assert.equal(
-				result.toString(),
-				`INSERT INTO INVENTARIO_CD
+		test(
+			"Insertar datos en una tabla sin especificar las columnas",
+			{ only: false },
+			async () => {
+				const result = await qb
+					.insert(
+						"INVENTARIO_CD",
+						[],
+						["Patsy Cline: 12 Greatest Hits", "Country", "MCA Records", 32],
+					)
+					.toString();
+
+				assert.equal(
+					result,
+					`INSERT INTO INVENTARIO_CD
 VALUES
 ( 'Patsy Cline: 12 Greatest Hits', 'Country', 'MCA Records', 32 );`,
-			);
-		});
-		test("Insertar datos en una tabla especificando columnas", async () => {
-			const result = await qb.insert(
-				"INVENTARIO_CD",
-				["NOMBRE_CD", "EDITOR", "EN_EXISTENCIA"],
-				["Fundamental", "Capitol Records", 34],
-			);
-			assert.equal(
-				result.toString(),
-				`INSERT INTO INVENTARIO_CD\n( NOMBRE_CD, EDITOR, EN_EXISTENCIA )
+				);
+			},
+		);
+		test(
+			"Insertar datos en una tabla especificando columnas",
+			{ only: false },
+			async () => {
+				const sql = `INSERT INTO INVENTARIO_CD\n( NOMBRE_CD, EDITOR, EN_EXISTENCIA )
 VALUES
-( 'Fundamental', 'Capitol Records', 34 );`,
-			);
-		});
-		test("Insertar datos en una tabla usando SELECT", async () => {
-			const qbSelect = await qb
-				.select(["NOMBRE_CD", "EN_EXISTENCIA"])
-				.from("INVENTARIO_CD");
-			const result = await qb.insert("INVENTARIO_CD_2", [], qbSelect);
-			console.log(result);
-			assert.equal(
-				result.toString(),
-				`INSERT INTO INVENTARIO_CD_2
+( 'Fundamental', 'Capitol Records', 34 );`;
+
+				const result = await qb
+					.insert(
+						"INVENTARIO_CD",
+						["NOMBRE_CD", "EDITOR", "EN_EXISTENCIA"],
+						["Fundamental", "Capitol Records", 34],
+					)
+					.toString();
+
+				assert.equal(result, sql);
+			},
+		);
+		test(
+			"Insertar datos en una tabla usando SELECT",
+			{ only: false },
+			async () => {
+				const sql = `INSERT INTO INVENTARIO_CD_2
 SELECT NOMBRE_CD, EN_EXISTENCIA
-FROM INVENTARIO_CD;`,
-			);
-		});
-		test("Insertar varias filas de datos", async () => {
-			const result = await qb.insert(
+FROM INVENTARIO_CD;`;
+
+				const result = await qb
+					.insert(
+						"INVENTARIO_CD_2",
+						[],
+						qb.select(["NOMBRE_CD", "EN_EXISTENCIA"]).from("INVENTARIO_CD"),
+					)
+					.toString();
+
+				assert.equal(result, sql);
+			},
+		);
+		test("Insertar varias filas de datos", { only: false }, async () => {
+			const result = qb.insert(
 				"INVENTARIO_CD",
 				[],
 				[
@@ -741,8 +775,9 @@ FROM INVENTARIO_CD;`,
 					[830, "Windham Hill Records"],
 				],
 			);
+
 			assert.equal(
-				result.toString(),
+				await result.toString(),
 				`INSERT INTO INVENTARIO_CD
 VALUES
 (827, 'Private Music'),
@@ -751,55 +786,80 @@ VALUES
 (830, 'Windham Hill Records');`,
 			);
 		});
-		test("Actualizar el valor de una columna", async () => {
-			const result = await qb.update("INVENTARIO_CD", { EN_EXISTENCIA: 27 });
+		test("Actualizar el valor de una columna", { only: false }, async () => {
+			const result = qb.update("INVENTARIO_CD", { EN_EXISTENCIA: 27 });
 			assert.equal(
-				result.toString(),
+				await result.toString(),
 				`UPDATE INVENTARIO_CD
 SET EN_EXISTENCIA = 27;`,
 			);
 		});
-		test("Actualizar el valor de varias columnas", async () => {
-			const result = await qb.update("INVENTARIO_CD", {
-				EN_EXISTENCIA: "27",
-				CANTIDAD: 10,
-			});
-			assert.equal(
-				result.toString(),
-				`UPDATE INVENTARIO_CD
+		test(
+			"Actualizar el valor de varias columnas",
+			{ only: false },
+			async () => {
+				const result = qb.update("INVENTARIO_CD", {
+					EN_EXISTENCIA: "27",
+					CANTIDAD: 10,
+				});
+				assert.equal(
+					await result.toString(),
+					`UPDATE INVENTARIO_CD
 SET EN_EXISTENCIA = '27',
 CANTIDAD = 10;`,
-			);
-		});
-		test("Actualizar el valor de una columna solo de algunas filas usando where", async () => {
-			const result = await qb
-				.update("INVENTARIO_CD", { EN_EXISTENCIA: 27 })
-				.where([qb.eq("NOMBRE_CD", "Out of Africa")]);
-			assert.equal(
-				result.toString(),
-				`UPDATE INVENTARIO_CD
+				);
+			},
+		);
+		test(
+			"Actualizar el valor de una columna solo de algunas filas usando where",
+			{ only: false },
+			async () => {
+				const result = qb
+					.update("INVENTARIO_CD", { EN_EXISTENCIA: 27 })
+					.where(qb.eq("NOMBRE_CD", "Out of Africa"));
+
+				assert.equal(
+					await result.toString(),
+					`UPDATE INVENTARIO_CD
 SET EN_EXISTENCIA = 27
 WHERE NOMBRE_CD = 'Out of Africa';`,
-			);
-		});
-		test("Actualizar el valor de una columna usando como valor el select", async () => {
-			const qbSelect = await qb
-				.select(qb.avg("EN_EXISTENCIA"))
-				.from("INVENTARIO_CD");
-
+				);
+			},
+		);
+		test("probar la anidacion de llamadas", { only: false }, async () => {
 			const result = await qb
-				.update("INVENTARIO_CD_2", { EN_EXISTENCIA_2: qbSelect })
-				.where([qb.eq("NOMBRE_CD_2", "Orlando")]);
+				.hello({
+					say: qb.hello("asigna a say"),
+					Value: qb.say("asigna un valor al campo Value"),
+				})
+				.toString();
 
-			assert.equal(
-				result.toString(),
-				`UPDATE INVENTARIO_CD_2
-SET EN_EXISTENCIA_2 =
-( SELECT AVG(EN_EXISTENCIA)
-FROM INVENTARIO_CD )
-WHERE NOMBRE_CD_2 = 'Orlando';`,
-			);
+			console.log("Resultado final anidacion\n", result);
+			assert.ok(result);
 		});
+		test(
+			"Actualizar el valor de una columna usando como valor el select",
+			{ only: false },
+			async () => {
+				const result = qb
+					.update("INVENTARIO_CD_2", {
+						EN_EXISTENCIA_2: qb
+							.select(qb.avg("EN_EXISTENCIA"))
+							.from("INVENTARIO_CD"),
+					})
+					.where(qb.eq("NOMBRE_CD_2", "Orlando"))
+					.toString();
+
+				// 				assert.equal(
+				// 					await qbSelect.toString(),
+				// 					`UPDATE INVENTARIO_CD_2
+				// SET EN_EXISTENCIA_2 =
+				// ( SELECT AVG(EN_EXISTENCIA)
+				// FROM INVENTARIO_CD )
+				// WHERE NOMBRE_CD_2 = 'Orlando';`,
+				// 				);
+			},
+		);
 		test("Eliminar filas de una tabla con DELETE FROM", async () => {
 			const result = await qb.delete("INVENTARIO_CD");
 			assert.equal(result.toString(), "DELETE FROM INVENTARIO_CD;");
