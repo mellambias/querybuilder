@@ -1,4 +1,4 @@
-import { Types, check, isJSObject } from "./utils/utils.js";
+import { Types, check, isJSObject, log } from "./utils/utils.js";
 import Column from "./column.js";
 import Cursor from "./cursor.js";
 import Transaction from "./transaction.js";
@@ -143,32 +143,26 @@ class QueryBuilder {
 				}, {});
 			}
 			if (next.isQB) {
-				console.log(
-					"[QueryBuilder][toNext] El argumento de %o es una llamada a QB ",
-					data[1].prop,
-				);
+				log("toNext", "El argumento de %o es una llamada a QB ", data[1].prop);
 				next.q.push(valor);
-				console.log("[toNext] devuelve", next);
+				log("toNext", "devuelve", next);
 				return next;
 			}
-			console.log("[toNext] valor: %o next:%o", valor, next);
-
+			log("toNext", "Recibe valor: %o next:%o", valor, next);
 			const { q, ...resto } = next;
 			if (Array.isArray(q)) {
-				console.log("[toNext] q", q);
-				q.push(valor);
+				q.push(valor.concat(stringJoin));
+				log("toNext", "devuelve q", q);
 				return {
 					q,
 					...resto,
 				};
 			}
-			console.log("[toNext] devuelve 2", { q: [valor], ...resto });
-			return { q: [valor], ...resto };
+			log("toNext", "devuelve 2", { q: [valor.concat(stringJoin)], ...resto });
+			return { q: [valor.concat(stringJoin)], ...resto };
 		}
 		if (data instanceof QueryBuilder) {
-			console.log(
-				"[QueryBuilder][toNext] El objeto actual es una llamada interna ",
-			);
+			log("[QueryBuilder][toNext]", "El objeto actual es una llamada interna ");
 			return {};
 		}
 		return data;
@@ -226,7 +220,7 @@ class QueryBuilder {
 				return next;
 			}
 		}
-		return this.toNext([command, next], ";\n");
+		return this.toNext([command, next], ";");
 	}
 	/** 
 	@param {string} name - Nombre de la base de datos
@@ -285,32 +279,22 @@ class QueryBuilder {
 	}
 	alterTable(name, next) {
 		const command = this.language.alterTable(name);
-		const alterCols = [];
-		for (const column in next.AlterColumns.reverse()) {
-			alterCols.push(this.toNext([command, next.AlterColumns[column]]));
-		}
-		const { AlterColumns, ...resto } = next;
-		alterCols.push(resto);
-
-		return this.toNext(alterCols, ";\n");
+		log("alterTable", "responde con %o", command);
+		return this.toNext([command, next]);
 	}
 
 	alterTableComands() {
 		const comands = ["addColumn", "alterColumn", "dropColumn", "addConstraint"];
 		for (const comand of comands) {
 			this[comand] = (name, options, next) => {
+				log(comand, "recibe", next);
 				const alterTablePos = this.promiseStack.find(
 					(item) => item.prop === "alterTable",
 				);
 				if (alterTablePos !== undefined) {
-					if (next?.AlterColumns === undefined) {
-						next.AlterColumns = [];
-					}
-					next.AlterColumns.push(
-						this.toNext([this.language[comand](name, options, "valor"), next]),
-					);
-					next.q = "";
-					return next;
+					const response = this.language[comand](name, options, "valor");
+					log(comand, "response", response);
+					return this.toNext([response, next], ";");
 				}
 				this.error = `No se pueden añadir columnas sin un 'ALTER TABLE'`;
 				return next;
@@ -1035,8 +1019,8 @@ class QueryBuilder {
 	}
 	async toString(options) {
 		let joinQuery = await this.promise;
-		joinQuery = joinQuery.q.join(";\n").concat(";");
-		console.log("[toString]joinQuery\n", joinQuery);
+		joinQuery = joinQuery.q.join("\n");
+		log("toString", "joinQuery\n", joinQuery);
 		return joinQuery;
 	}
 	dropQuery() {

@@ -127,6 +127,10 @@ function isJSObject(target) {
 	return Object.prototype.toString(target) === "[object Object]";
 }
 
+function log(command, text, ...data) {
+	return console.log(`[${command}] ${text}`, ...data);
+}
+
 export {
 	dataTypes,
 	Types,
@@ -137,4 +141,5 @@ export {
 	jsonReplacer,
 	jsonReviver,
 	isJSObject,
+	log,
 };

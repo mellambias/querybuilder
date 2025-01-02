@@ -124,7 +124,7 @@ class Core {
 		return command.join(",\n ");
 	}
 	alterTable(name) {
-		return `ALTER TABLE ${name}\n`;
+		return `ALTER TABLE ${name}`;
 	}
 	addColumn(name, options) {
 		return `ADD COLUMN ${this.column(name, options)}`;
