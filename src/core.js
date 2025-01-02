@@ -5,6 +5,7 @@ import QueryBuilder from "./querybuilder.js";
 import sql2006 from "./comandos/sql2006.js";
 import Expresion from "./expresion.js";
 import Column from "./column.js";
+import { log } from "./utils/utils.js";
 
 class Core {
 	constructor() {
@@ -443,28 +444,45 @@ class Core {
 		}
 	}
 
-	getListValues(...values) {
-		const next = values.pop(); //extrae el último parametro de values
+	getSubselect(next) {
+		const subSelect = [next.q.pop()];
+		while (
+			!subSelect[0].toUpperCase().includes("SELECT") &&
+			next.q.length > 0
+		) {
+			subSelect.unshift(next.q.pop());
+		}
+		return subSelect.join("\n");
+	}
+
+	getListValues(values, next) {
+		log(["Core", "getListValues(values, next)"], "next", next);
+		log(["Core", "getListValues(values, next)"], "values", values.length);
 		let arrayValues = [];
 		if (Array.isArray(values[0])) {
 			arrayValues = values[0].map((value) => {
 				if (value instanceof QueryBuilder) {
-					return next;
+					log(["Core", "getListValues(values, next)"], "next", next);
+					return this.getSubselect(next);
 				}
 				return value;
 			});
 		} else {
 			arrayValues = values.map((value) => {
 				if (value instanceof QueryBuilder) {
-					return next;
+					log(["Core", "getListValues(values, next)"], "next %o", next);
+					return this.getSubselect(next);
 				}
 				return value;
 			});
 		}
 		return arrayValues;
 	}
-	in(columna, ...values) {
-		return `${columna} IN ( ${this.getListValues(...values).join(", ")} )`;
+	in(columna, values, next) {
+		log(["Core", "in(columna, values, next)"], "values", values.length);
+		const response = this.getListValues(values, next);
+		log(["Core", "in(columna, values, next)"], "respuesta", response);
+		return `${columna} IN ( ${response.join(", ")} )`;
 	}
 	notIn(columna, ...values) {
 		return `${columna} NOT IN ( ${this.getListValues(...values).join(", ")} )`;
@@ -582,24 +600,23 @@ class Core {
 		}
 		return sql;
 	}
-	async update(table, sets) {
+	async update(table, sets, next) {
 		const sql = `UPDATE ${table}`;
 		const setStack = [];
 		for (const col in sets) {
-			console.log("[update] col", col);
+			log(["Core", "update"], "Procesa columna", col);
 			if (typeof sets[col] === "string" && /(:)/.test(sets[col]) === false) {
 				setStack.push(`${col} = '${sets[col]}'`);
 			} else if (sets[col] instanceof QueryBuilder) {
-				console.log("[async update] ES UNA INSTANCIA DE QB", col);
-				const handler = new QueryBuilder(
-					sets[col].languageClass,
-					sets[col].options,
+				log(
+					["Core", "update"],
+					"El valor de la columna %o es un QB recibe: %o",
+					col,
+					next,
 				);
-				console.log("[update] promiseStack:", handler.promiseStack);
-				const value = await handler.toString();
-				console.log("[update] valor:", value);
-				const subSelect = "";
-				setStack.push(`${col} =\n( ${subSelect} ${value} )`);
+				const subSelect = next.q.join("\n");
+				next.q = [];
+				setStack.push(`${col} =\n( ${subSelect} )`);
 			} else {
 				setStack.push(`${col} = ${sets[col]}`);
 			}

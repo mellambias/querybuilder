@@ -101,7 +101,7 @@ function check(format, values) {
 		});
 		if (!exist && value !== undefined) {
 			errors.push(
-				`❌  El tipo de dato para '${item}' no coincide con es esperado '${type}'`,
+				`❌  El tipo de dato para '${item}' no coincide con el esperado '${type}' (${value}})`,
 			);
 		}
 	}
@@ -128,6 +128,10 @@ function isJSObject(target) {
 }
 
 function log(command, text, ...data) {
+	if (Array.isArray(command)) {
+		const commandList = command.map((item) => `[${item}]`).join("");
+		return console.log(`${commandList} ${text}`, ...data);
+	}
 	return console.log(`[${command}] ${text}`, ...data);
 }
 

@@ -1,6 +1,7 @@
 import Column from "../../column.js";
 import Expresion from "../../expresion.js";
 import QueryBuilder from "../../querybuilder.js";
+import { log } from "../../utils/utils.js";
 export const select = {
 	unique: (unique) => (unique === true ? "DISTINCT" : undefined),
 	all: (all) => (all === true ? "ALL" : undefined),
@@ -15,12 +16,9 @@ export const select = {
 			return columns;
 		}
 		if (columns instanceof QueryBuilder) {
-			console.log(
-				"[sql2006][select] self._values.next.column",
-				self._values.next.column,
-			);
+			log(["sql2006", "select"], " Es un QB");
 			// colStack.push(`${column.toString( {as:"subquery"})} AS `)
-			return self._values.next.column;
+			return self._values.next.q.pop();
 		}
 		const colStack = [];
 		for (const column of columns) {

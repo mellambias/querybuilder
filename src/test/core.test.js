@@ -166,7 +166,7 @@ ALTER TABLE DISCOS_COMPACTOS
 ALTER COLUMN CIUDAD DROP DEFAULT;`,
 			);
 		});
-		test("Elimina una columna a la tabla", { only: true }, async () => {
+		test("Elimina una columna a la tabla", { only: false }, async () => {
 			const result = await qb
 				.use("INVENTARIO")
 				.alterTable("DISCOS_COMPACTOS")
@@ -711,11 +711,12 @@ ORDER BY PRECIO, A_LA_MANO DESC;`,
 			{ only: false },
 			async () => {
 				const result = await qb
-					.insert(
-						"INVENTARIO_CD",
-						[],
-						["Patsy Cline: 12 Greatest Hits", "Country", "MCA Records", 32],
-					)
+					.insert("INVENTARIO_CD", [
+						"Patsy Cline: 12 Greatest Hits",
+						"Country",
+						"MCA Records",
+						32,
+					])
 					.toString();
 
 				assert.equal(
@@ -737,8 +738,8 @@ VALUES
 				const result = await qb
 					.insert(
 						"INVENTARIO_CD",
-						["NOMBRE_CD", "EDITOR", "EN_EXISTENCIA"],
 						["Fundamental", "Capitol Records", 34],
+						["NOMBRE_CD", "EDITOR", "EN_EXISTENCIA"],
 					)
 					.toString();
 
@@ -756,7 +757,6 @@ FROM INVENTARIO_CD;`;
 				const result = await qb
 					.insert(
 						"INVENTARIO_CD_2",
-						[],
 						qb.select(["NOMBRE_CD", "EN_EXISTENCIA"]).from("INVENTARIO_CD"),
 					)
 					.toString();
@@ -765,16 +765,12 @@ FROM INVENTARIO_CD;`;
 			},
 		);
 		test("Insertar varias filas de datos", { only: false }, async () => {
-			const result = qb.insert(
-				"INVENTARIO_CD",
-				[],
-				[
-					[827, "Private Music"],
-					[828, "Reprise Records"],
-					[829, "Asylum Records"],
-					[830, "Windham Hill Records"],
-				],
-			);
+			const result = qb.insert("INVENTARIO_CD", [
+				[827, "Private Music"],
+				[828, "Reprise Records"],
+				[829, "Asylum Records"],
+				[830, "Windham Hill Records"],
+			]);
 
 			assert.equal(
 				await result.toString(),
@@ -841,7 +837,13 @@ WHERE NOMBRE_CD = 'Out of Africa';`,
 			"Actualizar el valor de una columna usando como valor el select",
 			{ only: false },
 			async () => {
-				const result = qb
+				const sql = `UPDATE INVENTARIO_CD_2
+SET EN_EXISTENCIA_2 =
+( SELECT AVG(EN_EXISTENCIA)
+FROM INVENTARIO_CD )
+WHERE NOMBRE_CD_2 = 'Orlando';`;
+
+				const result = await qb
 					.update("INVENTARIO_CD_2", {
 						EN_EXISTENCIA_2: qb
 							.select(qb.avg("EN_EXISTENCIA"))
@@ -850,31 +852,32 @@ WHERE NOMBRE_CD = 'Out of Africa';`,
 					.where(qb.eq("NOMBRE_CD_2", "Orlando"))
 					.toString();
 
-				// 				assert.equal(
-				// 					await qbSelect.toString(),
-				// 					`UPDATE INVENTARIO_CD_2
-				// SET EN_EXISTENCIA_2 =
-				// ( SELECT AVG(EN_EXISTENCIA)
-				// FROM INVENTARIO_CD )
-				// WHERE NOMBRE_CD_2 = 'Orlando';`,
-				// 				);
+				assert.equal(result, sql);
 			},
 		);
-		test("Eliminar filas de una tabla con DELETE FROM", async () => {
-			const result = await qb.delete("INVENTARIO_CD");
-			assert.equal(result.toString(), "DELETE FROM INVENTARIO_CD;");
-		});
-		test("Eliminar algunas filas de una tabla con DELETE y where", async () => {
-			const result = await qb
-				.delete("INVENTARIO_CD")
-				.where(qb.eq("TIPO_MUSICA", "Country"));
-			assert.equal(
-				result.toString(),
-				`DELETE FROM INVENTARIO_CD
+		test(
+			"Eliminar filas de una tabla con DELETE FROM",
+			{ only: false },
+			async () => {
+				const result = qb.delete("INVENTARIO_CD");
+				assert.equal(await result.toString(), "DELETE FROM INVENTARIO_CD;");
+			},
+		);
+		test(
+			"Eliminar algunas filas de una tabla con DELETE y where",
+			{ only: false },
+			async () => {
+				const result = qb
+					.delete("INVENTARIO_CD")
+					.where(qb.eq("TIPO_MUSICA", "Country"));
+				assert.equal(
+					await result.toString(),
+					`DELETE FROM INVENTARIO_CD
 WHERE TIPO_MUSICA = 'Country';`,
-			);
-		});
-		test("eliminar datos usando una sub consulta", async () => {
+				);
+			},
+		);
+		test("eliminar datos usando una sub consulta", { only: true }, async () => {
 			const result = await qb
 				.delete("TIPOS_TITULO")
 				.where(
@@ -885,10 +888,11 @@ WHERE TIPO_MUSICA = 'Country';`,
 							.from("INVENTARIO_TITULOS")
 							.where(qb.eq("TITLE_ID", 108)),
 					),
-				);
+				)
+				.toString();
 
 			assert.equal(
-				result.toString(),
+				result,
 				`DELETE FROM TIPOS_TITULO
 WHERE TITULO_CD IN ( SELECT TITLE
 FROM INVENTARIO_TITULOS
