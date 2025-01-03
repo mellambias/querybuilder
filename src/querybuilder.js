@@ -72,6 +72,7 @@ class QueryBuilder {
 						const { prop, original, args, numeroArgumentos } =
 							target.promiseStack[index];
 						target.promise = target.promise.then((next) => {
+							next.last = next?.prop || null;
 							log("Proxy", "%o recibe:%o", prop, next);
 							// iguala el numero de argumentos que recibe la función
 							while (args.length < numeroArgumentos - 1) {
@@ -96,7 +97,7 @@ class QueryBuilder {
 					}
 
 					return (...args) => {
-						console.log("[Proxy] Se ha llamado a la funcion %o", prop);
+						log("Proxy", "Se ha llamado a la funcion %o", prop);
 						target.promiseStack.push({
 							prop,
 							original,
@@ -477,7 +478,10 @@ class QueryBuilder {
 	checkFrom(tables, alias) {
 		// biome-ignore lint/style/noArguments: <explanation>
 		const args = [...arguments];
-		const error = check("From(tables:string|array, alias:string|array)", args);
+		const error = check(
+			"checkFrom(tables:string|array, alias:string|array)",
+			args,
+		);
 		if (error) {
 			throw new Error(error);
 		}
@@ -493,8 +497,8 @@ class QueryBuilder {
 	}
 	from(tables, alias, next) {
 		try {
-			const select = this.promiseStack.find((item) => item.prop === "select");
-			if (select === undefined) {
+			log(["QB", "from(tables, alias, next)"], "Recibe: next", next);
+			if (next.last !== "select") {
 				this.error =
 					"[from] No es posible usar 'FROM', falta el comando 'select'";
 				return next;
@@ -643,9 +647,22 @@ class QueryBuilder {
 
 		for (const operTwo of operTwoCols) {
 			this[operTwo] = (a, b, next) => {
-				log("operTwoCols", "[%s] a:%o, b:%o next:%o", operTwo, a, b, next);
+				log(
+					["QueryBuilder", "operTwoCols", "%s"],
+					"a:%o, b:%o next:%o",
+					operTwo,
+					a,
+					b,
+					next,
+				);
 				const result = this.language[operTwo](a, b);
-				log("QueryBuilder", "[%s] result %o next %o", operTwo, result, next);
+				log(
+					["QueryBuilder", "%s"],
+					" result %o next %o",
+					operTwo,
+					result,
+					next,
+				);
 				if (next?.q === undefined) {
 					next.q = [];
 				}
@@ -654,10 +671,13 @@ class QueryBuilder {
 			};
 		}
 		for (const operOne of operOneCol) {
-			this[operOne] = (a) => this.language[operOne](a);
+			this[operOne] = (a, next) =>
+				this.toNext([this.language[operOne](a, next), next]);
 		}
+		//"between", "notBetween"
 		for (const operTree of operTreeArg) {
-			this[operTree] = (a, b, c) => this.language[operTree](a, b, c);
+			this[operTree] = (a, b, c, next) =>
+				this.toNext([this.language[operTree](a, b, c, next), next]);
 		}
 		// "and", "or", "not", "distinct"
 		for (const oper of logicos) {
@@ -693,8 +713,9 @@ class QueryBuilder {
 		return this.toNext([result, next]);
 	}
 	notIn(columna, ...values) {
-		this.commandStack.push("notIn");
-		return this.language.notIn(columna, ...values);
+		const next = values.pop();
+		const result = this.language.notIn(columna, values, next);
+		return this.toNext([result, next]);
 	}
 
 	/**
@@ -1024,17 +1045,20 @@ class QueryBuilder {
 		if (/^(subselect)$/i.test(options?.as) === false) {
 			joinQuery = joinQuery.concat(";").replace(";;", ";");
 		}
+		joinQuery = joinQuery.replaceAll("\n\n", "\n");
 		log("toString", "joinQuery\n", joinQuery);
+		this.dropQuery();
 		return joinQuery;
 	}
-	dropQuery() {
+	dropQuery(next) {
 		this.query = [];
 		this.selectCommand = undefined;
 		this.selectStack = [];
 		this.alterTableCommand = undefined;
 		this.alterTableStack = [];
-		this.promiseStack = Promise.resolve({});
-		return this;
+		this.promise = Promise.resolve({});
+		this.promiseStack = [];
+		return this.toNext(this.promise);
 	}
 	/**
 	 *

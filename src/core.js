@@ -452,7 +452,7 @@ class Core {
 		) {
 			subSelect.unshift(next.q.pop());
 		}
-		return subSelect.join("\n");
+		return subSelect;
 	}
 
 	getListValues(values, next) {
@@ -467,7 +467,7 @@ class Core {
 				}
 				return value;
 			});
-		} else {
+		} else if (Array.isArray(values)) {
 			arrayValues = values.map((value) => {
 				if (value instanceof QueryBuilder) {
 					log(["Core", "getListValues(values, next)"], "next %o", next);
@@ -475,35 +475,52 @@ class Core {
 				}
 				return value;
 			});
+		} else {
+			if (values instanceof QueryBuilder) {
+				return this.getSubselect(next).join("\n");
+			}
+			arrayValues = [values];
 		}
-		return arrayValues;
+		return arrayValues
+			.map((item) => {
+				if (typeof item === "string") {
+					return `'${item}'`;
+				}
+				if (Array.isArray(item)) {
+					return item.join("\n");
+				}
+				return item;
+			})
+			.join(", ");
 	}
 	in(columna, values, next) {
 		log(["Core", "in(columna, values, next)"], "values", values.length);
 		const response = this.getListValues(values, next);
-		log(["Core", "in(columna, values, next)"], "respuesta", response);
-		return `${columna} IN ( ${response.join(", ")} )`;
+		log(["Core", "in(columna, values, next)"], "respuesta %o", response);
+		return `${columna} IN ( ${response} )`;
 	}
-	notIn(columna, ...values) {
-		return `${columna} NOT IN ( ${this.getListValues(...values).join(", ")} )`;
+	notIn(columna, values, next) {
+		const response = this.getListValues(values, next);
+		return `${columna} NOT IN ( ${response} )`;
 	}
-	exists(subSelect) {
-		return `EXISTS ( ${this.getListValues(subSelect).join(", ")} )`;
+	exists(subSelect, next) {
+		const response = this.getListValues(subSelect, next);
+		return `EXISTS ( ${response} )`;
 	}
-	notExists(subSelect) {
-		return `NOT EXISTS ( ${this.getListValues(subSelect).join(", ")} )`;
+	notExists(subSelect, next) {
+		return `NOT EXISTS ( ${this.getListValues(subSelect, next)} )`;
 	}
 
-	async any(subSelect) {
-		const subselect = await this.getListValues(subSelect);
+	async any(subSelect, next) {
+		const subselect = await this.getListValues(subSelect, next);
 		console.log("any", subselect);
-		return `ANY ( ${subselect.join(", ")} )`;
+		return `ANY ( ${subselect} )`;
 	}
-	some(subSelect) {
-		return `SOME ( ${this.getListValues(subSelect).join(", ")} )`;
+	some(subSelect, next) {
+		return `SOME ( ${this.getListValues(subSelect, next)} )`;
 	}
-	all(subSelect) {
-		return `ALL ( ${this.getListValues(subSelect).join(", ")} )`;
+	all(subSelect, next) {
+		return `ALL ( ${this.getListValues(subSelect, next)} )`;
 	}
 
 	groupBy(columns, options) {

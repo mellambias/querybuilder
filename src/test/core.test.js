@@ -877,92 +877,120 @@ WHERE TIPO_MUSICA = 'Country';`,
 				);
 			},
 		);
-		test("eliminar datos usando una sub consulta", { only: true }, async () => {
+		test(
+			"eliminar datos usando una sub consulta",
+			{ only: false },
+			async () => {
+				const result = await qb
+					.delete("TIPOS_TITULO")
+					.where(
+						qb.in(
+							"TITULO_CD",
+							qb
+								.select("TITLE")
+								.from("INVENTARIO_TITULOS")
+								.where(qb.eq("TITLE_ID", 108)),
+						),
+					)
+					.toString();
+
+				assert.equal(
+					result,
+					`DELETE FROM TIPOS_TITULO
+WHERE TITULO_CD IN ( SELECT TITLE
+FROM INVENTARIO_TITULOS
+WHERE TITLE_ID = 108 );`,
+				);
+			},
+		);
+	});
+	describe("Predicados de WHERE", async () => {
+		test("operadores", { only: false }, async () => {
+			assert.equal(
+				await qb.eq("columna", "string").toString(),
+				"columna = 'string';",
+			);
+			assert.equal(await qb.ne("columna", 4).toString(), "columna <> 4;");
+			assert.equal(await qb.gt("columna", 4).toString(), "columna > 4;");
+			assert.equal(await qb.gte("columna", 4).toString(), "columna >= 4;");
+			assert.equal(await qb.lt("columna", 4).toString(), "columna < 4;");
+			assert.equal(await qb.lte("columna", 4).toString(), "columna <= 4;");
+		});
+		test("logicos", { only: false }, async () => {
 			const result = await qb
-				.delete("TIPOS_TITULO")
-				.where(
-					qb.in(
-						"TITULO_CD",
-						qb
-							.select("TITLE")
-							.from("INVENTARIO_TITULOS")
-							.where(qb.eq("TITLE_ID", 108)),
-					),
+				.and(
+					qb.or(qb.eq("columna", 1), qb.eq("columna", 2), qb.eq("columna", 3)),
+					qb.gt("col", 25),
 				)
+				.or(qb.and(qb.gt("PEPE", 10), qb.lt("PEPE", 40)))
 				.toString();
 
 			assert.equal(
 				result,
-				`DELETE FROM TIPOS_TITULO
-WHERE TITULO_CD IN ( SELECT TITLE
-FROM INVENTARIO_TITULOS
-WHERE TITLE_ID = 108 );`,
-			);
-		});
-	});
-	describe("Predicados de WHERE", async () => {
-		test("operadores", async () => {
-			assert.equal(qb.eq("columna", "string"), "columna = 'string'");
-			assert.equal(qb.ne("columna", 4), "columna <> 4");
-			assert.equal(qb.gt("columna", 4), "columna > 4");
-			assert.equal(qb.gte("columna", 4), "columna >= 4");
-			assert.equal(qb.lt("columna", 4), "columna < 4");
-			assert.equal(qb.lte("columna", 4), "columna <= 4");
-		});
-		test("logicos", async () => {
-			assert.equal(
-				qb.and(
-					qb.or(qb.eq("columna", 1), qb.eq("columna", 2), qb.eq("columna", 3)),
-					qb.gt("col", 25),
-				) + qb.or(qb.and(qb.gt("PEPE", 10), qb.lt("PEPE", 40))),
 				`((columna = 1
 OR columna = 2
 OR columna = 3)
 AND col > 25)
 OR (PEPE > 10
-AND PEPE < 40)`,
+AND PEPE < 40);`,
 			);
 		});
-		test("predicado NOT", async () => {
-			assert.equal(qb.not(qb.eq("col", 24)), "NOT (col = 24)");
+
+		test("predicado NOT", { only: false }, async () => {
 			assert.equal(
-				qb.not(qb.or(qb.eq("col", 24), qb.gt("col", 10))),
+				await qb.not(qb.eq("col", 24)).toString(),
+				"NOT (col = 24);",
+			);
+			assert.equal(
+				await qb.not(qb.or(qb.eq("col", 24), qb.gt("col", 10))).toString(),
 				`NOT ((col = 24
-OR col > 10))`,
+OR col > 10));`,
 			);
 		});
-		test("Un valor entre un mínimo y un máximo", async () => {
-			assert.equal(qb.between("CAMPO", 12, 15), "CAMPO BETWEEN 12 AND 15");
+		test("Un valor entre un mínimo y un máximo", { only: false }, async () => {
+			assert.equal(
+				await qb.between("CAMPO", 12, 15).toString(),
+				"CAMPO BETWEEN 12 AND 15;",
+			);
 		});
-		test("Valores que pueden ser Null o no Null", async () => {
-			assert.equal(qb.isNull("col"), "col IS NULL");
+		test("Valores que pueden ser Null o no Null", { only: false }, async () => {
+			assert.equal(await qb.isNull("col").toString(), "col IS NULL;");
 			assert.equal(
-				qb.isNull(["col1", "col2", "col3"]),
-				"col1 IS NULL\nAND col2 IS NULL\nAND col3 IS NULL",
+				await qb.isNull(["col1", "col2", "col3"]).toString(),
+				"col1 IS NULL\nAND col2 IS NULL\nAND col3 IS NULL;",
 			);
 			assert.equal(
-				qb.isNotNull(["col1", "col2", "col3"]),
-				"col1 IS NOT NULL\nAND col2 IS NOT NULL\nAND col3 IS NOT NULL",
+				await qb.isNotNull(["col1", "col2", "col3"]).toString(),
+				"col1 IS NOT NULL\nAND col2 IS NOT NULL\nAND col3 IS NOT NULL;",
 			);
 			assert.equal(
-				qb.and(
-					qb.isNotNull("LUGAR_DE_NACIMIENTO"),
-					qb.gt("AÑO_NACIMIENTO", 1940),
-				),
+				await qb
+					.and(
+						qb.isNotNull("LUGAR_DE_NACIMIENTO"),
+						qb.gt("AÑO_NACIMIENTO", 1940),
+					)
+					.toString(),
 				`(LUGAR_DE_NACIMIENTO IS NOT NULL
-AND AÑO_NACIMIENTO > 1940)`,
+AND AÑO_NACIMIENTO > 1940);`,
 			);
 		});
-		test("Valor que coincide con una expresion usando comodines % y _", async () => {
-			assert.equal(qb.like("ID_CD", "%01"), "ID_CD LIKE ('%01')");
-		});
-		test("valor dentro de una lista", async () => {
+		test(
+			"Valor que coincide con una expresion usando comodines % y _",
+			{ only: false },
+			async () => {
+				assert.equal(
+					await qb.like("ID_CD", "%01").toString(),
+					"ID_CD LIKE ('%01');",
+				);
+			},
+		);
+		test("valor dentro de una lista", { only: false }, async () => {
 			assert.equal(
-				qb.in("EN_EXISTENCIA", [12, 22, 32, 42, "bocata"]),
-				"EN_EXISTENCIA IN ( 12, 22, 32, 42, 'bocata' )",
+				await qb.in("EN_EXISTENCIA", [12, 22, 32, 42, "bocata"]).toString(),
+				"EN_EXISTENCIA IN ( 12, 22, 32, 42, 'bocata' );",
 			);
 			assert.equal(
-				qb
+				await qb
 					.select(["TITULO", "ARTISTA"])
 					.from("ARTISTAS_DISCO_COMPACTO")
 					.where(
@@ -982,9 +1010,9 @@ FROM INVENTARIO_DISCO_COMPACTO
 WHERE EN_EXISTENCIA > 10 );`,
 			);
 		});
-		test("El valor existe en la subconsulta", async () => {
+		test("El valor existe en la subconsulta", { only: true }, async () => {
 			assert.equal(
-				qb
+				await qb
 					.select(["TITULO", "ARTISTA"])
 					.from("ARTISTAS_DISCO_COMPACTO")
 					.where(
