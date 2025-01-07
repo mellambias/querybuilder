@@ -7,7 +7,8 @@ export const select = {
 	all: (all) => (all === true ? "ALL" : undefined),
 	// biome-ignore lint/complexity/useArrowFunction: <explanation>
 	columns: function (columns, self) {
-		console.log("[columns]self._values.next", self._values.next);
+		const next = self._values.next;
+		// log(["sql2006", "select", "columns"], "self._values.next", next);
 		if (
 			typeof columns === "string" ||
 			columns instanceof Column ||
@@ -16,29 +17,48 @@ export const select = {
 			return columns;
 		}
 		if (columns instanceof QueryBuilder) {
-			log(["sql2006", "select"], " Es un QB");
+			log(["sql2006", "select", "QueryBuilder"], " Es un QB");
 			// colStack.push(`${column.toString( {as:"subquery"})} AS `)
-			return self._values.next.q.pop();
+			return next.q.pop();
 		}
-		const colStack = [];
-		for (const column of columns) {
+		log(
+			["sql2006", "select"],
+			"Procesa lista de columnas valores en q%o",
+			next.q,
+		);
+		const colStack = Array(columns.length);
+		for (const [index, column] of columns.entries()) {
+			log("antes", "colStack", colStack);
 			if (typeof column === "string") {
-				colStack.push(`${column}`);
-			}
-			if (column instanceof Column || column instanceof Expresion) {
-				colStack.push(`${column}`);
-			}
-			if (column?.col !== undefined) {
-				if (column.as !== undefined) {
-					colStack.push(`${column.col} AS ${column.as}`);
-				} else {
-					colStack.push(`${column.col}`);
-				}
+				colStack[index] = `${column}`;
 			}
 			if (column instanceof QueryBuilder) {
-				console.log("[sql2006][select] ");
-				// colStack.push(`${column.toString( {as:"subquery"})} AS `)
+				const colValue = next.q.shift();
+				if (colValue instanceof Column || colValue instanceof Expresion) {
+					log(
+						["sql2006", "select"],
+						"col isColumn: %o, isExpresion: %o valor:%s indice:%o",
+						colValue instanceof Column,
+						colValue instanceof Expresion,
+						colValue,
+						index,
+					);
+
+					colStack[index] = `${colValue}`;
+					log("despues QB", "colStack", colStack);
+				} else {
+					log("colValue?.col", "colValue colStack", colValue.col, colStack);
+					if (colValue?.col !== undefined) {
+						if (colValue.as !== undefined) {
+							colStack[index] = `${colValue.col} AS ${colValue.as}`;
+						} else {
+							colStack[index] = `${colValue.col}`;
+						}
+					}
+				}
 			}
+
+			log("despues column?.col", "colStack", colStack);
 		}
 		return colStack.join(", ");
 	},

@@ -72,8 +72,9 @@ class QueryBuilder {
 						const { prop, original, args, numeroArgumentos } =
 							target.promiseStack[index];
 						target.promise = target.promise.then((next) => {
+							log(["Proxy", "promise", "then", "%o"], "recibe:%o", prop, next);
 							next.last = next?.prop || null;
-							log("Proxy", "%o recibe:%o", prop, next);
+
 							// iguala el numero de argumentos que recibe la función
 							while (args.length < numeroArgumentos - 1) {
 								args.push(undefined);
@@ -138,28 +139,39 @@ class QueryBuilder {
 	toNext(data, stringJoin = "") {
 		if (Array.isArray(data)) {
 			let [valor, next] = data;
-			if (isJSObject(valor)) {
-				valor = Object.keys(valor).reduce((obj, key) => {
-					if (valor[key] instanceof QueryBuilder) {
-						obj[key] = next.q.shift();
-					} else {
-						obj[key] = valor[key];
-					}
-					return obj;
-				}, {});
+			if (valor === null) {
+				return next;
 			}
-			if (next.isQB) {
+			if (isJSObject(valor)) {
+				if (valor instanceof Column) {
+					log("toNext", "Recibe un objeto Column");
+				} else {
+					valor = Object.keys(valor).reduce((obj, key) => {
+						if (valor[key] instanceof QueryBuilder) {
+							obj[key] = next.q.shift();
+						} else {
+							obj[key] = valor[key];
+						}
+						return obj;
+					}, {});
+				}
+			}
+
+			if (next?.isQB) {
 				log(
 					"toNext",
-					"El argumento de %o es una llamada a QB.\n valor %o",
-					data[1].prop,
+					"El argumento de %o es una llamada a QB.\n valor recibido %o",
+					next.prop,
 					valor,
 				);
 				next.q.push(valor);
-				log("toNext", "devuelve", next);
+				log("toNext", "QB devuelve", next);
 				return next;
 			}
-			log("toNext", "Recibe valor: %o next:%o", valor, next);
+			log("toNext", "Procesar valor: %o next:%o", valor, next);
+			if (next?.q === undefined) {
+				return { ...next, q: [valor] };
+			}
 			const { q, ...resto } = next;
 			if (Array.isArray(q)) {
 				if (typeof valor === "string") {
@@ -167,7 +179,6 @@ class QueryBuilder {
 				} else {
 					q.push(valor);
 				}
-				log("toNext", "devuelve q", q);
 				return {
 					q,
 					...resto,
@@ -523,20 +534,21 @@ class QueryBuilder {
 			"fullJoin",
 		];
 		for (const join of joinTypes) {
-			this[join] = (tables, alias) => {
-				this.commandStack.push(join);
+			this[join] = (tables, alias, next) => {
 				this.checkFrom(tables, alias);
-				if (this.selectCommand?.length > 0) {
+				log(["QB", "joins", "%o"], " Recibe el objeto next", join, next);
+				if (["select", "on"].includes(next?.last)) {
 					const result = this.language[join](tables, alias);
 					if (result instanceof Error) {
-						this.error = result;
+						next.error = result;
 					} else {
-						this.selectStack.push(result);
+						return this.toNext([result, next]);
 					}
 				} else {
-					this.error = "No es posible aplicar, falta el comando 'select'";
+					next.error =
+						"No es posible aplicar, falta un comando previo 'select' u 'on'";
 				}
-				return this;
+				return this.toNext([null, next]);
 			};
 		}
 		//Sinonimos
@@ -550,34 +562,35 @@ class QueryBuilder {
 		}
 	}
 
-	using(columnsInCommon) {
-		const currentJoin = this.commandStack[this.commandStack.length - 1];
-		this.commandStack.push("using");
-		if (["innerJoin", "join", "leftJoin", "rightJoin"].includes(currentJoin)) {
-			this.selectStack.push(this.language.using(columnsInCommon));
-		} else {
-			this.error = `No es posible aplicar 'USING' a un ${currentJoin}`;
+	using(columnsInCommon, next) {
+		log(["QB", "using"], "Recibe next", next);
+		// solo se puede aplicar si el ultimo comando es un join del tipo incluido en el array
+		if (["innerJoin", "join", "leftJoin", "rightJoin"].includes(next.last)) {
+			const response = this.language.using(columnsInCommon);
+			return this.toNext([response, next]);
 		}
-		return this;
+		next.error = `No es posible aplicar 'USING' a un join de tipo: "${next.last}"`;
+		return this.toNext([null, next]);
 	}
 
 	union(...selects) {
+		const next = selects.pop();
 		if (selects.length < 2) {
-			this.error = new Error("UNION necesita mínimo dos instrucciones SELECT");
+			next.error = "UNION ALL necesita mínimo dos instrucciones SELECT";
+			return this.toNext([null, next]);
 		}
-		this.commandStack.push("union");
-		this.query.push(this.language.union(...selects));
-		return this;
+		const response = this.language.union(selects, next, { all: false });
+		return this.toNext([response, next]);
 	}
 	unionAll(...selects) {
+		const next = selects.pop();
+		log(["QB", "unionAll"], "recibe next", next);
 		if (selects.length < 2) {
-			this.error = new Error(
-				"UNION ALL necesita mínimo dos instrucciones SELECT",
-			);
+			next.error = "UNION ALL necesita mínimo dos instrucciones SELECT";
+			return this.toNext([null, next]);
 		}
-		this.commandStack.push("union");
-		this.query.push(this.language.union(...selects, { all: true }));
-		return this;
+		const response = this.language.union(selects, next, { all: true });
+		return this.toNext([response, next]);
 	}
 	where(predicados, next) {
 		next.isQB = predicados instanceof QueryBuilder;
@@ -609,14 +622,20 @@ class QueryBuilder {
 		}
 		return this;
 	}
-	on(predicados) {
-		this.commandStack.push("on");
-		if (this.selectCommand?.length > 0) {
-			this.selectStack.push(this.language.on(predicados));
-		} else {
-			this.error = "No es posible aplicar, falta el comando 'FROM'";
+	on(predicados, next) {
+		log(["QB", "on"], "Recibe next", next);
+		if (
+			this.promiseStack.some((item) =>
+				["innerJoin", "join", "leftJoin", "rightJoin", "fullJoin"].includes(
+					item.prop,
+				),
+			)
+		) {
+			const response = this.language.on(predicados, next);
+			return this.toNext([response, next]);
 		}
-		return this;
+		next.error = "No es posible aplicar 'on', falta un comando tipo 'join'";
+		return this.toNext([null, next]);
 	}
 
 	// Predicados
@@ -651,28 +670,21 @@ class QueryBuilder {
 					["QueryBuilder", "operTwoCols", "%s"],
 					"a:%o, b:%o next:%o",
 					operTwo,
-					a,
-					b,
+					a instanceof QueryBuilder ? "QB" : a,
+					b instanceof QueryBuilder ? "QB" : b,
 					next,
 				);
-				const result = this.language[operTwo](a, b);
-				log(
-					["QueryBuilder", "%s"],
-					" result %o next %o",
-					operTwo,
-					result,
-					next,
-				);
-				if (next?.q === undefined) {
-					next.q = [];
-				}
-				next.q.push(result);
-				return next;
+				const result = this.language[operTwo](a, b, next);
+				const nextObj = this.toNext([result, next]);
+				return nextObj;
 			};
 		}
 		for (const operOne of operOneCol) {
-			this[operOne] = (a, next) =>
-				this.toNext([this.language[operOne](a, next), next]);
+			this[operOne] = (a, next) => {
+				const response = this.language[operOne](a, next);
+				log(["QB", "predicados", "%o"], "respuesta", operOne, response);
+				return this.toNext([response, next]);
+			};
 		}
 		//"between", "notBetween"
 		for (const operTree of operTreeArg) {
@@ -724,7 +736,7 @@ class QueryBuilder {
 	 * @param {string} table - nombre de la tabla
 	 * @returns {Column}
 	 */
-	col(name, table) {
+	col(name, table, next) {
 		// biome-ignore lint/style/noArguments: <explanation>
 		const args = [...arguments];
 		const error = check(
@@ -734,8 +746,8 @@ class QueryBuilder {
 		if (error) {
 			throw new Error(error);
 		}
-		this.commandStack.push("col");
-		return new Column(name, table, this.language.dataType);
+		const columna = new Column(name, table, this.language.dataType);
+		return this.toNext([columna, next]);
 	}
 	/**
 	 * Es igual a col salvo el orden de los parametros
@@ -743,7 +755,7 @@ class QueryBuilder {
 	 * @param {string} name - nombre de la columna
 	 * @returns {Column}
 	 */
-	coltn(table, name) {
+	coltn(table, name, next) {
 		// biome-ignore lint/style/noArguments: <explanation>
 		const args = [...arguments];
 		const error = check(
@@ -754,7 +766,7 @@ class QueryBuilder {
 			throw new Error(error);
 		}
 		this.commandStack.push("coltn");
-		return new Column(name, table, this.language.dataType);
+		return this.toNext([new Column(name, table, this.language.dataType), next]);
 	}
 
 	exp(expresion) {
@@ -894,14 +906,18 @@ class QueryBuilder {
 					next,
 					command,
 				);
-				return this.toNext([command, next], "\n");
+				return this.toNext([command, next]);
 			};
 		}
 	}
 
 	// funciones VALOR de cadena
 	substr(column, inicio, ...options) {
-		return this.language.substr(column, inicio, ...options);
+		const next = options.pop();
+		return this.toNext([
+			this.language.substr(column, inicio, ...options),
+			next,
+		]);
 	}
 
 	/**
@@ -924,7 +940,7 @@ class QueryBuilder {
 			"localTimestamp",
 		];
 		for (const name of names) {
-			this[name] = () => this.language[name]();
+			this[name] = (next) => this.toNext([this.language[name]()], next);
 		}
 	}
 

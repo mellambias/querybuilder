@@ -37,14 +37,24 @@ class Core {
 				const callFunction = scheme[key].bind(this);
 				if (values[key] !== undefined) {
 					const respuesta = callFunction(values[key], scheme);
+					log(["Core", "getStatement", "%o"], "respuesta", key, respuesta);
 					return respuesta;
 				}
-				return callFunction(scheme.defaults[key], scheme);
+				const respuesta = callFunction(scheme.defaults[key], scheme);
+				log(
+					["Core", "getStatement", "%o"],
+					"respuesta de %o",
+					key,
+					scheme.defaults,
+					respuesta,
+				);
+				return respuesta;
 			})
 			.filter((result) => result !== undefined)
 			.join(charJoin)
 			.replaceAll(" \n", "\n")
 			.trim();
+
 		return `${command ? `${command} ` : ""}${commandArray}`;
 	}
 
@@ -256,8 +266,8 @@ class Core {
 	//Comandos DQL
 	// SELECT [ DISTINCT | ALL ] { * | < selección de lista > }
 	select(columns, options, next) {
-		console.log("[Core][select]next", next);
-		return this.getStatement(
+		log(["Core", "select"], "next", next);
+		const result = this.getStatement(
 			"SELECT",
 			sql2006.select,
 			{
@@ -267,6 +277,8 @@ class Core {
 			},
 			" ",
 		);
+		log(["Core", "select"], "result", result);
+		return result;
 	}
 	from(tables, alias) {
 		if (typeof tables === "string") {
@@ -330,23 +342,29 @@ class Core {
 		return `USING (${columnsInCommon})`;
 	}
 
-	union(...selects) {
+	union(selects, next, options) {
 		let union = "\nUNION\n";
 		const sql = [];
+		const qbSelect = [];
 		for (const select of selects) {
 			if (select instanceof QueryBuilder) {
-				sql.push(select.queryJoin({ as: "subselect" }));
+				qbSelect.push(this.getSubselect(next).join("\n"));
+				sql.push("QB");
 			}
 			if (typeof select === "string") {
 				sql.push(select);
 			}
-			if (typeof select === "object") {
-				if (select?.all) {
-					union = "\nUNION ALL\n";
-				}
-			}
 		}
-		return `${sql.join(union).replaceAll(";", "")}`;
+		const result = sql.map((item) => {
+			if (item === "QB") {
+				return qbSelect.pop();
+			}
+			return item;
+		});
+		if (options?.all) {
+			union = "\nUNION ALL\n";
+		}
+		return `${result.join(union)}`;
 	}
 	where(predicados) {
 		const sql = "WHERE";
@@ -360,12 +378,15 @@ class Core {
 		return `WHERE CURRENT OF ${cursorName};`;
 	}
 
-	on(predicados) {
+	on(predicados, next) {
 		const sql = "ON";
 		if (typeof predicados === "string") {
 			return `${sql} ${predicados}`;
 		}
-
+		if (predicados instanceof QueryBuilder) {
+			const valor = next.q.pop();
+			return `${sql} ${valor}`;
+		}
 		return `${sql} ${predicados.join("\n")}`;
 	}
 
@@ -385,18 +406,22 @@ class Core {
 			if (typeof this[oper] === "function") {
 				continue;
 			}
-			this[oper] = (a, b) => {
-				if (b !== undefined) {
-					if (b instanceof QueryBuilder) {
-						return `${a} ${operadores[oper]} ( ${b.toString({ as: "subselect" })} )`;
-					}
-					return `${a} ${operadores[oper]} ${typeof b === "string" ? (/^(ANY|SOME|ALL)$/.test(b.match(/^\w+/)[0]) ? b : `'${b}'`) : b}`;
+			this[oper] = (a, b, next) => {
+				let valorDeA = a;
+				let valorDeB = b;
+				if (b instanceof QueryBuilder) {
+					valorDeB = next.q.pop();
 				}
-				if (Array.isArray(a)) {
-					return `${a.join(` ${operadores[oper]}\nAND `)} ${operadores[oper]}`;
+				if (a instanceof QueryBuilder) {
+					valorDeA = next.q.pop();
 				}
-				console.log("[predicados]", oper);
-				return `${a} ${operadores[oper]}`;
+				if (valorDeB !== undefined) {
+					return `${valorDeA} ${operadores[oper]} ${typeof valorDeB === "string" ? (/^(ANY|SOME|ALL)$/.test(valorDeB.match(/^\w+/)[0]) ? valorDeB : `'${valorDeB}'`) : valorDeB}`;
+				}
+				if (Array.isArray(valorDeA)) {
+					return `${valorDeA.join(` ${operadores[oper]}\nAND `)} ${operadores[oper]}`;
+				}
+				return `${valorDeA} ${operadores[oper]}`;
 			};
 		}
 		const logicos = {
@@ -410,6 +435,7 @@ class Core {
 		for (const oper in logicos) {
 			if (/^(and|or)$/i.test(oper)) {
 				this[oper] = (...predicados) => {
+					const next = predicados.pop();
 					if (predicados.length > 1) {
 						return `(${predicados.join(`\n${logicos[oper].toUpperCase()} `)})`;
 					}
@@ -426,8 +452,17 @@ class Core {
 			}
 
 			if (/^(like|notLike)$/i.test(oper)) {
-				this[oper] = (...predicados) =>
-					`${predicados[0]} ${logicos[oper].toUpperCase()} ('${predicados[1]}')`;
+				this[oper] = (...predicados) => {
+					const next = predicados.pop();
+					let [a, b] = predicados;
+					if (b instanceof QueryBuilder) {
+						b = next.q.pop();
+					}
+					if (a instanceof QueryBuilder) {
+						a = next.q.pop();
+					}
+					return `${a} ${logicos[oper].toUpperCase()} ('${b}')`;
+				};
 			}
 			if (/^(distinct)$/i.test(oper)) {
 				this[oper] = (...predicados) =>
@@ -457,7 +492,11 @@ class Core {
 
 	getListValues(values, next) {
 		log(["Core", "getListValues(values, next)"], "next", next);
-		log(["Core", "getListValues(values, next)"], "values", values.length);
+		log(
+			["Core", "getListValues(values, next)"],
+			"typeof values",
+			typeof values,
+		);
 		let arrayValues = [];
 		if (Array.isArray(values[0])) {
 			arrayValues = values[0].map((value) => {
@@ -477,6 +516,7 @@ class Core {
 			});
 		} else {
 			if (values instanceof QueryBuilder) {
+				log(["Core", "getListValues(values, next)"], "Es un QB next", next);
 				return this.getSubselect(next).join("\n");
 			}
 			arrayValues = [values];
@@ -508,13 +548,13 @@ class Core {
 		return `EXISTS ( ${response} )`;
 	}
 	notExists(subSelect, next) {
-		return `NOT EXISTS ( ${this.getListValues(subSelect, next)} )`;
+		const response = this.getListValues(subSelect, next);
+		return `NOT EXISTS ( ${response} )`;
 	}
 
-	async any(subSelect, next) {
-		const subselect = await this.getListValues(subSelect, next);
-		console.log("any", subselect);
-		return `ANY ( ${subselect} )`;
+	any(subSelect, next) {
+		const response = this.getListValues(subSelect, next);
+		return `ANY ( ${response} )`;
 	}
 	some(subSelect, next) {
 		return `SOME ( ${this.getListValues(subSelect, next)} )`;

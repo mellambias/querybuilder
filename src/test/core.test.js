@@ -1010,7 +1010,7 @@ FROM INVENTARIO_DISCO_COMPACTO
 WHERE EN_EXISTENCIA > 10 );`,
 			);
 		});
-		test("El valor existe en la subconsulta", { only: true }, async () => {
+		test("El valor existe en la subconsulta", { only: false }, async () => {
 			assert.equal(
 				await qb
 					.select(["TITULO", "ARTISTA"])
@@ -1031,164 +1031,195 @@ FROM INVENTARIO_DISCO_COMPACTO
 WHERE EN_EXISTENCIA > 10 );`,
 			);
 		});
-		test("el valor coincide con algun valor en la sub consulta", async () => {
-			assert.equal(
-				qb
-					.select(["TITULO", "REBAJA"])
-					.from("REBAJA_CD")
-					.where(
-						qb.lt(
-							"REBAJA",
-							qb.any(
-								qb
-									.select("MENUDEO")
-									.from("MENUDEO_CD")
-									.where(qb.gt("EN_EXISTENCIA", 9)),
+		test(
+			"el valor coincide con algun valor en la sub consulta",
+			{ only: false },
+			async () => {
+				assert.equal(
+					await qb
+						.select(["TITULO", "REBAJA"])
+						.from("REBAJA_CD")
+						.where(
+							qb.lt(
+								"REBAJA",
+								qb.any(
+									qb
+										.select("MENUDEO")
+										.from("MENUDEO_CD")
+										.where(qb.gt("EN_EXISTENCIA", 9)),
+								),
 							),
-						),
-					)
-					.toString(),
-				`SELECT TITULO, REBAJA
+						)
+						.toString(),
+					`SELECT TITULO, REBAJA
 FROM REBAJA_CD
 WHERE REBAJA < ANY ( SELECT MENUDEO
 FROM MENUDEO_CD
 WHERE EN_EXISTENCIA > 9 );`,
-			);
-		});
-		test("coincide con mas de un valor en la sub consulta", async () => {
-			assert.equal(
-				qb
-					.select(["TITULO", "REBAJA"])
-					.from("REBAJA_CD")
-					.where(
-						qb.lt(
-							"REBAJA",
-							qb.some(
-								qb
-									.select("MENUDEO")
-									.from("MENUDEO_CD")
-									.where(qb.gt("EN_EXISTENCIA", 9)),
+				);
+			},
+		);
+		test(
+			"coincide con mas de un valor en la sub consulta",
+			{ only: false },
+			async () => {
+				assert.equal(
+					await qb
+						.select(["TITULO", "REBAJA"])
+						.from("REBAJA_CD")
+						.where(
+							qb.lt(
+								"REBAJA",
+								qb.some(
+									qb
+										.select("MENUDEO")
+										.from("MENUDEO_CD")
+										.where(qb.gt("EN_EXISTENCIA", 9)),
+								),
 							),
-						),
-					)
-					.toString(),
-				`SELECT TITULO, REBAJA
+						)
+						.toString(),
+					`SELECT TITULO, REBAJA
 FROM REBAJA_CD
 WHERE REBAJA < SOME ( SELECT MENUDEO
 FROM MENUDEO_CD
 WHERE EN_EXISTENCIA > 9 );`,
-			);
-		});
-		test("coincide con todos los valores de la sub consulta", async () => {
-			assert.equal(
-				qb
-					.select(["TITULO", "REBAJA"])
-					.from("REBAJA_CD")
-					.where(
-						qb.lt(
-							"REBAJA",
-							qb.all(
-								qb
-									.select("MENUDEO")
-									.from("MENUDEO_CD")
-									.where(qb.gt("EN_EXISTENCIA", 9)),
+				);
+			},
+		);
+		test(
+			"coincide con todos los valores de la sub consulta",
+			{ only: false },
+			async () => {
+				assert.equal(
+					await qb
+						.select(["TITULO", "REBAJA"])
+						.from("REBAJA_CD")
+						.where(
+							qb.lt(
+								"REBAJA",
+								qb.all(
+									qb
+										.select("MENUDEO")
+										.from("MENUDEO_CD")
+										.where(qb.gt("EN_EXISTENCIA", 9)),
+								),
 							),
-						),
-					)
-					.toString(),
-				`SELECT TITULO, REBAJA
+						)
+						.toString(),
+					`SELECT TITULO, REBAJA
 FROM REBAJA_CD
 WHERE REBAJA < ALL ( SELECT MENUDEO
 FROM MENUDEO_CD
 WHERE EN_EXISTENCIA > 9 );`,
-			);
-		});
+				);
+			},
+		);
 	});
 	describe("Funciones", async () => {
 		describe("SET", async () => {
-			test("COUNT", async () => {
-				assert.equal(qb.count("*"), "COUNT(*)");
-				assert.equal(qb.count("PRECIO"), "COUNT(PRECIO)");
-				assert.equal(qb.count("PRECIO", "DINERO"), "COUNT(PRECIO) AS DINERO");
-			});
-			test("SELECT con COUNT", async () => {
-				const result = await qb
-					.select(qb.count("PRECIO", "DINERO"))
-					.from("LISTA_CD");
+			test("COUNT", { only: false }, async () => {
+				assert.equal(await qb.count("*").toString(), "COUNT(*);");
+				assert.equal(await qb.count("PRECIO").toString(), "COUNT(PRECIO);");
 				assert.equal(
-					result.toString(),
-					"SELECT COUNT(PRECIO) AS DINERO\nFROM LISTA_CD;",
+					await qb.count("PRECIO", "DINERO").toString(),
+					"COUNT(PRECIO) AS DINERO;",
 				);
 			});
-			test("MAX y MIN", async () => {
-				assert.equal(qb.max("PRECIO"), "MAX(PRECIO)");
-				assert.equal(qb.max("PRECIO", "DINERO"), "MAX(PRECIO) AS DINERO");
-				assert.equal(qb.min("PRECIO"), "MIN(PRECIO)");
-				assert.equal(qb.min("PRECIO", "DINERO"), "MIN(PRECIO) AS DINERO");
+			test("SELECT con COUNT", { only: false }, async () => {
+				const result = await qb
+					.select(qb.count("PRECIO", "DINERO"))
+					.from("LISTA_CD")
+					.toString();
+
+				assert.equal(result, "SELECT COUNT(PRECIO) AS DINERO\nFROM LISTA_CD;");
 			});
-			test("SUM", async () => {
-				assert.equal(qb.sum("PRECIO"), "SUM(PRECIO)");
-				assert.equal(qb.sum("PRECIO", "DINERO"), "SUM(PRECIO) AS DINERO");
+			test("MAX y MIN", { only: false }, async () => {
+				assert.equal(await qb.max("PRECIO").toString(), "MAX(PRECIO);");
+				assert.equal(
+					await qb.max("PRECIO", "DINERO").toString(),
+					"MAX(PRECIO) AS DINERO;",
+				);
+				assert.equal(await qb.min("PRECIO").toString(), "MIN(PRECIO);");
+				assert.equal(
+					await qb.min("PRECIO", "DINERO").toString(),
+					"MIN(PRECIO) AS DINERO;",
+				);
 			});
-			test("AVG", async () => {
-				assert.equal(qb.avg("PRECIO"), "AVG(PRECIO)");
-				assert.equal(qb.avg("PRECIO", "DINERO"), "AVG(PRECIO) AS DINERO");
+			test("SUM", { only: false }, async () => {
+				assert.equal(await qb.sum("PRECIO").toString(), "SUM(PRECIO);");
+				assert.equal(
+					await qb.sum("PRECIO", "DINERO").toString(),
+					"SUM(PRECIO) AS DINERO;",
+				);
+			});
+			test("AVG", { only: false }, async () => {
+				assert.equal(await qb.avg("PRECIO").toString(), "AVG(PRECIO);");
+				assert.equal(
+					await qb.avg("PRECIO", "DINERO").toString(),
+					"AVG(PRECIO) AS DINERO;",
+				);
 			});
 		});
 		describe("VALUE", async () => {
-			describe("funciones de valor de cadena", async () => {
+			describe("funciones de valor de cadena", { only: false }, async () => {
 				test("substring", async () => {
 					assert.equal(
-						qb.substr("DESCRIPCION", 3),
-						"SUBSTRING(DESCRIPCION FROM 3)",
+						await qb.substr("DESCRIPCION", 3).toString(),
+						"SUBSTRING(DESCRIPCION FROM 3);",
 					);
 					assert.equal(
-						qb.substr("DESCRIPCION", 3, 10),
-						"SUBSTRING(DESCRIPCION FROM 3 FOR 10)",
+						await qb.substr("DESCRIPCION", 3, 10).toString(),
+						"SUBSTRING(DESCRIPCION FROM 3 FOR 10);",
 					);
 					assert.equal(
-						qb.substr("DESCRIPCION", 3, "ABREVIADO"),
-						"SUBSTRING(DESCRIPCION FROM 3) AS ABREVIADO",
+						await qb.substr("DESCRIPCION", 3, "ABREVIADO").toString(),
+						"SUBSTRING(DESCRIPCION FROM 3) AS ABREVIADO;",
 					);
 				});
 				test("UPPER y LOWER", async () => {
-					assert.equal(qb.upper("DISCO"), "UPPER(DISCO)");
+					assert.equal(await qb.upper("DISCO").toString(), "UPPER(DISCO);");
 					assert.equal(
-						qb.upper("DISCO", "DISCO_EN_MAYUSCULA"),
-						"UPPER(DISCO) AS DISCO_EN_MAYUSCULA",
+						await qb.upper("DISCO", "DISCO_EN_MAYUSCULA").toString(),
+						"UPPER(DISCO) AS DISCO_EN_MAYUSCULA;",
 					);
-					assert.equal(qb.lower("DISCO"), "LOWER(DISCO)");
+					assert.equal(await qb.lower("DISCO").toString(), "LOWER(DISCO);");
 					assert.equal(
-						qb.lower("DISCO", "DISCO_EN_MAYUSCULA"),
-						"LOWER(DISCO) AS DISCO_EN_MAYUSCULA",
+						await qb.lower("DISCO", "DISCO_EN_MAYUSCULA").toString(),
+						"LOWER(DISCO) AS DISCO_EN_MAYUSCULA;",
 					);
 				});
 			});
-			describe("funciones de tiempo", async () => {
+			describe("funciones de tiempo", { only: false }, async () => {
 				test("Current", async () => {
-					assert.equal(qb.currentDate(), "CURRENT_DATE");
-					assert.equal(qb.currentTime(), "CURRENT_TIME");
-					assert.equal(qb.currentTimestamp(), "CURRENT_TIMESTAMP");
+					assert.equal(await qb.currentDate().toString(), "CURRENT_DATE;");
+					assert.equal(await qb.currentTime().toString(), "CURRENT_TIME;");
+					assert.equal(
+						await qb.currentTimestamp().toString(),
+						"CURRENT_TIMESTAMP;",
+					);
 				});
 				test("local time", async () => {
-					assert.equal(qb.localTime(), "LOCALTIME");
-					assert.equal(qb.localTimestamp(), "LOCALTIMESTAMP");
+					assert.equal(await qb.localTime().toString(), "LOCALTIME;");
+					assert.equal(await qb.localTimestamp().toString(), "LOCALTIMESTAMP;");
 				});
 			});
 		});
 	});
 	describe("Operaciones con dos tablas", async () => {
-		test("tabla de producto cartesiano", async () => {
+		test("tabla de producto cartesiano", { only: false }, async () => {
 			const result = await qb
 				.select("*")
-				.from(["INVENTARIO_CD", "INTERPRETES"]);
+				.from(["INVENTARIO_CD", "INTERPRETES"])
+				.toString();
+
 			assert.equal(
-				result.toString(),
+				result,
 				`SELECT *
 FROM INVENTARIO_CD, INTERPRETES;`,
 			);
 		});
-		test("Una tabla EQUI-JOIN", async () => {
+		test("Una tabla EQUI-JOIN", { only: false }, async () => {
 			const result = await qb
 				.select("*")
 				.from(["INVENTARIO_CD", "INTERPRETES"])
@@ -1197,41 +1228,47 @@ FROM INVENTARIO_CD, INTERPRETES;`,
 						qb.col("ID_INTER", "INVENTARIO_CD"),
 						qb.col("ID_INTER", "INTERPRETES"),
 					),
-				);
+				)
+				.toString();
 			assert.equal(
-				result.toString(),
+				result,
 				`SELECT *
 FROM INVENTARIO_CD, INTERPRETES
 WHERE INVENTARIO_CD.ID_INTER = INTERPRETES.ID_INTER;`,
 			);
 		});
-		test("limitar las columnas arrojadas y agregar otro predicado a la cláusula WHERE y así limitar las filas arrojadas", async () => {
-			const result = await qb
-				.select([
-					qb.col("NOMBRE_CD", "INVENTARIO_CD"),
-					qb.col("NOMBRE_INTER", "INTERPRETES"),
-					qb.col("EN_EXISTENCIA", "INVENTARIO_CD"),
-				])
-				.from(["INVENTARIO_CD", "INTERPRETES"])
-				.where(
-					qb.and(
-						qb.eq(
-							qb.col("ID_INTER", "INVENTARIO_CD"),
-							qb.col("ID_INTER", "INTERPRETES"),
+		test(
+			"limitar las columnas arrojadas y agregar otro predicado a la cláusula WHERE y así limitar las filas arrojadas",
+			{ only: false },
+			async () => {
+				const result = await qb
+					.select([
+						qb.col("NOMBRE_CD", "INVENTARIO_CD"),
+						qb.col("NOMBRE_INTER", "INTERPRETES"),
+						qb.col("EN_EXISTENCIA", "INVENTARIO_CD"),
+					])
+					.from(["INVENTARIO_CD", "INTERPRETES"])
+					.where(
+						qb.and(
+							qb.eq(
+								qb.col("ID_INTER", "INVENTARIO_CD"),
+								qb.col("ID_INTER", "INTERPRETES"),
+							),
+							qb.lt(qb.col("EN_EXISTENCIA", "INVENTARIO_CD"), 15),
 						),
-						qb.lt(qb.col("EN_EXISTENCIA", "INVENTARIO_CD"), 15),
-					),
-				);
+					)
+					.toString();
 
-			assert.equal(
-				result.toString(),
-				`SELECT INVENTARIO_CD.NOMBRE_CD, INTERPRETES.NOMBRE_INTER, INVENTARIO_CD.EN_EXISTENCIA
+				assert.equal(
+					result,
+					`SELECT INVENTARIO_CD.NOMBRE_CD, INTERPRETES.NOMBRE_INTER, INVENTARIO_CD.EN_EXISTENCIA
 FROM INVENTARIO_CD, INTERPRETES
 WHERE (INVENTARIO_CD.ID_INTER = INTERPRETES.ID_INTER
 AND INVENTARIO_CD.EN_EXISTENCIA < 15);`,
-			);
-		});
-		test("Uso de alias para tablas", async () => {
+				);
+			},
+		);
+		test("Uso de alias para tablas", { only: false }, async () => {
 			const result = await qb
 				.select([
 					qb.col("NOMBRE_CD", "c"),
@@ -1244,17 +1281,18 @@ AND INVENTARIO_CD.EN_EXISTENCIA < 15);`,
 						qb.eq(qb.col("ID_INTER", "c"), qb.col("ID_INTER", "p")),
 						qb.lt(qb.col("EN_EXISTENCIA", "c"), 15),
 					),
-				);
+				)
+				.toString();
 
 			assert.equal(
-				result.toString(),
+				result,
 				`SELECT c.NOMBRE_CD, p.NOMBRE_INTER, c.EN_EXISTENCIA
 FROM INVENTARIO_CD AS c, INTERPRETES AS p
 WHERE (c.ID_INTER = p.ID_INTER
 AND c.EN_EXISTENCIA < 15);`,
 			);
 		});
-		test("CROSS JOIN", async () => {
+		test("CROSS JOIN", { only: false }, async () => {
 			const result = await qb
 				.select([
 					qb.col("NOMBRE_CD", "c"),
@@ -1267,55 +1305,59 @@ AND c.EN_EXISTENCIA < 15);`,
 						qb.eq(qb.col("ID_INTER", "c"), qb.col("ID_INTER", "p")),
 						qb.lt(qb.col("EN_EXISTENCIA", "c"), 15),
 					),
-				);
+				)
+				.toString();
 
 			assert.equal(
-				result.toString(),
+				result,
 				`SELECT c.NOMBRE_CD, p.NOMBRE_INTER, c.EN_EXISTENCIA
 FROM INVENTARIO_CD c CROSS JOIN INTERPRETES p
 WHERE (c.ID_INTER = p.ID_INTER
 AND c.EN_EXISTENCIA < 15);`,
 			);
 		});
-		test("NATURAL JOIN", async () => {
+		test("NATURAL JOIN", { only: false }, async () => {
 			const result = await qb
 				.select(["TITULO_CD", "TIPO_CD", qb.col("MENUDEO", "c")])
 				.naturalJoin(["TITULOS_EN_EXISTENCIA", "COSTOS_TITULO"], ["s", "c"])
-				.where(qb.gt(qb.col("INVENTARIO", "s"), 15));
+				.where(qb.gt(qb.col("INVENTARIO", "s"), 15))
+				.toString();
 
 			assert.equal(
-				result.toString(),
+				result,
 				`SELECT TITULO_CD, TIPO_CD, c.MENUDEO
 FROM TITULOS_EN_EXISTENCIA s NATURAL JOIN COSTOS_TITULO c
 WHERE s.INVENTARIO > 15;`,
 			);
 		});
-		test("Join de columna nombrada", async () => {
+		test("Join de columna nombrada con using", { only: false }, async () => {
 			const result = await qb
 				.select(["TITULO_CD", qb.col("TIPO_CD", "s"), qb.col("MENUDEO", "c")])
 				.join(["TITULOS_EN_EXISTENCIA", "COSTOS_TITULO"], ["s", "c"])
 				.using("TITULO_CD")
-				.where(qb.gt(qb.col("INVENTARIO", "s"), 15));
+				.where(qb.gt(qb.col("INVENTARIO", "s"), 15))
+				.toString();
 
 			assert.equal(
-				result.toString(),
+				result,
 				`SELECT TITULO_CD, s.TIPO_CD, c.MENUDEO
 FROM TITULOS_EN_EXISTENCIA s JOIN COSTOS_TITULO c
 USING (TITULO_CD)
 WHERE s.INVENTARIO > 15;`,
 			);
 		});
-		test("INNER JOIN y la clausula ON", async () => {
+		test("INNER JOIN y la clausula ON", { only: false }, async () => {
 			const result = await qb
 				.select([qb.col("TITULO", "t"), qb.col("ARTISTA", "a")])
 				.innerJoin(["TITULO_CDS", "ARTISTAS_TITULOS"], ["t", "ta"])
 				.on(qb.eq(qb.col("ID_TITULO", "t"), qb.col("ID_TITULO", "ta")))
 				.innerJoin("ARTISTAS_CD", "a")
 				.on(qb.eq(qb.col("ID_ARTISTA", "ta"), qb.col("ID_ARTISTA", "a")))
-				.where(qb.like(qb.col("TITULO", "t"), "%Blue%"));
+				.where(qb.like(qb.col("TITULO", "t"), "%Blue%"))
+				.toString();
 
 			assert.equal(
-				result.toString(),
+				result,
 				`SELECT t.TITULO, a.ARTISTA
 FROM TITULO_CDS t INNER JOIN ARTISTAS_TITULOS ta
 ON t.ID_TITULO = ta.ID_TITULO
@@ -1324,7 +1366,7 @@ ON ta.ID_ARTISTA = a.ID_ARTISTA
 WHERE t.TITULO LIKE ('%Blue%');`,
 			);
 		});
-		test("LEFT OUTER JOIN", async () => {
+		test("LEFT OUTER JOIN", { only: false }, async () => {
 			const result = await qb
 				.select([
 					qb.col("TITULO", "i"),
@@ -1332,16 +1374,17 @@ WHERE t.TITULO LIKE ('%Blue%');`,
 					qb.col("EXISTENCIA", "i"),
 				])
 				.leftJoin(["INFO_CD", "TIPO_CD"], ["i", "t"])
-				.on(qb.eq(qb.col("ID_TIPO", "i"), qb.col("ID_TIPO", "t")));
+				.on(qb.eq(qb.col("ID_TIPO", "i"), qb.col("ID_TIPO", "t")))
+				.toString();
 
 			assert.equal(
-				result.toString(),
+				result,
 				`SELECT i.TITULO, t.NOMBRE_TIPO, i.EXISTENCIA
 FROM INFO_CD i LEFT OUTER JOIN TIPO_CD t
 ON i.ID_TIPO = t.ID_TIPO;`,
 			);
 		});
-		test("RIGHT OUTER JOIN", async () => {
+		test("RIGHT OUTER JOIN", { only: false }, async () => {
 			const result = await qb
 				.select([
 					qb.col("TITULO", "i"),
@@ -1349,16 +1392,17 @@ ON i.ID_TIPO = t.ID_TIPO;`,
 					qb.col("EXISTENCIA", "i"),
 				])
 				.rightJoin(["INFO_CD", "TIPO_CD"], ["i", "t"])
-				.on(qb.eq(qb.col("ID_TIPO", "i"), qb.col("ID_TIPO", "t")));
+				.on(qb.eq(qb.col("ID_TIPO", "i"), qb.col("ID_TIPO", "t")))
+				.toString();
 
 			assert.equal(
-				result.toString(),
+				result,
 				`SELECT i.TITULO, t.NOMBRE_TIPO, i.EXISTENCIA
 FROM INFO_CD i RIGHT OUTER JOIN TIPO_CD t
 ON i.ID_TIPO = t.ID_TIPO;`,
 			);
 		});
-		test("FULL OUTER JOIN", async () => {
+		test("FULL OUTER JOIN", { only: false }, async () => {
 			const result = await qb
 				.select([
 					qb.col("TITULO", "i"),
@@ -1366,25 +1410,49 @@ ON i.ID_TIPO = t.ID_TIPO;`,
 					qb.col("EXISTENCIA", "i"),
 				])
 				.fullJoin(["INFO_CD", "TIPO_CD"], ["i", "t"])
-				.on(qb.eq(qb.col("ID_TIPO", "i"), qb.col("ID_TIPO", "t")));
+				.on(qb.eq(qb.col("ID_TIPO", "i"), qb.col("ID_TIPO", "t")))
+				.toString();
 
 			assert.equal(
-				result.toString(),
+				result,
 				`SELECT i.TITULO, t.NOMBRE_TIPO, i.EXISTENCIA
 FROM INFO_CD i FULL OUTER JOIN TIPO_CD t
 ON i.ID_TIPO = t.ID_TIPO;`,
 			);
 		});
-		test("UNION", async () => {
-			const result = await qb.unionAll(
-				qb.select("TIPO_CD").from("CDS_CONTINUADOS"),
-				qb.select("TIPO_CD").from("CDS_DESCONTINUADOS"),
-			);
+		test("UNION", { only: false }, async () => {
+			const result = await qb
+				.union(
+					qb.select("TIPO_CD").from("CDS_CONTINUADOS"),
+					qb.select("TIPO_CD").from("CDS_DESCONTINUADOS"),
+				)
+				.toString();
 
 			assert.equal(
-				result.toString(),
+				result,
 				`SELECT TIPO_CD
 FROM CDS_CONTINUADOS
+UNION
+SELECT TIPO_CD
+FROM CDS_DESCONTINUADOS;`,
+			);
+		});
+		test("UNION ALL", { only: false }, async () => {
+			const result = await qb
+				.unionAll(
+					qb.select("TIPO_CD").from("CDS_CONTINUADOS"),
+					"SELECT TIPO_CD\nFROM CDS_DEVUELTOS",
+					qb.select("TIPO_CD").from("CDS_DESCONTINUADOS"),
+				)
+				.toString();
+
+			assert.equal(
+				result,
+				`SELECT TIPO_CD
+FROM CDS_CONTINUADOS
+UNION ALL
+SELECT TIPO_CD
+FROM CDS_DEVUELTOS
 UNION ALL
 SELECT TIPO_CD
 FROM CDS_DESCONTINUADOS;`,
@@ -1392,7 +1460,7 @@ FROM CDS_DESCONTINUADOS;`,
 		});
 	});
 	describe("USO DE SUBCONSULTAS PARA ACCEDER Y MODIFICAR DATOS", async () => {
-		test("subconsultas con varios resultados", async () => {
+		test("subconsultas con varios resultados", { only: true }, async () => {
 			const result = await qb
 				.select("*")
 				.from("EXISTENCIA_CD")
