@@ -1,4 +1,5 @@
 import QueryBuilder from "../../querybuilder.js";
+import { log } from "../../utils/utils.js";
 export const createSchema = {
 	name: (name) => name,
 	authorization: (authorization) => `AUTHORIZATION ${authorization}`,
@@ -69,12 +70,14 @@ export const createCursor = {
 		/^(SCROLL|NO SCROLL)$/i.test(cursor) ? cursor.toUpperCase() : undefined,
 	hold: (hold) => `${hold === true ? "WITH" : "WITHOUT"} HOLD`,
 	return: (value) => `${value === true ? "WITH" : "WITHOUT"} RETURN`,
-	expresion: (expresion) => {
+	expresion: function (expresion, self) {
+		const next = self._values.next;
+
 		if (typeof expresion === "string") {
 			return `CURSOR FOR ${expresion}`;
 		}
 		if (expresion instanceof QueryBuilder) {
-			return `CURSOR FOR ${expresion.toString({ as: "subselect" })}`;
+			return `CURSOR FOR ${this.getSubselect(next).join("\n")}`;
 		}
 		throw new Error("la expresion no es valida");
 	},

@@ -50,7 +50,10 @@ class QueryBuilder {
 			"toString",
 			"toNext",
 			"checkFrom",
+			"openCursor",
+			"valueOf",
 		];
+		this.returnPromise = ["createCursor", "closeCursor"];
 		this.handler = {
 			get(target, prop, receiver) {
 				if (prop === "catch") {
@@ -62,7 +65,7 @@ class QueryBuilder {
 				}
 				const original = Reflect.get(target, prop, receiver);
 
-				if (prop === "promise") {
+				if (prop === "promise2") {
 					/**
 					 * Cuando se llama a promise se encadenan las llamadas
 					 * en una sola promesa secuencia
@@ -105,7 +108,40 @@ class QueryBuilder {
 							args,
 							numeroArgumentos: original.length,
 						});
-						return receiver; // Para encadenar
+						target.promise = target.promise.then((next) => {
+							let nextValue = next;
+							let isOfType = "una instancia de ";
+							switch (true) {
+								case next instanceof QueryBuilder:
+									isOfType += "QueryBuilder";
+									break;
+								case next instanceof Command:
+									isOfType += "Command";
+									break;
+								case next instanceof Cursor:
+									isOfType += "Cursor";
+									nextValue = { q: [next.toString()] };
+									break;
+								default:
+									isOfType = next;
+									break;
+							}
+							log(["Proxy", "get", "then", "%o"], "recibe:%o", prop, isOfType);
+							nextValue.last = nextValue?.prop || null;
+
+							// iguala el numero de argumentos que recibe la función
+							while (args.length < original.length - 1) {
+								args.push(undefined);
+							}
+							// añade el argumento a la función
+							args.push({ ...nextValue, prop });
+							const response = original.apply(receiver, args); // ejecución del comando
+							return response;
+						});
+						if (target.returnPromise.indexOf(prop) >= 0) {
+							return target.promise;
+						}
+						return receiver; // Para encadenar llamadas
 					};
 				}
 
@@ -142,9 +178,13 @@ class QueryBuilder {
 			if (valor === null) {
 				return next;
 			}
+
 			if (isJSObject(valor)) {
 				if (valor instanceof Column) {
 					log("toNext", "Recibe un objeto Column");
+				} else if (valor instanceof Cursor) {
+					log("toNext", "Devuelve un cursor");
+					return { q: [valor] };
 				} else {
 					valor = Object.keys(valor).reduce((obj, key) => {
 						if (valor[key] instanceof QueryBuilder) {
@@ -168,7 +208,13 @@ class QueryBuilder {
 				log("toNext", "QB devuelve", next);
 				return next;
 			}
-			log("toNext", "Procesar valor: %o next:%o", valor, next);
+			log(
+				"toNext",
+				"Procesar otros valores: %o\n next:%o\n usando %o",
+				valor,
+				next,
+				stringJoin,
+			);
 			if (next?.q === undefined) {
 				return { ...next, q: [valor] };
 			}
@@ -610,17 +656,19 @@ class QueryBuilder {
 		log("where", "command %o", command);
 		return this.toNext([command, next]);
 	}
-	whereCursor(cursorName) {
-		this.commandStack.push("whereCursor");
+	whereCursor(cursorName, next) {
 		if (this.cursores?.[cursorName] === undefined) {
-			this.error = `El cursor '${cursorName}' no ha sido definido`;
+			next.error = `El cursor '${cursorName}' no ha sido definido`;
+			return this.toNext([null, next]);
 		}
-		if (this.selectCommand?.length > 0) {
-			this.selectStack.push(this.language.whereCursor(cursorName));
-		} else {
-			this.error = "No es posible aplicar, falta el comando 'select|delete'";
-		}
-		return this;
+		const response = this.language.whereCursor(cursorName);
+		log(
+			["QB", "whereCursor"],
+			"next %o cursor",
+			next,
+			this.cursores?.[cursorName].cursor,
+		);
+		return this.toNext([response, next]);
 	}
 	on(predicados, next) {
 		log(["QB", "on"], "Recibe next", next);
@@ -946,32 +994,33 @@ class QueryBuilder {
 
 	//cursores
 
-	createCursor(name, expresion, options) {
-		this.commandStack.push("createCursor");
+	createCursor(name, expresion, options, next) {
 		try {
-			this.cursores[name] = new Cursor(name, expresion, options, this);
-			this.query.push(this.cursores[name].toString().replace(";", ""));
+			this.cursores[name] = new Cursor(name, expresion, options, this, next);
+			this.toNext([this.cursores[name].toString(), next]);
+			return this.cursores[name];
 		} catch (error) {
-			this.error = error.message;
+			next.error = error.message;
+			return this.toNext([null, next]);
 		}
-		return this.cursores[name];
 	}
-	openCursor(name) {
-		this.commandStack.push("openCursor");
+
+	openCursor(name, next) {
 		try {
 			this.cursores[name].open();
 			return this.cursores[name];
 		} catch (error) {
-			this.error = error.message;
+			next.error = error.message;
+			return this.toNext([null, next]);
 		}
 	}
-	closeCursor(name) {
-		this.commandStack.push("closeCursor");
+	closeCursor(name, next) {
 		try {
-			this.cursores[name].close();
-			return this;
+			this.cursores[name].close(next);
+			return this.cursores[name];
 		} catch (error) {
-			this.error = error.message;
+			next.error = error.message;
+			return this.toNext([null, next]);
 		}
 	}
 
@@ -1056,14 +1105,24 @@ class QueryBuilder {
 	}
 	//toString function on Object QueryBuilder
 	async toString(options) {
+		log(
+			["QB", "toString"],
+			"pasando a string una promesa:",
+			this.promise instanceof Promise,
+		);
 		let joinQuery = await this.promise;
-		joinQuery = joinQuery.q.join("\n");
-		if (/^(subselect)$/i.test(options?.as) === false) {
-			joinQuery = joinQuery.concat(";").replace(";;", ";");
+		log(["QB", "toString"], "Promesa resuelta", joinQuery);
+		if (Array.isArray(joinQuery.q)) {
+			joinQuery = joinQuery.q.join("\n");
+			if (/^(subselect)$/i.test(options?.as) === false) {
+				joinQuery = joinQuery.concat(";").replace(";;", ";");
+			}
+			joinQuery = joinQuery.replaceAll("\n\n", "\n");
+			log(["QB", "toString"], "joinQuery\n", joinQuery);
+			this.dropQuery();
+		} else {
+			log(["QB", "toString"], "No es un array ", joinQuery.q);
 		}
-		joinQuery = joinQuery.replaceAll("\n\n", "\n");
-		log("toString", "joinQuery\n", joinQuery);
-		this.dropQuery();
 		return joinQuery;
 	}
 	dropQuery(next) {

@@ -375,7 +375,7 @@ class Core {
 	}
 
 	whereCursor(cursorName) {
-		return `WHERE CURRENT OF ${cursorName};`;
+		return `WHERE CURRENT OF ${cursorName}`;
 	}
 
 	on(predicados, next) {
@@ -482,7 +482,7 @@ class Core {
 	getSubselect(next) {
 		const subSelect = [next.q.pop()];
 		while (
-			!subSelect[0].toUpperCase().includes("SELECT") &&
+			!subSelect[0].toUpperCase().startsWith("SELECT") &&
 			next.q.length > 0
 		) {
 			subSelect.unshift(next.q.pop());
@@ -773,7 +773,7 @@ class Core {
 		return new Expresion(command);
 	}
 	// cursores
-	createCursor(name, expresion, options) {
+	createCursor(name, expresion, options, next) {
 		if (typeof name !== "string" || typeof name === "undefined") {
 			throw new Error("Es necesario un nombre valido para el cursor");
 		}
@@ -785,6 +785,7 @@ class Core {
 				name,
 				expresion,
 				options,
+				next,
 			},
 			" ",
 		);
