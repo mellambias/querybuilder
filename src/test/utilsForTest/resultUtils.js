@@ -1,5 +1,6 @@
 import { jsonReviver } from "../../noSql/mongoUtils.js";
 import QueryBuilder from "../../querybuilder.js";
+import { log } from "../../utils/utils.js";
 export function tableFormat(columns, rows, responses, query) {
 	// console.log(
 	// 	"columns %o\nrows %o\nresponses %o\n query %o",
@@ -102,7 +103,13 @@ function justifica(valor, width, fill) {
  * @param {Bollean} query - true muestra la consulta si no existen resultados
  */
 export async function showResults(datos, debug) {
-	console.log("[showResults]", datos, debug);
+	let typeData = datos;
+	switch (true) {
+		case datos instanceof QueryBuilder:
+			typeData = "Instancia de QB";
+			break;
+	}
+	log(["resultUtils", "showResults"], typeData, debug);
 	if (datos?.result) {
 		const { response, columns, rows } = datos.result;
 		tableFormat(columns, rows, response, await datos.promise);
@@ -135,4 +142,44 @@ export async function showResults(datos, debug) {
 		"%s\n",
 		`${datos?.error ? `❌ Errores:${datos?.error}` : "✔ No se han recibido errores"}`,
 	);
+}
+
+export async function getResultFromTest(databaseTest, ...sql) {
+	try {
+		const resultTest = await databaseTest.execute(sql.join(";\n"));
+		const { response } = resultTest.response();
+		return response[response.length - 1];
+	} catch (error) {
+		throw new Error(error.message);
+	}
+}
+
+export async function existTable(driver, database, tableName) {
+	const data = await getResultFromTest(
+		driver,
+		`use ${database}`,
+		"show tables",
+	);
+	return data.some(
+		(item) => Object.values(item)[0].toUpperCase() === tableName.toUpperCase(),
+	);
+}
+export async function noExistTable(driver, database, tableName) {
+	const data = await getResultFromTest(
+		driver,
+		`use ${database}`,
+		"show tables",
+	);
+	return data.every(
+		(item) => Object.values(item)[0].toUpperCase() !== tableName.toUpperCase(),
+	);
+}
+
+export async function describeTable(driver, database, tableName) {
+	const columns = await getResultFromTest(
+		driver,
+		`use ${database}`,
+		`DESCRIBE ${tableName}`,
+	);
+	return columns;
 }

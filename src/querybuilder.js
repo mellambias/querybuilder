@@ -48,6 +48,7 @@ class QueryBuilder {
 			"getAll",
 			"execute",
 			"toString",
+			"queryJoin",
 			"toNext",
 			"checkFrom",
 			"openCursor",
@@ -216,6 +217,9 @@ class QueryBuilder {
 				stringJoin,
 			);
 			if (next?.q === undefined) {
+				if (typeof valor === "string") {
+					return { ...next, q: [valor.concat(stringJoin)] };
+				}
 				return { ...next, q: [valor] };
 			}
 			const { q, ...resto } = next;
@@ -291,7 +295,7 @@ class QueryBuilder {
 			if (this.driverDB !== undefined) {
 				this.driverDB.use(database);
 			} else {
-				return next;
+				return this.toNext([command, next], ";");
 			}
 		}
 		return this.toNext([command, next], ";");
@@ -302,7 +306,7 @@ class QueryBuilder {
 	createDatabase(name, options, next) {
 		try {
 			const command = this.language.createDatabase(name.validSqlId(), options);
-			return this.toNext([command, next], ";\n");
+			return this.toNext([command, next], ";");
 		} catch (error) {
 			this.error = error.message;
 			return next;
@@ -317,9 +321,9 @@ class QueryBuilder {
 			const command = this.language.createSchema(name.validSqlId(), options);
 			return this.toNext([command, next]);
 		} catch (error) {
-			this.error = error.message;
+			next.error = error.message;
 		}
-		return next;
+		return this.toNext([null, next]);
 	}
 
 	dropSchema(name, options, next) {
@@ -347,9 +351,9 @@ class QueryBuilder {
 			const command = this.language.createTable(name.validSqlId(), options);
 			return this.toNext([command, next], ";");
 		} catch (error) {
-			this.error = error.message;
+			next.error = error.message;
 		}
-		return next;
+		return this.toNext([null, next]);
 	}
 	alterTable(name, next) {
 		const command = this.language.alterTable(name);
@@ -400,18 +404,18 @@ class QueryBuilder {
 			const command = this.language.createType(name.validSqlId(), options);
 			return this.toNext([command, next]);
 		} catch (error) {
-			this.error = error.message;
+			next.error = error.message;
+			return this.toNext([null, next]);
 		}
-		return next;
 	}
 	dropType(name, options, next) {
 		try {
 			const command = this.language.dropType(name, options);
 			return this.toNext([command, next]);
 		} catch (error) {
-			this.error = error.message;
+			next.error = error.message;
 		}
-		return next;
+		return this.toNext([null, next]);
 	}
 
 	createAssertion(name, assertion, next) {
@@ -422,9 +426,9 @@ class QueryBuilder {
 			);
 			return this.toNext([command, next], ";");
 		} catch (error) {
-			this.error = error.message;
+			next.error = error.message;
 		}
-		return next;
+		return this.toNext([null, next]);
 	}
 
 	createDomain(name, options, next) {
@@ -432,9 +436,9 @@ class QueryBuilder {
 			const command = this.language.createDomain(name.validSqlId(), options);
 			return this.toNext([command, next], ";");
 		} catch (error) {
-			this.error = error.message;
+			next.error = error.message;
 		}
-		return next;
+		return this.toNext([null, next]);
 	}
 
 	createView(name, options, next) {
@@ -442,18 +446,18 @@ class QueryBuilder {
 			const command = this.language.createView(name.validSqlId(), options);
 			return this.toNext([command, next], ";");
 		} catch (error) {
-			this.error = error.message;
+			next.error = error.message;
 		}
-		return this;
+		return this.toNext([null, next]);
 	}
 	dropView(name, next) {
 		try {
 			const command = this.language.dropView(name);
 			return this.toNext([command, next], ";");
 		} catch (error) {
-			this.error = error.message;
+			next.error = error.message;
 		}
-		return next;
+		return this.toNext([null, next]);
 	}
 
 	// Seguridad
@@ -463,18 +467,18 @@ class QueryBuilder {
 			const command = this.language.createRoles(names, options);
 			return this.toNext([command, next], ";");
 		} catch (error) {
-			this.error = error.message;
+			next.error = error.message;
 		}
-		return next;
+		return this.toNext([null, next]);
 	}
 	dropRoles(names, options, next) {
 		try {
 			const command = this.language.dropRoles(names, options);
 			return this.toNext([command, next], ";");
 		} catch (error) {
-			this.error = error.message;
+			next.error = error.message;
 		}
-		return next;
+		return this.toNext([null, next]);
 	}
 
 	grant(privilegios, on, to, options, next) {
@@ -482,9 +486,9 @@ class QueryBuilder {
 			const command = this.language.grant(privilegios, on, to, options);
 			return this.toNext([command, next], ";");
 		} catch (error) {
-			this.error = error.message;
+			next.error = error.message;
 		}
-		return next;
+		return this.toNext([null, next]);
 	}
 
 	revoke(privilegios, on, from, options, next) {
@@ -492,9 +496,9 @@ class QueryBuilder {
 			const command = this.language.revoke(privilegios, on, from, options);
 			return this.toNext([command, next], ";");
 		} catch (error) {
-			this.error = error.message;
+			next.error = error.message;
 		}
-		return next;
+		return this.toNext([null, next]);
 	}
 
 	grantRoles(roles, users, options, next) {
@@ -502,18 +506,18 @@ class QueryBuilder {
 			const command = this.language.grantRoles(roles, users, options);
 			return this.toNext([command, next], ";");
 		} catch (error) {
-			this.error = error.message;
+			next.error = error.message;
 		}
-		return next;
+		return this.toNext([null, next]);
 	}
 	revokeRoles(roles, from, options, next) {
 		try {
 			const command = this.language.revokeRoles(roles, from, options);
 			return this.toNext([command, next], ";");
 		} catch (error) {
-			this.error = error.message;
+			next.error = error.message;
 		}
-		return next;
+		return this.toNext([null, next]);
 	}
 
 	//Consulta de datos SQL
@@ -528,9 +532,9 @@ class QueryBuilder {
 			const command = this.language.select(columns, options, next);
 			return this.toNext([command, next]);
 		} catch (error) {
-			this.error = error.message;
+			next.error = error.message;
 		}
-		return next;
+		return this.toNext([null, next]);
 	}
 	checkFrom(tables, alias) {
 		// biome-ignore lint/style/noArguments: <explanation>
@@ -564,9 +568,9 @@ class QueryBuilder {
 			const command = this.language.from(tables, alias);
 			return this.toNext([command, next]);
 		} catch (error) {
-			this.error = error.message;
+			next.error = error.message;
 		}
-		return next;
+		return this.toNext([null, next]);
 	}
 
 	joins() {
@@ -1040,92 +1044,24 @@ class QueryBuilder {
 	}
 
 	async queryJoin(options) {
-		if (/^(subselect)$/i.test(options?.as) === false) {
-			if (this.prevInstance !== null) {
-				const prevQuery = await this.prevInstance.queryJoin(options);
-				if (prevQuery !== null) {
-					this.query.unshift(prevQuery);
-				}
-				this.prevInstance = null;
-			}
-		}
-
-		if (this.alterTableCommand !== undefined) {
-			if (this.alterTableCommand instanceof Promise) {
-				this.alterTableCommand = this.alterTableCommand;
-			}
-
-			if (this.alterTableCommand instanceof Command) {
-				this.query.push(this.alterTableCommand);
-				this.alterTableCommand = undefined;
-			}
-			if (this.alterTableCommand?.length > 0) {
-				this.alterTableCommand = this.alterTableStack.join(";\n");
-				this.query.push(this.alterTableCommand);
-				this.alterTableCommand = undefined;
-				this.alterTableStack = [];
-			}
-		}
-		if (this.selectCommand?.length > 0) {
-			if (this.selectStack.length > 0) {
-				this.selectStack.sort((a, b) => {
-					if (/^(LIMIT)/i.test(a) && /^(OFFSET)/i.test(b)) return -1;
-					if (/^(OFFSET)/i.test(a) && /^(LIMIT)/i.test(b)) return 1;
-					if (/^(LIMIT|OFFSET)/i.test(b)) return -1;
-					return 0;
-				});
-				this.selectCommand += `\n${this.selectStack.join("\n")}`;
-			}
-			this.query.push(this.selectCommand);
-			this.selectCommand = undefined;
-			this.selectStack = [];
-		}
-		if (this.selectCommand instanceof Command) {
-			console.log(
-				"[queryJoin] el comando select \n>>> %o \n <<<",
-				this.selectCommand,
-			);
-			await this.selectCommand.toJson(); // evaluara el comando
-			this.query.push(this.selectCommand);
-			this.selectCommand = undefined;
-		}
-
-		if (this.query.length > 0) {
-			const data = await Promise.all(this.query);
-			const send = data
-				.filter((item) => item !== null)
-				.join(";\n")
-				.concat(";")
-				.replace(";;", ";");
-			if (this.error) {
-				throw new Error(`${send}\n> ${this.error}`, { cause: this.error });
-			}
-			return `${send}`;
-		}
-		return null;
-	}
-	//toString function on Object QueryBuilder
-	async toString(options) {
-		log(
-			["QB", "toString"],
-			"pasando a string una promesa:",
-			this.promise instanceof Promise,
-		);
 		let joinQuery = await this.promise;
-		log(["QB", "toString"], "Promesa resuelta", joinQuery);
+		log(["QB", "queryJoin"], "Promesa resuelta", joinQuery);
+		if (joinQuery?.error) {
+			throw new Error(joinQuery.error);
+		}
 		if (Array.isArray(joinQuery.q)) {
 			joinQuery = joinQuery.q.join("\n");
 			if (/^(subselect)$/i.test(options?.as) === false) {
 				joinQuery = joinQuery.concat(";").replace(";;", ";");
 			}
 			joinQuery = joinQuery.replaceAll("\n\n", "\n");
-			log(["QB", "toString"], "joinQuery\n", joinQuery);
-			this.dropQuery();
+			log(["QB", "queryJoin"], "devuelve\n%s", joinQuery);
 		} else {
-			log(["QB", "toString"], "No es un array ", joinQuery.q);
+			log(["QB", "queryJoin"], "No es un array ", joinQuery.q);
 		}
 		return joinQuery;
 	}
+
 	dropQuery(next) {
 		this.query = [];
 		this.selectCommand = undefined;
@@ -1136,6 +1072,12 @@ class QueryBuilder {
 		this.promiseStack = [];
 		return this.toNext(this.promise);
 	}
+	//toString function on Object QueryBuilder
+	async toString(options) {
+		const joinQuery = await this.queryJoin(options);
+		this.dropQuery();
+		return joinQuery;
+	}
 	/**
 	 *
 	 * @param {Boolean} testOnly - Si es true no llama al driver
@@ -1144,21 +1086,21 @@ class QueryBuilder {
 	async execute(testOnly = false) {
 		if (testOnly) {
 			console.log(">[QueryBuilder] [execute] en modo 'solo-test'\n");
-			return this.promise;
+			return await this.queryJoin();
 		}
 		if (!this.driverDB) {
 			throw new Error("No ha establecido un driver.");
 		}
 
 		try {
-			const send = await this.promise;
-			await this.driverDB.execute(send);
+			const joinQuery = await this.queryJoin();
+			log(["QB", "execute"], "Ejecutar\n%s\n==========", joinQuery);
+			await this.driverDB.execute(joinQuery);
 			this.result = this.driverDB.response();
 			this.error = undefined;
-			// this.commandStack.push("execute");
 			return this;
 		} catch (error) {
-			this.error = `Capture on QueryBuilder [execute] ${error.message} ${this.commandStack.join("->")}`;
+			this.error = error.message;
 			this.result = undefined;
 			return this;
 		}

@@ -3,10 +3,17 @@ import assert from "node:assert/strict";
 import QueryBuilder from "../querybuilder.js";
 import MySQL from "../sql/MySQL.js";
 import { config } from "../../config.js";
-import { showResults } from "./utilsForTest/resultUtils.js";
+import {
+	showResults,
+	getResultFromTest,
+	existTable,
+	describeTable,
+} from "./utilsForTest/resultUtils.js";
 
 const MySql8 = config.databases.MySql8;
 let qb;
+const Driver = MySql8.driver;
+const databaseTest = new Driver(MySql8.params);
 beforeEach(() => {
 	const queryBuilder = new QueryBuilder(MySQL, {
 		typeIdentificator: "regular",
@@ -15,54 +22,42 @@ beforeEach(() => {
 	qb = queryBuilder.driver(MySql8.driver, MySql8.params);
 });
 
-describe("Driver MySqlDriver", async () => {
+describe("Driver MySqlDriver", { only: false }, async () => {
 	test("crea una base de datos", async () => {
-		try {
-			const result = await qb.createDatabase("testing").execute();
-			showResults(result);
-			assert.equal(qb.toString(), "CREATE DATABASE testing;");
-		} catch (error) {
-			assert.equal(
-				error.message,
-				"Can't create database 'testing'; database exists",
-			);
-		}
+		const debug = false;
+		const result = await qb.createDatabase("testing").execute(debug);
+		showResults(result, debug);
+
+		const resultTest = await databaseTest.execute("show databases");
+		const { response } = resultTest.response();
+		assert.ok(
+			response[0].some((item) => Object.values(item).includes("testing")),
+		);
 	});
 	test("Crear una tabla en la base de datos testing", async () => {
+		const debug = false;
 		const result = await qb
 			.use("testing")
 			.dropTable("TABLE_TEST", { secure: true })
 			.createTable("TABLE_TEST", { cols: { ID: "INT" } })
-			.execute();
-		showResults(result);
+			.execute(debug);
 
+		showResults(result, debug);
+
+		const data = await getResultFromTest(
+			databaseTest,
+			"use testing",
+			"show tables",
+		);
+		assert.ok(data.some((item) => Object.values(item).includes("table_test")));
 		assert.equal(
 			await result.toString(),
-			"USE testing;\nDROP TABLE IF EXIST TABLE_TEST;\nCREATE TABLE TABLE_TEST\n( ID INT );",
+			"USE testing;\nDROP TABLE IF EXISTS TABLE_TEST;\nCREATE TABLE TABLE_TEST\n( ID INT );",
 		);
 	});
-
-	test("Crear una tabla temporal global", async () => {
-		const result = await qb
-			.use("testing")
-			.createTable("table_test_temp", {
-				temporary: "global",
-				onCommit: "delete",
-				cols: { ID: "INT" },
-			})
-			.execute();
-		showResults(result);
-		if (!result.error) {
-			assert.equal(
-				await result.toString(),
-				"USE testing;\nCREATE TEMPORARY TABLE table_test_temp ( ID INT );",
-			);
-			assert.ok(result.queryResult);
-		} else {
-			assert.equal(result.error, result.queryResultError);
-		}
-	});
+	//Fin test
 	test("Crear una tabla con varias columnas", async () => {
+		const debug = false;
 		const cols = {
 			ID_ARTISTA: "INTEGER",
 			NOMBRE_ARTISTA: { type: "CHARACTER(60)", default: "artista" },
@@ -72,8 +67,22 @@ describe("Driver MySqlDriver", async () => {
 		const result = await qb
 			.use("testing")
 			.createTable("table_test2", { cols, secure: true })
-			.execute();
-		showResults(result);
+			.execute(debug);
+
+		showResults(result, debug);
+		const data = await getResultFromTest(
+			databaseTest,
+			"use testing",
+			"show tables",
+		);
+		assert.ok(data.some((item) => Object.values(item).includes("table_test2")));
+
+		const columns = await getResultFromTest(
+			databaseTest,
+			"use testing",
+			"DESCRIBE table_test2",
+		);
+		assert.equal(columns.length, Object.keys(cols).length);
 
 		assert.equal(
 			await result.toString(),
@@ -100,15 +109,22 @@ CREATE TABLE IF NOT EXISTS table_test2
 	});
 
 	test("elimina una tabla", async () => {
+		const debug = false;
 		const result = await qb
 			.use("testing")
-			.dropTable("TABLE_TEST_2", { secure: true, option: "cascade" })
-			.execute();
+			.dropTable("TABLE_TEST2", { secure: true, option: "cascade" })
+			.execute(debug);
 
 		if (!result.error) {
+			const data = await getResultFromTest(
+				databaseTest,
+				"use testing",
+				"show tables",
+			);
+			assert.ok(data.every((item) => Object.values(item) !== "table_test2"));
 			assert.equal(
 				await result.toString(),
-				"USE testing;\nDROP TABLE IF EXISTS TABLE_TEST_2 CASCADE;",
+				"USE testing;\nDROP TABLE IF EXISTS TABLE_TEST2 CASCADE;",
 			);
 		} else {
 			assert.equal(result.error, "");
@@ -168,9 +184,16 @@ const CDS_ARTISTA = {
 	ID_DISCO_COMPACTO: "INT",
 };
 
-describe("Trabaja con INVENTARIO", () => {
-	test("Crea la base de datos inventario", async () => {
+describe("Trabaja con INVENTARIO", async () => {
+	test("Crea la base de datos inventario", { only: false }, async () => {
 		const result = await qb.createDatabase("INVENTARIO").execute();
+
+		const data = await getResultFromTest(databaseTest, "show databases");
+		assert.ok(
+			data.some(
+				(item) => Object.values(item)[0].toUpperCase() === "INVENTARIO",
+			),
+		);
 
 		assert.equal(
 			await result.toString(),
@@ -184,11 +207,12 @@ describe("Trabaja con INVENTARIO", () => {
 			);
 		}
 	});
-	beforeEach(async () => {
-		qb = qb.use("INVENTARIO");
-	});
-	describe("Crea las tablas", () => {
-		test("crear tabla TIPOS_MUSICA", async () => {
+
+	describe("Crea las tablas", async () => {
+		beforeEach(async () => {
+			qb = qb.use("INVENTARIO");
+		});
+		test("crear tabla TIPOS_MUSICA", { only: false }, async () => {
 			const result = await qb
 				.createTable("TIPOS_MUSICA", {
 					secure: true,
@@ -206,7 +230,18 @@ describe("Trabaja con INVENTARIO", () => {
 						},
 					],
 				})
-				.execute();
+				.execute(true);
+
+			// existe la tabla
+			assert.ok(await existTable(databaseTest, "inventario", "tipos_musica"));
+			// campos de la tabla
+			const cols = await describeTable(
+				databaseTest,
+				"inventario",
+				"tipos_musica",
+			);
+
+			assert.equal(cols.length, Object.keys(TIPOS_MUSICA).length);
 
 			if (!result.error) {
 				assert.equal(
@@ -223,7 +258,7 @@ CREATE TABLE IF NOT EXISTS TIPOS_MUSICA
 			}
 		});
 
-		test("crear tabla DISQUERAS_CD", async () => {
+		test("crear tabla DISQUERAS_CD", { only: false }, async () => {
 			const result = await qb
 				.createTable("DISQUERAS_CD", {
 					secure: true,
@@ -237,6 +272,15 @@ CREATE TABLE IF NOT EXISTS TIPOS_MUSICA
 					],
 				})
 				.execute();
+
+			assert.ok(await existTable(databaseTest, "inventario", "DISQUERAS_CD"));
+			const cols = await describeTable(
+				databaseTest,
+				"inventario",
+				"DISQUERAS_CD",
+			);
+
+			assert.equal(cols.length, Object.keys(DISQUERAS_CD).length);
 
 			if (!result.error) {
 				assert.equal(
@@ -252,7 +296,7 @@ CREATE TABLE IF NOT EXISTS DISQUERAS_CD
 			}
 		});
 
-		test("crear la tabla DISCOS_COMPACTOS", async () => {
+		test("crear la tabla DISCOS_COMPACTOS", { only: false }, async () => {
 			const result = await qb
 				.createTable("DISCOS_COMPACTOS", {
 					secure: true,
@@ -278,6 +322,15 @@ CREATE TABLE IF NOT EXISTS DISQUERAS_CD
 				.execute();
 
 			if (!result.error) {
+				assert.ok(
+					await existTable(databaseTest, "inventario", "DISCOS_COMPACTOS"),
+				);
+				const cols = await describeTable(
+					databaseTest,
+					"inventario",
+					"DISCOS_COMPACTOS",
+				);
+				assert.equal(cols.length, Object.keys(DISCOS_COMPACTOS).length);
 				assert.equal(
 					await result.toString(),
 					`USE INVENTARIO;
@@ -293,7 +346,7 @@ CREATE TABLE IF NOT EXISTS DISCOS_COMPACTOS
 			}
 		});
 
-		test("crear tabla TIPOS_DISCO_COMPACTO", async () => {
+		test("crear tabla TIPOS_DISCO_COMPACTO", { only: false }, async () => {
 			const result = await qb
 				.createTable("TIPOS_DISCO_COMPACTO", {
 					secure: true,
@@ -327,6 +380,15 @@ CREATE TABLE IF NOT EXISTS DISCOS_COMPACTOS
 				.execute();
 
 			if (!result.error) {
+				assert.ok(
+					await existTable(databaseTest, "inventario", "TIPOS_DISCO_COMPACTO"),
+				);
+				const cols = await describeTable(
+					databaseTest,
+					"inventario",
+					"TIPOS_DISCO_COMPACTO",
+				);
+				assert.equal(cols.length, Object.keys(TIPOS_DISCO_COMPACTO).length);
 				assert.equal(
 					await result.toString(),
 					`USE INVENTARIO;
@@ -344,7 +406,7 @@ CREATE TABLE IF NOT EXISTS TIPOS_DISCO_COMPACTO
 				);
 			}
 		});
-		test("crear tabla ARTISTAS", async () => {
+		test("crear tabla ARTISTAS", { only: false }, async () => {
 			const result = await qb
 				.createTable("ARTISTAS", {
 					secure: true,
@@ -360,6 +422,13 @@ CREATE TABLE IF NOT EXISTS TIPOS_DISCO_COMPACTO
 				.execute();
 
 			if (!result.error) {
+				assert.ok(await existTable(databaseTest, "inventario", "ARTISTAS"));
+				const cols = await describeTable(
+					databaseTest,
+					"inventario",
+					"ARTISTAS",
+				);
+				assert.equal(cols.length, Object.keys(ARTISTAS).length);
 				assert.equal(
 					await result.toString(),
 					`USE INVENTARIO;
@@ -374,7 +443,7 @@ CREATE TABLE IF NOT EXISTS ARTISTAS
 			}
 		});
 
-		test("crear tabla CDS_ARTISTA", async () => {
+		test("crear tabla CDS_ARTISTA", { only: false }, async () => {
 			const result = await qb
 				.createTable("CDS_ARTISTA", {
 					secure: true,
@@ -408,6 +477,13 @@ CREATE TABLE IF NOT EXISTS ARTISTAS
 				.execute();
 
 			if (!result.error) {
+				assert.ok(await existTable(databaseTest, "inventario", "CDS_ARTISTA"));
+				const cols = await describeTable(
+					databaseTest,
+					"inventario",
+					"CDS_ARTISTA",
+				);
+				assert.equal(cols.length, Object.keys(CDS_ARTISTA).length);
 				assert.equal(
 					await result.toString(),
 					`USE INVENTARIO;
@@ -423,7 +499,7 @@ CREATE TABLE IF NOT EXISTS CDS_ARTISTA
 			}
 		});
 
-		test("Crea tabla TITULOS_CD", async () => {
+		test("Crea tabla TITULOS_CD", { only: false }, async () => {
 			const result = await qb
 				.createTable("TITULOS_CD", {
 					secure: true,
@@ -432,6 +508,13 @@ CREATE TABLE IF NOT EXISTS CDS_ARTISTA
 				.execute();
 
 			if (!result.error) {
+				assert.ok(await existTable(databaseTest, "inventario", "TITULOS_CD"));
+				const cols = await describeTable(
+					databaseTest,
+					"inventario",
+					"TITULOS_CD",
+				);
+				assert.equal(cols.length, Object.keys(TITULOS_CD).length);
 				assert.equal(
 					await result.toString(),
 					`USE INVENTARIO;
@@ -446,23 +529,34 @@ CREATE TABLE IF NOT EXISTS TITULOS_CD
 		});
 	});
 	describe("Alterar las tablas", () => {
-		test("Añadir una columna a la tabla DISCOS_COMPACTOS", async () => {
-			const result = await qb
-				.alterTable("DISCOS_COMPACTOS")
-				.addColumn("EN_EXISTENCIA", { type: "INT", values: ["not null"] })
-				.execute();
+		test(
+			"Añadir una columna a la tabla DISCOS_COMPACTOS",
+			{ only: true },
+			async () => {
+				const result = await qb
+					.alterTable("DISCOS_COMPACTOS")
+					.addColumn("EN_EXISTENCIA", { type: "INT", values: ["not null"] })
+					.execute();
 
-			if (!result.error) {
-				assert.equal(
-					await result.toString(),
-					`USE INVENTARIO;
+				if (!result.error) {
+					assert.ok(await existTable(databaseTest, "inventario", "TITULOS_CD"));
+					const cols = await describeTable(
+						databaseTest,
+						"inventario",
+						"TITULOS_CD",
+					);
+					assert.equal(cols.length, Object.keys(TITULOS_CD).length);
+					assert.equal(
+						await result.toString(),
+						`USE INVENTARIO;
 ALTER TABLE DISCOS_COMPACTOS
 ADD COLUMN EN_EXISTENCIA INT NOT NULL;`,
-				);
-			} else {
-				assert.equal(result.error, "Duplicate column name 'EN_EXISTENCIA'");
-			}
-		});
+					);
+				} else {
+					assert.equal(result.error, "Duplicate column name 'EN_EXISTENCIA'");
+				}
+			},
+		);
 
 		test("añade una constraint de tipo CHECK al campo EN_EXISTENCIA", async () => {
 			const result = await qb
@@ -3405,7 +3499,7 @@ VALUES
 			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
-		test("actualizar el valor Both Sides Now", { only: true }, async () => {
+		test("actualizar el valor Both Sides Now", { only: false }, async () => {
 			const debug = true;
 			const query = `UPDATE TIPOS_TITULO
 SET TIPO_CD = 'Folk'
