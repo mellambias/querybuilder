@@ -8,8 +8,16 @@ class Transaction {
 		this.stack = [];
 		this.error = undefined;
 		this.commandStack = [];
+		this.setTransaction();
 	}
 
+	setTransaction() {
+		if (this.options !== undefined) {
+			this.commandStack = [
+				`${this.builder.language.setTransaction(this.options)};`,
+			];
+		}
+	}
 	async connect() {
 		if (this.stack.length === 0) {
 			this.error = new Error(
@@ -18,6 +26,7 @@ class Transaction {
 		}
 		return this;
 	}
+
 	add(...querys) {
 		for (const query of querys) {
 			if (query instanceof QueryBuilder) {
@@ -33,11 +42,7 @@ class Transaction {
 			throw new Error(transaccion.error);
 		}
 		try {
-			if (this.options !== undefined) {
-				this.commandStack.push(
-					`${this.builder.language.setTransaction(this.options)};`,
-				);
-			}
+			this.setTransaction();
 			this.commandStack.push(
 				`${this.builder.language.startTransaction(options)};`,
 			);

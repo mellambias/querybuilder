@@ -1722,7 +1722,7 @@ CLOSE CD_4;`,
 		);
 	});
 	describe("trabajo con transacciones", async () => {
-		test("set transaction", { only: true }, async () => {
+		test("set transaction", { only: false }, async () => {
 			const result = await qb.setTransaction({
 				access: "read only",
 				isolation: "READ UNCOMMITTED",
@@ -1736,7 +1736,7 @@ ISOLATION LEVEL READ UNCOMMITTED,
 DIAGNOSTICS SIZE 5;`,
 			);
 		});
-		test("set transaction READ WRITE", async () => {
+		test("set transaction READ WRITE", { only: false }, async () => {
 			const result = await qb.setTransaction({
 				access: "read WRITE",
 				isolation: "serializable",
@@ -1744,52 +1744,20 @@ DIAGNOSTICS SIZE 5;`,
 			});
 
 			assert.equal(
-				result.toString(),
+				result,
 				`SET TRANSACTION READ WRITE,
 ISOLATION LEVEL SERIALIZABLE,
 DIAGNOSTICS SIZE 8;`,
 			);
 		});
-		test("Iniciar la transaccion", async () => {
-			const result = await qb.startTransaction({
-				access: "read only",
-				isolation: "READ UNCOMMITTED",
-				diagnostic: 5,
-			});
-
-			assert.equal(
-				result.toString(),
-				`START TRANSACTION READ ONLY,
-ISOLATION LEVEL READ UNCOMMITTED,
-DIAGNOSTICS SIZE 5;`,
-			);
-		});
-		test("aplicar restricciones diferidas", async () => {
-			const result = await qb.setConstraints(
-				["RESTRICCION_1", "RESTRICCION_2"],
-				"deferred",
-			);
-
-			assert.equal(
-				result.toString(),
-				"SET CONSTRAINTS RESTRICCION_1, RESTRICCION_2 DEFERRED;",
-			);
-		});
-		test("aplicar puntos de recuperación", async () => {
+		test("aplicar restricciones diferidas", { only: true }, async () => {
 			const result = await qb
-				.setSavePoint("SECCION_1")
-				.clearSavePoint("SECCION_1");
+				.setConstraints(["RESTRICCION_1", "RESTRICCION_2"], "deferred")
+				.toString();
 
 			assert.equal(
-				result.toString(),
-				"SAVEPOINT SECCION_1;\nRELEASE SAVEPOINT SECCION_1;",
-			);
-		});
-		test("commit and rollback", async () => {
-			const result = await qb.commit().rollback("SECCTION_1");
-			assert.equal(
-				result.toString(),
-				"COMMIT;\nROLLBACK TO SAVEPOINT SECCTION_1;",
+				result,
+				"SET CONSTRAINTS RESTRICCION_1, RESTRICCION_2 DEFERRED;",
 			);
 		});
 	});

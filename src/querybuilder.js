@@ -53,7 +53,7 @@ class QueryBuilder {
 			"openCursor",
 			"valueOf",
 		];
-		this.returnPromise = ["createCursor", "closeCursor"];
+		this.returnPromise = ["createCursor", "closeCursor", "setTransaction"];
 		this.handler = {
 			get(target, prop, receiver) {
 				if (prop === "catch") {
@@ -1025,17 +1025,18 @@ class QueryBuilder {
 	}
 
 	setTransaction(options) {
-		return new Transaction(this, options);
+		const transaction = new Transaction(this, options);
+		return transaction;
 	}
 
-	setConstraints(restrictions, type) {
-		this.commandStack.push("setConstraints");
+	setConstraints(restrictions, type, next) {
 		try {
-			this.query.push(`${this.language.setConstraints(restrictions, type)}`);
+			const response = this.language.setConstraints(restrictions, type);
+			return this.toNext([response, next]);
 		} catch (error) {
-			this.error = error.message;
+			next.error = error.message;
+			return this.toNext([null, next]);
 		}
-		return this;
 	}
 
 	async queryJoin(options) {
