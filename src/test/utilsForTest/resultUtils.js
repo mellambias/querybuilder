@@ -104,24 +104,19 @@ function justifica(valor, width, fill) {
  */
 export async function showResults(datos, debug) {
 	let typeData = datos;
+	let query = datos;
 	switch (true) {
 		case datos instanceof QueryBuilder:
 			typeData = "Instancia de QB";
+			query = await datos.queryJoin();
 			break;
 	}
-	log(["resultUtils", "showResults"], typeData, debug);
+	log(["resultUtils", "showResults"], "datos:\n%o\n debug %o", typeData, debug);
 	if (datos?.result) {
 		const { response, columns, rows } = datos.result;
-		tableFormat(columns, rows, response, await datos.promise);
+		tableFormat(columns, rows, response, query);
 	} else if (debug) {
 		console.log("******* DEBUG INFO *********\n");
-		let query;
-
-		if (typeof datos === "string") {
-			query = datos;
-		} else {
-			query = await datos.promise;
-		}
 		console.log("el tipo de query es", typeof query);
 		if (typeof query === "object") {
 			console.log("✔ queryObject>>\n");
@@ -146,14 +141,20 @@ export async function showResults(datos, debug) {
 
 export async function getResultFromTest(databaseTest, ...sql) {
 	try {
+		if (sql.length === 0) {
+			throw new Error("La consulta esta vacia");
+		}
 		const resultTest = await databaseTest.execute(sql.join(";\n"));
 		const { response } = resultTest.response();
 		return response[response.length - 1];
 	} catch (error) {
-		throw new Error(error.message);
+		throw new Error(`[getResultFromTest] ${error.message}`, {
+			cause: sql.join(";\n"),
+		});
 	}
 }
 
+//Funciones para MySQL
 export async function existTable(driver, database, tableName) {
 	const data = await getResultFromTest(
 		driver,
@@ -162,6 +163,18 @@ export async function existTable(driver, database, tableName) {
 	);
 	return data.some(
 		(item) => Object.values(item)[0].toUpperCase() === tableName.toUpperCase(),
+	);
+}
+export async function existView(driver, database, viewName) {
+	const data = await getResultFromTest(
+		driver,
+		`use ${database}`,
+		`SELECT TABLE_NAME
+FROM information_schema.VIEWS
+WHERE TABLE_SCHEMA = '${database}';`,
+	);
+	return data.some(
+		(item) => Object.values(item)[0].toUpperCase() === viewName.toUpperCase(),
 	);
 }
 export async function noExistTable(driver, database, tableName) {
@@ -182,4 +195,42 @@ export async function describeTable(driver, database, tableName) {
 		`DESCRIBE ${tableName}`,
 	);
 	return columns;
+}
+
+export async function restriccionesTable(driver, database, tableName) {
+	const claves = `SELECT 
+    TABLE_NAME,
+    COLUMN_NAME,
+    CONSTRAINT_NAME,
+    REFERENCED_TABLE_NAME,
+    REFERENCED_COLUMN_NAME
+FROM 
+    information_schema.KEY_COLUMN_USAGE
+WHERE 
+    TABLE_SCHEMA = '${database}'
+    AND TABLE_NAME = '${tableName}';`;
+
+	const check = `SELECT 
+    CONSTRAINT_NAME,
+    CHECK_CLAUSE
+FROM 
+    information_schema.CHECK_CONSTRAINTS
+WHERE 
+    CONSTRAINT_SCHEMA = '${database}';`;
+
+	const values = `SELECT 
+    COLUMN_NAME,
+    IS_NULLABLE,
+    COLUMN_TYPE,
+    COLUMN_DEFAULT
+FROM 
+    information_schema.COLUMNS
+WHERE 
+    TABLE_SCHEMA = '${database}'
+    AND TABLE_NAME = '${tableName}';`;
+
+	const clavesData = await getResultFromTest(driver, claves);
+	const checkData = await getResultFromTest(driver, check);
+	const valuesData = await getResultFromTest(driver, values);
+	return { claves: clavesData, check: checkData, values: valuesData };
 }

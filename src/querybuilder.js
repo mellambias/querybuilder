@@ -370,12 +370,12 @@ class QueryBuilder {
 					(item) => item.prop === "alterTable",
 				);
 				if (alterTablePos !== undefined) {
-					const response = this.language[comand](name, options, "valor");
+					const response = this.language[comand](name, options, next);
 					log(comand, "response", response);
 					return this.toNext([response, next], ";");
 				}
-				this.error = `No se pueden añadir columnas sin un 'ALTER TABLE'`;
-				return next;
+				next.error = `No se pueden añadir columnas sin un 'ALTER TABLE'`;
+				return this.toNext([null, next]);
 			};
 		}
 		const alterColums = ["setDefault", "dropDefault"];
@@ -414,8 +414,8 @@ class QueryBuilder {
 			return this.toNext([command, next]);
 		} catch (error) {
 			next.error = error.message;
+			return this.toNext([null, next]);
 		}
-		return this.toNext([null, next]);
 	}
 
 	createAssertion(name, assertion, next) {
@@ -427,8 +427,8 @@ class QueryBuilder {
 			return this.toNext([command, next], ";");
 		} catch (error) {
 			next.error = error.message;
+			return this.toNext([null, next]);
 		}
-		return this.toNext([null, next]);
 	}
 
 	createDomain(name, options, next) {
@@ -437,18 +437,22 @@ class QueryBuilder {
 			return this.toNext([command, next], ";");
 		} catch (error) {
 			next.error = error.message;
+			return this.toNext([null, next]);
 		}
-		return this.toNext([null, next]);
 	}
 
 	createView(name, options, next) {
 		try {
-			const command = this.language.createView(name.validSqlId(), options);
+			const command = this.language.createView(
+				name.validSqlId(),
+				options,
+				next,
+			);
 			return this.toNext([command, next], ";");
 		} catch (error) {
 			next.error = error.message;
+			return this.toNext([null, next]);
 		}
-		return this.toNext([null, next]);
 	}
 	dropView(name, next) {
 		try {
@@ -456,8 +460,8 @@ class QueryBuilder {
 			return this.toNext([command, next], ";");
 		} catch (error) {
 			next.error = error.message;
+			return this.toNext([null, next]);
 		}
-		return this.toNext([null, next]);
 	}
 
 	// Seguridad
@@ -911,9 +915,9 @@ class QueryBuilder {
 			}
 			return this.toNext([command, next]);
 		} catch (error) {
-			this.error = error.message;
+			next.error = error.message;
+			return this.toNext([null, next]);
 		}
-		return this;
 	}
 
 	async update(table, sets, next) {

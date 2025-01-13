@@ -52,10 +52,11 @@ export const createDomain = {
 export const createView = {
 	name: (name) => `VIEW ${name}`,
 	cols: (cols) => `( ${cols.join(", ")} )`,
-	as: (vista) =>
-		vista instanceof QueryBuilder
-			? `AS ${vista.toString({ as: "subselect" })}`
-			: `AS ${vista}`,
+	as: function (vista, self) {
+		return vista instanceof QueryBuilder
+			? `AS ${this.getSubselect(self._values.next).join("\n")}`
+			: `AS ${vista}`;
+	},
 	check: (check) => (check === true ? "WITH CHECK OPTION" : undefined),
 	orden: ["name", "cols", "as", "check"],
 };

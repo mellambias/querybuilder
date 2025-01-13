@@ -21,6 +21,7 @@ export const select = {
 			// colStack.push(`${column.toString( {as:"subquery"})} AS `)
 			return next.q.pop();
 		}
+		columns.reverse();
 		log(
 			["sql2006", "select"],
 			"Procesa lista de columnas valores en q%o",
@@ -33,7 +34,7 @@ export const select = {
 				colStack[index] = `${column}`;
 			}
 			if (column instanceof QueryBuilder) {
-				const colValue = next.q.shift();
+				const colValue = next.q.pop();
 				if (colValue instanceof Column || colValue instanceof Expresion) {
 					log(
 						["sql2006", "select"],
@@ -60,7 +61,7 @@ export const select = {
 
 			log("despues column?.col", "colStack", colStack);
 		}
-		return colStack.join(", ");
+		return colStack.reverse().join(", ");
 	},
 	orden: ["unique", "all", "columns"],
 };

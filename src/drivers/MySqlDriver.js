@@ -30,7 +30,7 @@ class MySqlDriver extends Driver {
 			 * - SELECT -> contains rows returned by server
 			 * this.queryFields contains extra meta data about the operation, if available
 			 */
-			const querys = query.split(";").filter((q) => q.length > 0);
+			const querys = query.split(";").filter((q) => q.length > 2);
 			for (const query of querys) {
 				const [result, fields] = await this.connection.query(`${query};`);
 				this.queyResult.push(result);

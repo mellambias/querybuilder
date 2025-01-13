@@ -7,7 +7,9 @@ import {
 	showResults,
 	getResultFromTest,
 	existTable,
+	existView,
 	describeTable,
+	restriccionesTable,
 } from "./utilsForTest/resultUtils.js";
 
 const MySql8 = config.databases.MySql8;
@@ -529,23 +531,29 @@ CREATE TABLE IF NOT EXISTS TITULOS_CD
 		});
 	});
 	describe("Alterar las tablas", () => {
+		beforeEach(async () => {
+			qb = qb.use("INVENTARIO");
+		});
 		test(
 			"Añadir una columna a la tabla DISCOS_COMPACTOS",
-			{ only: true },
+			{ only: false },
 			async () => {
 				const result = await qb
 					.alterTable("DISCOS_COMPACTOS")
 					.addColumn("EN_EXISTENCIA", { type: "INT", values: ["not null"] })
-					.execute();
+					.execute(true);
 
 				if (!result.error) {
-					assert.ok(await existTable(databaseTest, "inventario", "TITULOS_CD"));
 					const cols = await describeTable(
 						databaseTest,
 						"inventario",
-						"TITULOS_CD",
+						"DISCOS_COMPACTOS",
 					);
-					assert.equal(cols.length, Object.keys(TITULOS_CD).length);
+
+					assert.ok(
+						cols.some((item) => item.Field.toUpperCase() === "EN_EXISTENCIA"),
+						"El campo no existe",
+					);
 					assert.equal(
 						await result.toString(),
 						`USE INVENTARIO;
@@ -558,32 +566,67 @@ ADD COLUMN EN_EXISTENCIA INT NOT NULL;`,
 			},
 		);
 
-		test("añade una constraint de tipo CHECK al campo EN_EXISTENCIA", async () => {
-			const result = await qb
-				.alterTable("DISCOS_COMPACTOS")
-				.addConstraint("CK_EN_EXISTENCIA", {
-					check: qb.and(qb.gt("EN_EXISTENCIA", 0), qb.lt("EN_EXISTENCIA", 50)),
-				})
-				.execute();
+		test("funcion restriccionesTable", { only: false }, async () => {
+			const restrictions = await restriccionesTable(
+				databaseTest,
+				"inventario",
+				"DISCOS_COMPACTOS",
+			);
+			console.dir(restrictions, { depth: null });
+		});
 
-			if (!result.error) {
-				assert.equal(
-					await result.toString(),
-					`USE INVENTARIO;
+		test(
+			"añade una constraint de tipo CHECK al campo EN_EXISTENCIA",
+			{ only: false },
+			async () => {
+				const debug = true;
+				const result = await qb
+					.alterTable("DISCOS_COMPACTOS")
+					.addConstraint("CK_EN_EXISTENCIA", {
+						check: qb.and(
+							qb.gt("EN_EXISTENCIA", 0),
+							qb.lt("EN_EXISTENCIA", 50),
+						),
+					})
+					.execute(debug);
+
+				if (!result.error) {
+					const { check } = await restriccionesTable(
+						databaseTest,
+						"inventario",
+						"DISCOS_COMPACTOS",
+					);
+					// console.dir(check, { depth: null });
+					const newConstraint = check.find(
+						(item) => item.CONSTRAINT_NAME === "CK_EN_EXISTENCIA",
+					);
+					assert.equal(
+						newConstraint.CHECK_CLAUSE,
+						"((`EN_EXISTENCIA` > 0) and (`EN_EXISTENCIA` < 50))",
+						"La constraint no existe o no coincide",
+					);
+					assert.equal(
+						await result.toString(),
+						`USE INVENTARIO;
 ALTER TABLE DISCOS_COMPACTOS
 ADD CONSTRAINT CK_EN_EXISTENCIA CHECK ( (EN_EXISTENCIA > 0
 AND EN_EXISTENCIA < 50) );`,
-				);
-			} else {
-				assert.equal(
-					result.error,
-					"Duplicate check constraint name 'CK_EN_EXISTENCIA'.",
-				);
-			}
-		});
+					);
+				} else {
+					assert.equal(
+						result.error,
+						"Duplicate check constraint name 'CK_EN_EXISTENCIA'.",
+					);
+				}
+			},
+		);
 	});
 	describe("llena las tablas inventario", async () => {
-		test("TIPOS_MUSICA", async () => {
+		beforeEach(async () => {
+			qb = qb.use("INVENTARIO");
+		});
+		test("TIPOS_MUSICA", { only: false }, async () => {
+			const debug = false;
 			const table = "TIPOS_MUSICA";
 			const rows = [
 				[11, "Blues"],
@@ -598,11 +641,28 @@ AND EN_EXISTENCIA < 50) );`,
 				[20, "Soundtracks"],
 				[21, "Christmas"],
 			];
-			const result = await qb.insert(table, [], rows).execute();
-			showResults(result);
+			const result = await qb.insert(table, rows).execute(debug);
+			showResults(result, debug);
+			const data = await getResultFromTest(
+				databaseTest,
+				"use inventario",
+				`select * from ${table}`,
+			);
+			assert.ok(
+				data.length >= rows.length,
+				"No todos los registros han sido añadidos",
+			);
+			assert.ok(
+				rows.every(([key, ...values]) =>
+					data.find((item) => Object.values(item).includes(key)),
+				),
+				"No se han insertado correctamente",
+			);
 		});
 		//fin
-		test("DISQUERAS_CD", async () => {
+		test("DISQUERAS_CD", { only: false }, async () => {
+			const table = "DISQUERAS_CD";
+			const debug = false;
 			const disqueras_cd = [
 				[827, "Private Music"],
 				[828, "Reprise Records"],
@@ -616,12 +676,27 @@ AND EN_EXISTENCIA < 50) );`,
 				[836, "Sarabande Records"],
 			];
 			const result = await qb
-				.insert("DISQUERAS_CD", [], disqueras_cd)
-				.execute();
-			showResults(result);
+				.insert("DISQUERAS_CD", disqueras_cd)
+				.execute(debug);
+			showResults(result, debug);
+			const data = await getResultFromTest(
+				databaseTest,
+				"use inventario",
+				`select * from ${table}`,
+			);
+			assert.ok(
+				data.length >= disqueras_cd.length,
+				"No todos los registros han sido añadidos",
+			);
+			assert.ok(
+				disqueras_cd.every(([key, ...values]) =>
+					data.find((item) => Object.values(item).includes(key)),
+				),
+				"No se han insertado correctamente",
+			);
 		});
 		//fin
-		test("DISCOS_COMPACTOS", async () => {
+		test("DISCOS_COMPACTOS", { only: false }, async () => {
 			const discos_compactos = [
 				[101, "Famous Blue Raincoat", 827, 13],
 				[102, "Blue", 828, 42],
@@ -640,12 +715,28 @@ AND EN_EXISTENCIA < 50) );`,
 				[115, "Orlando", 836, 5],
 			];
 			const result = await qb
-				.insert("DISCOS_COMPACTOS", [], discos_compactos)
+				.insert("DISCOS_COMPACTOS", discos_compactos)
 				.execute();
 			showResults(result);
+
+			const data = await getResultFromTest(
+				databaseTest,
+				"use inventario",
+				"select * from DISCOS_COMPACTOS",
+			);
+			assert.ok(
+				data.length >= discos_compactos.length,
+				"No todos los registros han sido añadidos",
+			);
+			assert.ok(
+				discos_compactos.every(([key, ...values]) =>
+					data.find((item) => Object.values(item).includes(key)),
+				),
+				"No se han insertado correctamente",
+			);
 		});
 		//fin
-		test("TIPOS_DISCO_COMPACTO", async () => {
+		test("TIPOS_DISCO_COMPACTO", { only: false }, async () => {
 			const table = "TIPOS_DISCO_COMPACTO";
 			const rows = [
 				[101, 18],
@@ -673,10 +764,26 @@ AND EN_EXISTENCIA < 50) );`,
 				[114, 11],
 				[115, 20],
 			];
-			const result = await qb.insert(table, [], rows).execute();
+			const result = await qb.insert(table, rows).execute();
 			showResults(result);
+			const data = await getResultFromTest(
+				databaseTest,
+				"use inventario",
+				`select * from ${table}`,
+			);
+			assert.ok(
+				data.length >= rows.length,
+				"No todos los registros han sido añadidos",
+			);
+			assert.ok(
+				rows.every(([key, ...values]) =>
+					data.find((item) => Object.values(item).includes(key)),
+				),
+				"No se han insertado correctamente",
+			);
 		});
-		test("ARTISTAS", async () => {
+		//fin
+		test("ARTISTAS", { only: false }, async () => {
 			const table = "ARTISTAS";
 			const rows = [
 				[2001, "Jennifer Warnes", "Seattle, Washington, Estados Unidos"],
@@ -698,11 +805,26 @@ AND EN_EXISTENCIA < 50) );`,
 				[2017, "David Motion", "Desconocido"],
 				[2018, "Sally Potter", "Desconocido"],
 			];
-			const result = await qb.insert(table, [], rows).execute();
+			const result = await qb.insert(table, rows).execute();
 			showResults(result);
+			const data = await getResultFromTest(
+				databaseTest,
+				"use inventario",
+				`select * from ${table}`,
+			);
+			assert.ok(
+				data.length >= rows.length,
+				"No todos los registros han sido añadidos",
+			);
+			assert.ok(
+				rows.every(([key, ...values]) =>
+					data.find((item) => Object.values(item).includes(key)),
+				),
+				"No se han insertado correctamente",
+			);
 		});
 		//fin
-		test("CDS_ARTISTA", async () => {
+		test("CDS_ARTISTA", { only: false }, async () => {
 			const table = "CDS_ARTISTA";
 			const rows = [
 				[2001, 101],
@@ -725,32 +847,48 @@ AND EN_EXISTENCIA < 50) );`,
 				[2017, 115],
 				[2018, 115],
 			];
-			const result = await qb.insert(table, [], rows).execute();
+			const result = await qb.insert(table, rows).execute();
 			showResults(result);
+			const data = await getResultFromTest(
+				databaseTest,
+				"use inventario",
+				`select * from ${table}`,
+			);
+			assert.ok(
+				data.length >= rows.length,
+				"No todos los registros han sido añadidos",
+			);
+			assert.ok(
+				rows.every(([key]) =>
+					data.find((item) => Object.values(item).includes(key)),
+				),
+				"No se han insertado correctamente",
+			);
 		});
-		//fin
-
-		//fin
-
-		//fin
-		// test("", async () => {
-		// 	const table = "";
-		// 	const rows = [];
-		// 	const result = await qb.insert(table, [], rows).execute();
-		// 	showResults(result);
-		// });
 		//fin
 	});
 
 	describe("Crear vistas", () => {
-		test("crea la vista CDS_EN_EXISTENCIA", async () => {
-			const result = await qb.createView("CDS_EN_EXISTENCIA", {
-				as: qb
-					.select(["TITULO_CD", "EN_EXISTENCIA"])
-					.from("DISCOS_COMPACTOS")
-					.where(qb.gt("EN_EXISTENCIA", 10)),
-				check: true,
-			});
+		beforeEach(async () => {
+			qb = qb.use("INVENTARIO");
+		});
+		test("crea la vista CDS_EN_EXISTENCIA", { only: false }, async () => {
+			const debug = false;
+			const result = await qb
+				.createView("CDS_EN_EXISTENCIA", {
+					as: qb
+						.select(["TITULO_CD", "EN_EXISTENCIA"])
+						.from("DISCOS_COMPACTOS")
+						.where(qb.gt("EN_EXISTENCIA", 10)),
+					check: true,
+				})
+				.execute(debug);
+			showResults(result, debug);
+
+			assert.ok(
+				await existView(databaseTest, "inventario", "CDS_EN_EXISTENCIA"),
+				"La vista CDS_EN_EXISTENCIA no existe",
+			);
 
 			if (!result.error) {
 				assert.equal(
@@ -766,7 +904,8 @@ WITH CHECK OPTION;`,
 				assert.equal(result.error, "Table 'CDS_EN_EXISTENCIA' already exists");
 			}
 		});
-		test("añade la vista EDITORES_CD", async () => {
+		test("añade la vista EDITORES_CD", { only: true }, async () => {
+			const debug = false;
 			const result = await qb
 				.createView("EDITORES_CD", {
 					cols: ["TITULO_CD", "EDITOR"],
@@ -789,8 +928,13 @@ WITH CHECK OPTION;`,
 							),
 						),
 				})
-				.execute();
+				.execute(debug);
+
 			if (!result.error) {
+				assert.ok(
+					await existView(databaseTest, "inventario", "EDITORES_CD"),
+					"La vista EDITORES_CD no existe",
+				);
 				assert.equal(
 					await result.toString(),
 					`USE INVENTARIO;
@@ -807,43 +951,47 @@ OR DISQUERAS_CD.ID_DISQUERA = 5402));`,
 			}
 		});
 
-		test("volver a crear la vista EDITORES_CD ahora sin restricciones", async () => {
-			const query = `SELECT DISCOS_COMPACTOS.TITULO_CD, DISQUERAS_CD.NOMBRE_COMPAÑIA
+		test(
+			"volver a crear la vista EDITORES_CD ahora sin restricciones",
+			{ only: true },
+			async () => {
+				const query = `SELECT DISCOS_COMPACTOS.TITULO_CD, DISQUERAS_CD.NOMBRE_COMPAÑIA
 FROM DISCOS_COMPACTOS, DISQUERAS_CD
 WHERE DISCOS_COMPACTOS.ID_DISQUERA = DISQUERAS_CD.ID_DISQUERA`;
-			const result = await qb
-				.dropView("EDITORES_CD")
-				.createView("EDITORES_CD", {
-					cols: ["TITULO_CD", "EDITOR"],
-					as: qb
-						.select([
-							qb.col("TITULO_CD", "DISCOS_COMPACTOS"),
-							qb.col("NOMBRE_DISCOGRAFICA", "DISQUERAS_CD"),
-						])
-						.from(["DISCOS_COMPACTOS", "DISQUERAS_CD"])
-						.where(
-							qb.eq(
-								qb.col("ID_DISQUERA", "DISCOS_COMPACTOS"),
-								qb.col("ID_DISQUERA", "DISQUERAS_CD"),
+				const result = await qb
+					.dropView("EDITORES_CD")
+					.createView("EDITORES_CD", {
+						cols: ["TITULO_CD", "EDITOR"],
+						as: qb
+							.select([
+								qb.col("TITULO_CD", "DISCOS_COMPACTOS"),
+								qb.col("NOMBRE_DISCOGRAFICA", "DISQUERAS_CD"),
+							])
+							.from(["DISCOS_COMPACTOS", "DISQUERAS_CD"])
+							.where(
+								qb.eq(
+									qb.col("ID_DISQUERA", "DISCOS_COMPACTOS"),
+									qb.col("ID_DISQUERA", "DISQUERAS_CD"),
+								),
 							),
-						),
-				})
-				.execute();
-			if (!result.error) {
-				assert.equal(
-					await result.toString(),
-					`USE INVENTARIO;
+					})
+					.execute();
+				if (!result.error) {
+					assert.equal(
+						await result.toString(),
+						`USE INVENTARIO;
 DROP VIEW EDITORES_CD;
 CREATE VIEW EDITORES_CD
 ( TITULO_CD, EDITOR )
 AS SELECT DISCOS_COMPACTOS.TITULO_CD, DISQUERAS_CD.NOMBRE_DISCOGRAFICA
 FROM DISCOS_COMPACTOS, DISQUERAS_CD
 WHERE DISCOS_COMPACTOS.ID_DISQUERA = DISQUERAS_CD.ID_DISQUERA;`,
-				);
-			} else {
-				assert.equal(result.error, "");
-			}
-		});
+					);
+				} else {
+					assert.equal(result.error, "");
+				}
+			},
+		);
 	});
 
 	describe("Roles", () => {
@@ -2702,7 +2850,7 @@ VALUES
 (112, 'Blues on the Bayou'),
 (113, 'Orlando');`;
 
-			const result = await qb.insert("TITULO_CDS", [], TITULO_CDS).execute();
+			const result = await qb.insert("TITULO_CDS", TITULO_CDS).execute();
 
 			showResults(result);
 			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
@@ -2790,7 +2938,7 @@ VALUES
 (2014, 'David Motion'),
 (2015, 'Sally Potter');`;
 
-			const result = await qb.insert("ARTISTAS_CD", [], ARTISTAS_CD).execute();
+			const result = await qb.insert("ARTISTAS_CD", ARTISTAS_CD).execute();
 
 			showResults(result);
 			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
@@ -2867,7 +3015,7 @@ VALUES
 ('Fundamental', 'NPOP', 10),
 ('Blues on the Bayou', 'BLUS', 11);`;
 
-			const result = await qb.insert("INFO_CD", [], INFO_CD).execute();
+			const result = await qb.insert("INFO_CD", INFO_CD).execute();
 
 			showResults(result);
 			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
@@ -2893,7 +3041,7 @@ VALUES
 ('BLUS', 'Blues'),
 ('JAZZ', 'Jazz');`;
 
-			const result = await qb.insert("TIPO_CD", [], TIPO_CD).execute();
+			const result = await qb.insert("TIPO_CD", TIPO_CD).execute();
 
 			showResults(result);
 			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);

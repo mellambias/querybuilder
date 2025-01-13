@@ -1,3 +1,6 @@
+import QueryBuilder from "../../querybuilder.js";
+import { log } from "../../utils/utils.js";
+
 export const constraint = {
 	name: (name) => `${name}`,
 	type: (type, self) =>
@@ -33,6 +36,16 @@ export const constraint = {
 
 		return this.getStatement("", foreingKey, data, " ");
 	},
-	check: (check) => `CHECK ( ${check} )`,
+	check: (check, self) => {
+		if (check instanceof QueryBuilder) {
+			log(
+				["sql2006", "constraint", "check"],
+				"Es un QB leer values",
+				self._values.next,
+			);
+			return `CHECK ( ${self._values?.next.q.pop()} )`;
+		}
+		return `CHECK ( ${check} )`;
+	},
 	orden: ["name", "type", "foreignKey", "check"],
 };

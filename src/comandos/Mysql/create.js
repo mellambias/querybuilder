@@ -12,9 +12,9 @@ export const createView = {
 			: undefined,
 	name: (name) => `VIEW ${name}`,
 	cols: (cols) => `( ${cols.join(", ")} )`,
-	as: (vista) => {
+	as: function (vista, self) {
 		if (vista instanceof QueryBuilder) {
-			return `AS ${vista.toString({ as: "subselect" })}`;
+			return `AS ${this.getSubselect(self._values.next).join("\n")}`;
 		}
 		return `AS ${vista}`;
 	},

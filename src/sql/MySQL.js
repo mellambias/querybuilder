@@ -138,8 +138,12 @@ class MySQL extends Core {
 		return sqlStack.join(";\n");
 	}
 	// 15.1.23 CREATE VIEW Statement
-	createView(name, options) {
-		return this.getStatement("CREATE", Mysql.createView, { name, ...options });
+	createView(name, options, next) {
+		return this.getStatement("CREATE", Mysql84.createView, {
+			name,
+			options,
+			next,
+		});
 	}
 
 	fullJoin(tables, alias) {

@@ -36,6 +36,12 @@ class Core {
 				}
 				const callFunction = scheme[key].bind(this);
 				if (values[key] !== undefined) {
+					log(
+						["Core", "getStatement", "%o"],
+						"llamar funcion parametros:values[key]\n%o",
+						key,
+						typeof values[key],
+					);
 					const respuesta = callFunction(values[key], scheme);
 					log(["Core", "getStatement", "%o"], "respuesta", key, respuesta);
 					return respuesta;
@@ -65,6 +71,61 @@ class Core {
 		if (typeof userOrRole === "object") {
 			return `'${userOrRole?.name}'${userOrRole?.host !== undefined ? `@'${userOrRole.host}'` : `@'${host}'`}`;
 		}
+	}
+
+	getSubselect(next) {
+		const subSelect = [next.q.pop()];
+		while (
+			!subSelect[0].toUpperCase().startsWith("SELECT") &&
+			next.q.length > 0
+		) {
+			subSelect.unshift(next.q.pop());
+		}
+		return subSelect;
+	}
+
+	getListValues(values, next) {
+		log(["Core", "getListValues(values, next)"], "next", next);
+		log(
+			["Core", "getListValues(values, next)"],
+			"typeof values",
+			typeof values,
+		);
+		let arrayValues = [];
+		if (Array.isArray(values[0])) {
+			arrayValues = values[0].map((value) => {
+				if (value instanceof QueryBuilder) {
+					log(["Core", "getListValues(values, next)"], "next", next);
+					return this.getSubselect(next);
+				}
+				return value;
+			});
+		} else if (Array.isArray(values)) {
+			arrayValues = values.map((value) => {
+				if (value instanceof QueryBuilder) {
+					log(["Core", "getListValues(values, next)"], "next %o", next);
+					return this.getSubselect(next);
+				}
+				return value;
+			});
+		} else {
+			if (values instanceof QueryBuilder) {
+				log(["Core", "getListValues(values, next)"], "Es un QB next", next);
+				return this.getSubselect(next).join("\n");
+			}
+			arrayValues = [values];
+		}
+		return arrayValues
+			.map((item) => {
+				if (typeof item === "string") {
+					return `'${item}'`;
+				}
+				if (Array.isArray(item)) {
+					return item.join("\n");
+				}
+				return item;
+			})
+			.join(", ");
 	}
 
 	// DDL
@@ -155,11 +216,12 @@ class Core {
 		return " DROP DEFAULT";
 	}
 
-	addConstraint(name, option) {
+	addConstraint(name, option, next) {
 		const constraint = [
 			{
 				name,
 				check: option.check,
+				next,
 			},
 		];
 		return `ADD ${this.tableConstraints(constraint)}`;
@@ -435,7 +497,6 @@ class Core {
 		for (const oper in logicos) {
 			if (/^(and|or)$/i.test(oper)) {
 				this[oper] = (...predicados) => {
-					const next = predicados.pop();
 					if (predicados.length > 1) {
 						return `(${predicados.join(`\n${logicos[oper].toUpperCase()} `)})`;
 					}
@@ -479,60 +540,6 @@ class Core {
 		}
 	}
 
-	getSubselect(next) {
-		const subSelect = [next.q.pop()];
-		while (
-			!subSelect[0].toUpperCase().startsWith("SELECT") &&
-			next.q.length > 0
-		) {
-			subSelect.unshift(next.q.pop());
-		}
-		return subSelect;
-	}
-
-	getListValues(values, next) {
-		log(["Core", "getListValues(values, next)"], "next", next);
-		log(
-			["Core", "getListValues(values, next)"],
-			"typeof values",
-			typeof values,
-		);
-		let arrayValues = [];
-		if (Array.isArray(values[0])) {
-			arrayValues = values[0].map((value) => {
-				if (value instanceof QueryBuilder) {
-					log(["Core", "getListValues(values, next)"], "next", next);
-					return this.getSubselect(next);
-				}
-				return value;
-			});
-		} else if (Array.isArray(values)) {
-			arrayValues = values.map((value) => {
-				if (value instanceof QueryBuilder) {
-					log(["Core", "getListValues(values, next)"], "next %o", next);
-					return this.getSubselect(next);
-				}
-				return value;
-			});
-		} else {
-			if (values instanceof QueryBuilder) {
-				log(["Core", "getListValues(values, next)"], "Es un QB next", next);
-				return this.getSubselect(next).join("\n");
-			}
-			arrayValues = [values];
-		}
-		return arrayValues
-			.map((item) => {
-				if (typeof item === "string") {
-					return `'${item}'`;
-				}
-				if (Array.isArray(item)) {
-					return item.join("\n");
-				}
-				return item;
-			})
-			.join(", ");
-	}
 	in(columna, values, next) {
 		log(["Core", "in(columna, values, next)"], "values", values.length);
 		const response = this.getListValues(values, next);
