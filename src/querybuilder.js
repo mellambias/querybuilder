@@ -472,8 +472,8 @@ class QueryBuilder {
 			return this.toNext([command, next], ";");
 		} catch (error) {
 			next.error = error.message;
+			return this.toNext([null, next]);
 		}
-		return this.toNext([null, next]);
 	}
 	dropRoles(names, options, next) {
 		try {
@@ -481,8 +481,8 @@ class QueryBuilder {
 			return this.toNext([command, next], ";");
 		} catch (error) {
 			next.error = error.message;
+			return this.toNext([null, next]);
 		}
-		return this.toNext([null, next]);
 	}
 
 	grant(privilegios, on, to, options, next) {
@@ -491,8 +491,8 @@ class QueryBuilder {
 			return this.toNext([command, next], ";");
 		} catch (error) {
 			next.error = error.message;
+			return this.toNext([null, next]);
 		}
-		return this.toNext([null, next]);
 	}
 
 	revoke(privilegios, on, from, options, next) {
@@ -501,8 +501,8 @@ class QueryBuilder {
 			return this.toNext([command, next], ";");
 		} catch (error) {
 			next.error = error.message;
+			return this.toNext([null, next]);
 		}
-		return this.toNext([null, next]);
 	}
 
 	grantRoles(roles, users, options, next) {
@@ -511,8 +511,8 @@ class QueryBuilder {
 			return this.toNext([command, next], ";");
 		} catch (error) {
 			next.error = error.message;
+			return this.toNext([null, next]);
 		}
-		return this.toNext([null, next]);
 	}
 	revokeRoles(roles, from, options, next) {
 		try {
@@ -520,8 +520,8 @@ class QueryBuilder {
 			return this.toNext([command, next], ";");
 		} catch (error) {
 			next.error = error.message;
+			return this.toNext([null, next]);
 		}
-		return this.toNext([null, next]);
 	}
 
 	//Consulta de datos SQL
@@ -1090,7 +1090,7 @@ class QueryBuilder {
 	async execute(testOnly = false) {
 		if (testOnly) {
 			console.log(">[QueryBuilder] [execute] en modo 'solo-test'\n");
-			return await this.queryJoin();
+			return await this.toString();
 		}
 		if (!this.driverDB) {
 			throw new Error("No ha establecido un driver.");

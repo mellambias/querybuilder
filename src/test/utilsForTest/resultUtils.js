@@ -144,6 +144,7 @@ export async function getResultFromTest(databaseTest, ...sql) {
 		if (sql.length === 0) {
 			throw new Error("La consulta esta vacia");
 		}
+		log(["resultUtils", "getResultFromTest"], "ejecutar %s", sql.join(";\n"));
 		const resultTest = await databaseTest.execute(sql.join(";\n"));
 		const { response } = resultTest.response();
 		return response[response.length - 1];

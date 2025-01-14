@@ -2,7 +2,9 @@ import { grant } from "./grant.js";
 export const revoke = {
 	...grant,
 	secure: (value) => (value === true ? "IF EXISTS" : undefined),
-	from: (from, self) => self.to(from, self).replace("TO", "FROM"),
+	from: function (from, self) {
+		return self.to.bind(this)(from, self).replace("TO", "FROM");
+	},
 	ignoreUser: (value) => (value === true ? "IGNORE UNKNOWN USER" : undefined),
 	orden: ["host", "secure", "commands", "on", "from", "ignoreUser"],
 };
@@ -15,7 +17,9 @@ export const revokeRoles = {
 		}
 		return typeof roles === "string" ? roles : roles.join(", ");
 	},
-	from: (from, self) => self.to(from, self).replace("TO", "FROM"),
+	from: function (from, self) {
+		return self.to.bind(this)(from, self).replace("TO", "FROM");
+	},
 	ignoreUser: (value) => (value === true ? "IGNORE UNKNOWN USER" : undefined),
 	orden: ["host", "roles", "from", "ignoreUser"],
 };
