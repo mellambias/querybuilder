@@ -1561,9 +1561,13 @@ FROM DISCOS_COMPACTOS`,
 			);
 		});
 	});
-
+	// manipulación datos CAPITULO 8 del Libro SQL
 	describe("capitulo 8", async () => {
-		test("crea la tabla INVENTARIO_CD.", async () => {
+		beforeEach(async () => {
+			qb = qb.use("INVENTARIO");
+		});
+		test("crea la tabla INVENTARIO_CD", { only: false }, async () => {
+			const debug = false;
 			const inventario_cd = {
 				NOMBRE_CD: { type: "varchar(60)", values: ["NOT NULL"] },
 				TIPO_MUSICA: "VARCHAR(15)",
@@ -1580,9 +1584,9 @@ FROM DISCOS_COMPACTOS`,
 					cols: inventario_cd,
 					secure: true,
 				})
-				.execute();
+				.execute(debug);
 
-			showResults(result);
+			showResults(result, debug);
 
 			assert.equal(
 				await result.toString(),
@@ -1593,213 +1597,419 @@ CREATE TABLE IF NOT EXISTS INVENTARIO_CD
  EDITOR VARCHAR(50) NOT NULL DEFAULT 'Independiente',
  EN_EXISTENCIA INT NOT NULL );`,
 			);
+
+			assert.ok(
+				await existTable(databaseTest, "inventario", "INVENTARIO_CD"),
+				"La tabla 'INVENTARIO_CD' no existe en la base de datos 'INVENTARIO'",
+			);
 		});
-		test("inserta un registro o row", async () => {
-			const result = await qb
-				.insert(
-					"INVENTARIO_CD",
-					[],
-					["Patsy Cline: 12 Greatest Hits", "Country", "MCA Records", 32],
-				)
-				.execute();
+		test(
+			"inserta un registro o row en la tabla 'INVENTARIO_CD'",
+			{ only: false },
+			async () => {
+				const debug = false;
+				const result = await qb
+					.insert("INVENTARIO_CD", [
+						"Patsy Cline: 12 Greatest Hits",
+						"Country",
+						"MCA Records",
+						32,
+					])
+					.execute(debug);
 
-			showResults(result);
+				showResults(result, debug);
 
-			assert.equal(
-				await result.toString(),
-				`USE INVENTARIO;
+				assert.equal(
+					await result.toString(),
+					`USE INVENTARIO;
 INSERT INTO INVENTARIO_CD
-VALUES ( 'Patsy Cline: 12 Greatest Hits', 'Country', 'MCA Records', 32 );`,
-			);
-		});
+VALUES
+( 'Patsy Cline: 12 Greatest Hits', 'Country', 'MCA Records', 32 );`,
+				);
+				const nombreCdInInventarioCd = (
+					await getResultFromTest(
+						databaseTest,
+						"USE INVENTARIO",
+						"SELECT * FROM INVENTARIO_CD",
+					)
+				).map((item) => item.NOMBRE_CD);
+				assert.ok(
+					nombreCdInInventarioCd.includes("Patsy Cline: 12 Greatest Hits"),
+					"El cd 'Patsy Cline: 12 Greatest Hits' no ha sido insertado",
+				);
+			},
+		);
 
-		test("Insertar datos en una tabla especificando columnas", async () => {
-			const result = await qb
-				.insert(
-					"INVENTARIO_CD",
-					["NOMBRE_CD", "EDITOR", "EN_EXISTENCIA"],
-					["Fundamental", "Capitol Records", 34],
-				)
-				.execute();
+		test(
+			"Insertar datos en una tabla 'INVENTARIO_CD' especificando columnas",
+			{ only: false },
+			async () => {
+				const debug = false;
+				const result = await qb
+					.insert(
+						"INVENTARIO_CD",
+						["Fundamental", "Capitol Records", 34],
+						["NOMBRE_CD", "EDITOR", "EN_EXISTENCIA"],
+					)
+					.execute(debug);
 
-			showResults(result);
+				showResults(result, debug);
 
-			assert.equal(
-				await result.toString(),
-				`INSERT INTO INVENTARIO_CD\n( NOMBRE_CD, EDITOR, EN_EXISTENCIA )
-VALUES ( 'Fundamental', 'Capitol Records', 34 );`,
-			);
-		});
+				assert.equal(
+					await result.toString(),
+					`USE INVENTARIO;
+INSERT INTO INVENTARIO_CD
+( NOMBRE_CD, EDITOR, EN_EXISTENCIA )
+VALUES
+( 'Fundamental', 'Capitol Records', 34 );`,
+				);
 
-		test("Insertar datos en una tabla usando datos de otra tabla", async () => {
-			const result = await qb
-				.createTable("INVENTARIO_CD_2", {
-					cols: {
-						NOMBRE_CD_2: { type: "varchar(60)", values: ["not null"] },
-						EN_EXISTENCIA_2: { type: "int", values: ["not null"] },
-					},
-				})
-				.insert(
-					"INVENTARIO_CD_2",
-					[],
-					qb.select(["NOMBRE_CD", "EN_EXISTENCIA"]).from("INVENTARIO_CD"),
-				)
-				.execute();
+				const nombreCdInInventarioCd = (
+					await getResultFromTest(
+						databaseTest,
+						"USE INVENTARIO",
+						"SELECT * FROM INVENTARIO_CD",
+					)
+				).map((item) => item.NOMBRE_CD);
+				assert.ok(
+					nombreCdInInventarioCd.includes("Fundamental"),
+					"El cd 'Fundamental' no ha sido insertado",
+				);
+			},
+		);
 
-			showResults(result);
+		test(
+			"Insertar datos en una tabla usando datos de otra tabla",
+			{ only: false },
+			async () => {
+				const debug = false;
+				const result = await qb
+					.createTable("INVENTARIO_CD_2", {
+						cols: {
+							NOMBRE_CD_2: { type: "varchar(60)", values: ["not null"] },
+							EN_EXISTENCIA_2: { type: "int", values: ["not null"] },
+						},
+					})
+					.insert(
+						"INVENTARIO_CD_2",
+						qb.select(["NOMBRE_CD", "EN_EXISTENCIA"]).from("INVENTARIO_CD"),
+					)
+					.execute(debug);
 
-			assert.equal(
-				await result.toString(),
-				`USE INVENTARIO;
+				showResults(result, debug);
+
+				assert.equal(
+					await result.toString(),
+					`USE INVENTARIO;
 CREATE TABLE INVENTARIO_CD_2
 ( NOMBRE_CD_2 VARCHAR(60) NOT NULL,
  EN_EXISTENCIA_2 INT NOT NULL );
 INSERT INTO INVENTARIO_CD_2
 SELECT NOMBRE_CD, EN_EXISTENCIA
 FROM INVENTARIO_CD;`,
-			);
-		});
+				);
+				assert.ok(
+					await existTable(databaseTest, "inventario", "INVENTARIO_CD_2"),
+					"La tabla 'INVENTARIO_CD_2' no ha sido creada",
+				);
 
-		test("Insertar varias filas de datos en una tabla", async () => {
-			const result = await qb
-				.insert(
-					"DISQUERAS_CD",
-					[],
-					[
-						[827, "Private Music"],
-						[828, "Reprise Records"],
-						[829, "Asylum Records"],
-						[830, "Windham Hill Records"],
-					],
-				)
-				.execute();
+				const nombreCdInInventarioCd = (
+					await getResultFromTest(
+						databaseTest,
+						"USE INVENTARIO",
+						"SELECT * FROM INVENTARIO_CD",
+					)
+				).map((item) => item.NOMBRE_CD);
+				const nombreCdInInventarioCd_2 = (
+					await getResultFromTest(
+						databaseTest,
+						"USE INVENTARIO",
+						"SELECT * FROM INVENTARIO_CD_2",
+					)
+				).map((item) => item.NOMBRE_CD_2);
 
-			showResults(result);
+				assert.ok(
+					nombreCdInInventarioCd_2.every((item) =>
+						nombreCdInInventarioCd.includes(item),
+					),
+					"No se han insertado todos los registros",
+				);
+			},
+		);
 
-			assert.equal(
-				await result.toString(),
-				`USE INVENTARIO;
+		test(
+			"Insertar varias filas de datos en una tabla",
+			{ only: false },
+			async () => {
+				const debug = false;
+				const result = await qb
+					.insert("DISQUERAS_CD", [
+						[927, "Private Music"],
+						[928, "Reprise Records"],
+						[929, "Asylum Records"],
+						[930, "Windham Hill Records"],
+					])
+					.execute(debug);
+
+				showResults(result, debug);
+
+				assert.equal(
+					await result.toString(),
+					`USE INVENTARIO;
 INSERT INTO DISQUERAS_CD
 VALUES
-(827, 'Private Music'),
-(828, 'Reprise Records'),
-(829, 'Asylum Records'),
-(830, 'Windham Hill Records');`,
-			);
-		});
+(927, 'Private Music'),
+(928, 'Reprise Records'),
+(929, 'Asylum Records'),
+(930, 'Windham Hill Records');`,
+				);
 
-		test("Actualizar el valor de una columna", async () => {
+				const idsInTable = (
+					await getResultFromTest(
+						databaseTest,
+						"USE INVENTARIO",
+						"SELECT * FROM DISQUERAS_CD",
+					)
+				).map((item) => item.ID_DISQUERA);
+
+				assert.ok(
+					[927, 928, 929, 930].every((item) => idsInTable.includes(item)),
+					"Los registros no han sido insertados",
+				);
+			},
+		);
+
+		test("Actualizar el valor de una columna", { only: false }, async () => {
+			const debug = false;
 			const result = await qb
 				.update("INVENTARIO_CD", { EN_EXISTENCIA: 27 })
-				.execute();
-			showResults(result);
+				.execute(debug);
+			showResults(result, debug);
 			assert.equal(
 				await result.toString(),
 				`USE INVENTARIO;
 UPDATE INVENTARIO_CD
 SET EN_EXISTENCIA = 27;`,
 			);
+			const enExistenciaInTable = (
+				await getResultFromTest(
+					databaseTest,
+					"USE INVENTARIO",
+					"SELECT * FROM INVENTARIO_CD",
+				)
+			).map((item) => item.EN_EXISTENCIA);
+			assert.ok(
+				enExistenciaInTable.every((item) => item === 27),
+				"los valores del campo 'EN_EXISTENCIA' debe ser 27",
+			);
 		});
 
-		test("añadir columna cantidad a inventario_cd", async () => {
-			const result = await qb
-				.alterTable("INVENTARIO_CD")
-				.addColumn("CANTIDAD", "INT")
-				.execute();
-			showResults(result);
-			assert.equal(
-				await result.toString(),
-				`USE INVENTARIO;
+		test(
+			"añadir la columna 'CANTIDAD' a la tabla 'INVENTARIO_CD'",
+			{ only: false },
+			async () => {
+				const debug = false;
+				const result = await qb
+					.alterTable("INVENTARIO_CD")
+					.addColumn("CANTIDAD", "INT")
+					.execute(debug);
+				showResults(result, debug);
+				assert.equal(
+					await result.toString(),
+					`USE INVENTARIO;
 ALTER TABLE INVENTARIO_CD
 ADD COLUMN CANTIDAD INT;`,
-			);
-		});
+				);
+				const tablaColumns = await describeTable(
+					databaseTest,
+					"inventario",
+					"INVENTARIO_CD",
+				);
+				const column = tablaColumns.find((item) => item.Field === "CANTIDAD");
+				assert.ok(column, "La columna 'CANTIDAD' no existe");
+				assert.equal(column.Type, "int", "El tipo de la columna ha de ser INT");
+			},
+		);
 
-		test("Actualizar el valor de varias columnas", async () => {
-			const result = await qb
-				.update("INVENTARIO_CD", {
-					EN_EXISTENCIA: "27",
-					CANTIDAD: 10,
-				})
-				.execute();
-			showResults(result);
-			assert.equal(
-				await result.toString(),
-				`USE INVENTARIO;
+		test(
+			"Actualizar el valor de varias columnas",
+			{ only: false },
+			async () => {
+				const result = await qb
+					.update("INVENTARIO_CD", {
+						EN_EXISTENCIA: "30",
+						CANTIDAD: 10,
+					})
+					.execute();
+				showResults(result);
+				assert.equal(
+					await result.toString(),
+					`USE INVENTARIO;
 UPDATE INVENTARIO_CD
-SET EN_EXISTENCIA = '27',
+SET EN_EXISTENCIA = '30',
 CANTIDAD = 10;`,
-			);
-		});
+				);
+				const dataInTable = await getResultFromTest(
+					databaseTest,
+					"USE INVENTARIO",
+					"SELECT * FROM INVENTARIO_CD",
+				);
 
-		test("Actualizar el valor de una columna solo de algunas filas usando where", async () => {
-			const result = await qb
-				.update("INVENTARIO_CD", { EN_EXISTENCIA: 37 })
-				.where([qb.eq("NOMBRE_CD", "Fundamental")])
-				.execute();
+				assert.ok(
+					dataInTable.every(
+						(item) => item.EN_EXISTENCIA === 30 && item.CANTIDAD === 10,
+					),
+					"los valores del campo 'EN_EXISTENCIA' debe ser 30 y 'CANTIDAD' debe ser 10",
+				);
+			},
+		);
 
-			showResults(result);
+		test(
+			"Actualizar el valor de una columna solo de algunas filas usando 'where'",
+			{ only: false },
+			async () => {
+				const result = await qb
+					.update("INVENTARIO_CD", { EN_EXISTENCIA: 37 })
+					.where([qb.eq("NOMBRE_CD", "Fundamental")])
+					.execute();
 
-			assert(
-				await result.toString(),
-				`USE INVENTARIO;
+				showResults(result);
+
+				assert(
+					await result.toString(),
+					`USE INVENTARIO;
 UPDATE INVENTARIO_CD
 SET EN_EXISTENCIA = 37
 WHERE NOMBRE_CD = 'Fundamental';`,
-			);
-		});
+				);
 
-		test("Actualizar una columna usando como valor el resultado devuelto por un select", async () => {
-			const result = await qb
-				.update("INVENTARIO_CD_2", {
-					EN_EXISTENCIA_2: qb
-						.select(qb.avg("EN_EXISTENCIA"))
-						.from("INVENTARIO_CD"),
-				})
-				.where([qb.eq("NOMBRE_CD_2", "Fundamental")])
-				.execute();
+				const dataInTable = (
+					await getResultFromTest(
+						databaseTest,
+						"USE INVENTARIO",
+						"SELECT * FROM INVENTARIO_CD",
+					)
+				).filter((item) => item.NOMBRE_CD === "Fundamental");
 
-			showResults(result);
+				assert.ok(
+					dataInTable.every((item) => item.EN_EXISTENCIA === 37),
+					"El valor del campo 'EN_EXISTENCIA' debe ser 37",
+				);
+			},
+		);
 
-			assert.equal(
-				await result.toString(),
-				`USE INVENTARIO;
+		test(
+			"Actualizar una columna usando como valor el resultado devuelto por un select",
+			{ only: false },
+			async () => {
+				const debug = false;
+				const result = await qb
+					.update("INVENTARIO_CD_2", {
+						EN_EXISTENCIA_2: qb
+							.select(qb.avg("EN_EXISTENCIA"))
+							.from("INVENTARIO_CD"),
+					})
+					.where([qb.eq("NOMBRE_CD_2", "Fundamental")])
+					.execute(debug);
+
+				showResults(result, debug);
+
+				assert.equal(
+					await result.toString(),
+					`USE INVENTARIO;
 UPDATE INVENTARIO_CD_2
 SET EN_EXISTENCIA_2 =
 ( SELECT AVG(EN_EXISTENCIA)
 FROM INVENTARIO_CD )
 WHERE NOMBRE_CD_2 = 'Fundamental';`,
-			);
-		});
+				);
 
-		test("Eliminar todas las filas de una tabla con DELETE FROM", async () => {
-			const result = await qb.delete("INVENTARIO_CD_2").execute();
+				const dataInTable = (
+					await getResultFromTest(
+						databaseTest,
+						"USE INVENTARIO",
+						"SELECT * FROM INVENTARIO_CD_2",
+					)
+				).filter((item) => item.NOMBRE_CD_2 === "Fundamental");
 
-			showResults(result);
-			assert.equal(
-				await result.toString(),
-				"USE INVENTARIO;\nDELETE FROM INVENTARIO_CD_2;",
-			);
-		});
+				const valueInTable = (
+					await getResultFromTest(
+						databaseTest,
+						"USE INVENTARIO",
+						"SELECT AVG(EN_EXISTENCIA) FROM INVENTARIO_CD",
+					)
+				).map((item) => Object.values(item)[0]);
 
-		test("Eliminar algunas filas de una tabla con DELETE y where", async () => {
-			const result = await qb
-				.delete("INVENTARIO_CD")
-				.where(qb.eq("TIPO_MUSICA", "Country"))
-				.execute();
+				console.log(valueInTable);
 
-			showResults(result);
+				assert.ok(
+					dataInTable.every(
+						(item) => item.EN_EXISTENCIA_2 === Math.ceil(valueInTable[0]),
+					),
+					`El valor del campo 'EN_EXISTENCIA' debe ser ${Math.ceil(valueInTable[0])}`,
+				);
+			},
+		);
 
-			assert.equal(
-				await result.toString(),
-				`USE INVENTARIO;
+		test(
+			"Eliminar todas las filas de una tabla con 'DELETE FROM'",
+			{ only: false },
+			async () => {
+				const result = await qb.delete("INVENTARIO_CD_2").execute();
+
+				showResults(result);
+				assert.equal(
+					await result.toString(),
+					"USE INVENTARIO;\nDELETE FROM INVENTARIO_CD_2;",
+				);
+
+				const dataInTable = await getResultFromTest(
+					databaseTest,
+					"USE INVENTARIO",
+					"SELECT * FROM INVENTARIO_CD_2",
+				);
+				assert.ok(
+					dataInTable.length === 0,
+					"La tabla 'INVENTARIO_CD_2' todavia tiene registros",
+				);
+			},
+		);
+
+		test(
+			"Eliminar algunas filas de una tabla con 'DELETE' y 'WHERE'",
+			{ only: false },
+			async () => {
+				const result = await qb
+					.delete("INVENTARIO_CD")
+					.where(qb.eq("TIPO_MUSICA", "Country"))
+					.execute();
+
+				showResults(result);
+
+				assert.equal(
+					await result.toString(),
+					`USE INVENTARIO;
 DELETE FROM INVENTARIO_CD
 WHERE TIPO_MUSICA = 'Country';`,
-			);
-		});
+				);
+
+				const dataInTable = (
+					await getResultFromTest(
+						databaseTest,
+						"USE INVENTARIO",
+						"SELECT * FROM INVENTARIO_CD",
+					)
+				).filter((item) => item.TIPO_MUSICA === "Country");
+				assert.equal(
+					dataInTable.length,
+					0,
+					`No se han borrado todos los registros para 'Country' queda/n ${dataInTable.length}`,
+				);
+			},
+		);
 	});
 
-	describe("Uso de predicados capitulo 9", async () => {
+	describe("Uso de predicados capitulo 9", { only: true }, async () => {
 		test("se consultará la tabla TIPOS_MUSICA para arrojar los nombres de aquellas filas cuyo valor ID_TIPO sea igual a 11 o 12", async () => {
 			const result = await qb
 				.select(["ID_TIPO", "NOMBRE_TIPO"])

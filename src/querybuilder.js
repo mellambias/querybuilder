@@ -355,7 +355,7 @@ class QueryBuilder {
 				this.error = "Tiene que especificar como mínimo una columna";
 			}
 			const command = this.language.createTable(name.validSqlId(), options);
-			return this.toNext([command, next], ";");
+			return this.toNext([command, next], ";", true);
 		} catch (error) {
 			next.error = error.message;
 		}
@@ -654,19 +654,7 @@ class QueryBuilder {
 	}
 	where(predicados, next) {
 		next.isQB = predicados instanceof QueryBuilder;
-		log(
-			"where",
-			"Recibe next: %o\n isQueryBuilder %o",
-			next,
-			predicados instanceof QueryBuilder,
-		);
-		let command;
-		if (predicados instanceof QueryBuilder) {
-			const values = next.q.pop();
-			command = this.language.where(values);
-			return this.toNext([command, next]);
-		}
-		command = this.language.where(predicados);
+		const command = this.language.where(predicados, next);
 		log("where", "command %o", command);
 		return this.toNext([command, next]);
 	}
@@ -909,16 +897,7 @@ class QueryBuilder {
 				throw new Error(error);
 			}
 			next.isQB = values instanceof QueryBuilder;
-			let command;
-			if (values instanceof QueryBuilder) {
-				log("insert", "Es un QueryBuilder... next", next);
-				const subSelect = next.q.join("\n");
-				command = this.language.insert(table, cols, subSelect, next);
-				next.q = [];
-				log("insert", " command ", command);
-			} else {
-				command = this.language.insert(table, cols, values, next);
-			}
+			const command = this.language.insert(table, cols, values, next);
 			return this.toNext([command, next], ";");
 		} catch (error) {
 			next.error = error.message;

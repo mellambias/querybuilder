@@ -81,6 +81,12 @@ class Core {
 		) {
 			subSelect.unshift(next.q.pop());
 		}
+		log(
+			["Core", "getSubselect"],
+			"Modifica next %o\n devuelve: subSelect %o",
+			next,
+			subSelect,
+		);
 		return subSelect;
 	}
 
@@ -428,10 +434,21 @@ class Core {
 		}
 		return `${result.join(union)}`;
 	}
-	where(predicados) {
+	where(predicados, next) {
 		const sql = "WHERE";
+		if (predicados instanceof QueryBuilder) {
+			const values = next.q.pop();
+			return `${sql} ${values}`;
+		}
 		if (Array.isArray(predicados)) {
-			return `${sql} ${predicados.join(", ")}`;
+			return `${sql} ${predicados
+				.map((item) => {
+					if (item instanceof QueryBuilder) {
+						return next.q.pop();
+					}
+					return item;
+				})
+				.join(", ")}`;
 		}
 		return `${sql} ${predicados}`;
 	}
@@ -636,7 +653,8 @@ class Core {
 									}
 									if (item instanceof QueryBuilder) {
 										console.log("[Core][insert]next", next);
-										return `${next.q}`;
+
+										return this.getSubselect(next).join("\n");
 									}
 									return item;
 								})
@@ -657,7 +675,7 @@ class Core {
 				.join(", ")} )`;
 		}
 		if (values instanceof QueryBuilder) {
-			sql = `${sql}\n${next.q}`;
+			sql = `${sql}\n${this.getSubselect(next).join("\n")}`;
 		}
 		if (typeof values === "string") {
 			sql = `${sql}\n${values}`;
