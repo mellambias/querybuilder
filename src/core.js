@@ -678,8 +678,7 @@ class Core {
 					col,
 					next,
 				);
-				const subSelect = next.q.join("\n");
-				next.q = [];
+				const subSelect = this.getSubselect(next).join("\n");
 				setStack.push(`${col} =\n( ${subSelect} )`);
 			} else {
 				setStack.push(`${col} = ${sets[col]}`);

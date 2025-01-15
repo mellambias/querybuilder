@@ -173,9 +173,15 @@ class QueryBuilder {
 		}, Promise.resolve());
 		return promise;
 	}
-	toNext(data, stringJoin = "") {
+	toNext(data, stringJoin = "", firstCommand = false) {
 		if (Array.isArray(data)) {
 			let [valor, next] = data;
+			if (next?.q?.length > 0 && firstCommand) {
+				// Siendo un comando inicial el anterior debe acabar en ';'
+				next.q[next.q.length - 1] += next.q[next.q.length - 1].endsWith(";")
+					? ""
+					: ";";
+			}
 			if (valor === null) {
 				return next;
 			}
@@ -913,7 +919,7 @@ class QueryBuilder {
 			} else {
 				command = this.language.insert(table, cols, values, next);
 			}
-			return this.toNext([command, next]);
+			return this.toNext([command, next], ";");
 		} catch (error) {
 			next.error = error.message;
 			return this.toNext([null, next]);
@@ -930,7 +936,7 @@ class QueryBuilder {
 				throw new Error(error);
 			}
 			const updateCommand = await this.language.update(table, sets, next);
-			return this.toNext([updateCommand, next]);
+			return this.toNext([updateCommand, next], "", true);
 		} catch (error) {
 			this.error = error.message;
 		}
@@ -938,16 +944,16 @@ class QueryBuilder {
 	delete(from, next) {
 		try {
 			const deleteCommand = this.language.delete(from);
-			return this.toNext([deleteCommand, next]);
+			return this.toNext([deleteCommand, next], "", true);
 		} catch (error) {
 			this.error = error.message;
+			return this.toNext([null, next]);
 		}
-		return this;
 	}
 	// funciones SET
 
 	/**
-	 * @param {string|column} funcion - argumento o columna sobre la que opera la función SQL
+	 * @param {string|Column} funcion - argumento o columna sobre la que opera la función SQL
 	 * @param {string} alias - nombre AS
 	 */
 	functionOneParam() {

@@ -1361,84 +1361,155 @@ WHERE  TABLE_SCHEMA = 'inventario'`,
 		});
 	});
 
-	describe("Manejo de datos", async () => {
-		test("Insertar datos", { only: true }, async () => {
+	describe("Manipulacion de datos en Inventario", async () => {
+		beforeEach(async () => {
+			qb = qb.use("INVENTARIO");
+		});
+		test("Insertar datos", { only: false }, async () => {
+			const debug = true;
 			const result = await qb
-				.insert("DISQUERAS_CD", [], [837, "DRG Records"])
-				.insert("DISCOS_COMPACTOS", [], [116, "Ann Hampton Callaway", 837, 14])
+				.insert("DISQUERAS_CD", [837, "DRG Records"])
+				.insert("DISCOS_COMPACTOS", [116, "Ann Hampton Callaway", 837, 14])
 				.insert(
 					"DISCOS_COMPACTOS",
-					["ID_DISCO_COMPACTO", "TITULO_CD", "ID_DISQUERA", "EN_EXISTENCIA"],
 					[117, "Rhythm Country and Blues", 837, 21],
+					["ID_DISCO_COMPACTO", "TITULO_CD", "ID_DISQUERA", "EN_EXISTENCIA"],
 				)
-				.execute();
+				.execute(debug);
 
-			showResults(result);
+			showResults(result, debug);
 
 			assert.equal(
 				await result.toString(),
 				`USE INVENTARIO;
 INSERT INTO DISQUERAS_CD
-VALUES ( 837, 'DRG Records' );
+VALUES
+( 837, 'DRG Records' );
 INSERT INTO DISCOS_COMPACTOS
-VALUES ( 116, 'Ann Hampton Callaway', 837, 14 );
+VALUES
+( 116, 'Ann Hampton Callaway', 837, 14 );
 INSERT INTO DISCOS_COMPACTOS
 ( ID_DISCO_COMPACTO, TITULO_CD, ID_DISQUERA, EN_EXISTENCIA )
-VALUES ( 117, 'Rhythm Country and Blues', 837, 21 );`,
+VALUES
+( 117, 'Rhythm Country and Blues', 837, 21 );`,
+			);
+			const disqueras_cdRows = (
+				await getResultFromTest(
+					databaseTest,
+					"USE INVENTARIO",
+					"SELECT ID_DISQUERA,NOMBRE_DISCOGRAFICA FROM DISQUERAS_CD",
+				)
+			).map((item) => item.ID_DISQUERA);
+
+			assert.ok(
+				disqueras_cdRows.includes(837),
+				"El registro en DISQUERAS_CD no se ha insertado",
+			);
+			const discos_compactosRows = (
+				await getResultFromTest(
+					databaseTest,
+					"USE INVENTARIO",
+					"SELECT ID_DISCO_COMPACTO FROM DISCOS_COMPACTOS",
+				)
+			).map((item) => item.ID_DISCO_COMPACTO);
+
+			assert.ok(
+				discos_compactosRows.includes(116),
+				"El registro en DISCOS_COMPACTOS no se ha insertado",
+			);
+			assert.ok(
+				discos_compactosRows.includes(117),
+				"El registro en DISCOS_COMPACTOS no se ha insertado",
 			);
 		});
 
-		test("Actualiza datos", async () => {
-			const result = await qb
-				.update("DISCOS_COMPACTOS", {
-					ID_DISQUERA: qb
-						.select("ID_DISQUERA")
-						.from("DISQUERAS_CD")
-						.where(qb.eq("NOMBRE_DISCOGRAFICA", "DRG Records")),
-				})
-				.where("ID_DISCO_COMPACTO = 116")
-				.execute();
+		test(
+			"Actualiza datos utilizando una subquery",
+			{ only: false },
+			async () => {
+				const debug = false;
+				const result = await qb
+					.update("DISCOS_COMPACTOS", {
+						ID_DISQUERA: qb
+							.select("ID_DISQUERA")
+							.from("DISQUERAS_CD")
+							.where(qb.eq("NOMBRE_DISCOGRAFICA", "DRG Records")),
+					})
+					.where("ID_DISCO_COMPACTO = 116")
+					.execute(debug);
 
-			showResults(result);
+				showResults(result, debug);
 
-			assert.equal(
-				await result.toString(),
-				`USE INVENTARIO;
+				assert.equal(
+					await result.toString(),
+					`USE INVENTARIO;
 UPDATE DISCOS_COMPACTOS
 SET ID_DISQUERA =
 ( SELECT ID_DISQUERA
 FROM DISQUERAS_CD
 WHERE NOMBRE_DISCOGRAFICA = 'DRG Records' )
 WHERE ID_DISCO_COMPACTO = 116;`,
-			);
-		});
+				);
 
-		test("leer datos de la tabla DISCOS_COMPACTO", async () => {
-			const result = await qb
-				.select("*")
-				.from("DISCOS_COMPACTOS")
-				.where(
-					qb.or(
-						qb.eq("ID_DISCO_COMPACTO", 116),
-						qb.eq("ID_DISCO_COMPACTO", 117),
-					),
-				)
+				const [idDisquera] = await getResultFromTest(
+					databaseTest,
+					"USE INVENTARIO",
+					`SELECT ID_DISQUERA
+FROM DISQUERAS_CD
+WHERE NOMBRE_DISCOGRAFICA = 'DRG Records'`,
+				);
+				assert.ok(idDisquera.ID_DISQUERA, "Registro no encontrado");
+				const [rowUpdated] = await getResultFromTest(
+					databaseTest,
+					"USE INVENTARIO",
+					`SELECT ID_DISQUERA
+FROM DISCOS_COMPACTOS
+WHERE ID_DISCO_COMPACTO = 116`,
+				);
+				assert.equal(
+					rowUpdated.ID_DISQUERA,
+					idDisquera.ID_DISQUERA,
+					"El campo 'ID_DISQUERA' no se ha actualizado correctamente",
+				);
+			},
+		);
 
-				.execute();
+		test(
+			"leer datos de la tabla DISCOS_COMPACTO",
+			{ only: false },
+			async () => {
+				const result = await qb
+					.select("*")
+					.from("DISCOS_COMPACTOS")
+					.where(
+						qb.or(
+							qb.eq("ID_DISCO_COMPACTO", 116),
+							qb.eq("ID_DISCO_COMPACTO", 117),
+						),
+					)
+					.execute();
 
-			showResults(result);
+				showResults(result);
 
-			assert(
-				await result.toString(),
-				`USE INVENTARIO;
+				assert(
+					await result.toString(),
+					`USE INVENTARIO;
 SELECT *
 FROM DISCOS_COMPACTOS
 WHERE (ID_DISCO_COMPACTO = 116
 OR ID_DISCO_COMPACTO = 117);`,
-			);
-		});
+				);
+				const { rows } = result.result;
+				const records = rows[1].map((item) => item.ID_DISCO_COMPACTO);
+				assert.ok(
+					[116, 117].some((item) => records.includes(item)),
+					"El resultado no incluye los valores",
+				);
+			},
+		);
 
-		test("borrar registros", async () => {
+		test("borrar registros", { only: false }, async () => {
+			const debug = false;
 			const result = await qb
 				.delete("DISCOS_COMPACTOS")
 				.where(
@@ -1449,9 +1520,9 @@ OR ID_DISCO_COMPACTO = 117);`,
 				)
 				.delete("DISQUERAS_CD")
 				.where(qb.eq("ID_DISQUERA", 837))
-				.execute();
+				.execute(debug);
 
-			showResults(result);
+			showResults(result, debug);
 
 			assert.equal(
 				await result.toString(),
@@ -1461,6 +1532,32 @@ WHERE (ID_DISCO_COMPACTO = 116
 OR ID_DISCO_COMPACTO = 117);
 DELETE FROM DISQUERAS_CD
 WHERE ID_DISQUERA = 837;`,
+			);
+			const DISCOS_COMPACTOS = (
+				await getResultFromTest(
+					databaseTest,
+					"USE INVENTARIO",
+					`SELECT ID_DISCO_COMPACTO
+FROM DISCOS_COMPACTOS`,
+				)
+			).map((item) => item.ID_DISCO_COMPACTO);
+			assert.ok(
+				[116, 117].every((item) => !DISCOS_COMPACTOS.includes(item)),
+				"No todos los registros han sido eliminados",
+			);
+
+			const DISQUERAS_CD = (
+				await getResultFromTest(
+					databaseTest,
+					"USE INVENTARIO",
+					`SELECT ID_DISQUERA
+	FROM DISQUERAS_CD`,
+				)
+			).map((item) => item.ID_DISQUERA);
+
+			assert.ok(
+				[837].every((item) => !DISQUERAS_CD.includes(item)),
+				"No todos los registros han sido eliminados",
 			);
 		});
 	});
