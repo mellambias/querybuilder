@@ -711,7 +711,7 @@ class QueryBuilder {
 			"like",
 			"notLike",
 		];
-		const operTreeArg = ["between", "notBetween"];
+		const operThreeArg = ["between", "notBetween"];
 		const logicos = ["and", "or", "not", "distinct"];
 
 		for (const operTwo of operTwoCols) {
@@ -737,9 +737,9 @@ class QueryBuilder {
 			};
 		}
 		//"between", "notBetween"
-		for (const operTree of operTreeArg) {
-			this[operTree] = (a, b, c, next) =>
-				this.toNext([this.language[operTree](a, b, c, next), next]);
+		for (const operThree of operThreeArg) {
+			this[operThree] = (a, b, c, next) =>
+				this.toNext([this.language[operThree](a, b, c, next), next]);
 		}
 		// "and", "or", "not", "distinct"
 		for (const oper of logicos) {

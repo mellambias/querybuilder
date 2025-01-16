@@ -149,8 +149,6 @@ const ARTISTAS = {
 	NOMBRE_ARTISTA: { type: "VARCHAR(60)", values: ["not null"] },
 	LUGAR_DE_NACIMIENTO: {
 		type: "VARCHAR(60)",
-		values: ["not null"],
-		default: "Desconocido",
 	},
 };
 const DISQUERAS_CD = {
@@ -437,7 +435,7 @@ CREATE TABLE IF NOT EXISTS TIPOS_DISCO_COMPACTO
 CREATE TABLE IF NOT EXISTS ARTISTAS
 ( ID_ARTISTA INT,
  NOMBRE_ARTISTA VARCHAR(60) NOT NULL,
- LUGAR_DE_NACIMIENTO VARCHAR(60) NOT NULL DEFAULT 'Desconocido',
+ LUGAR_DE_NACIMIENTO VARCHAR(60),
  CONSTRAINT PK_ARTISTAS PRIMARY KEY (ID_ARTISTA) );`,
 				);
 			} else {
@@ -795,15 +793,15 @@ AND EN_EXISTENCIA < 50) );`,
 				[2007, "Jose Carreras", "Barcelona, España"],
 				[2008, "Luciano Pavarotti", "Modena, Italia"],
 				[2009, "Placido Domingo", "Madrid, España"],
-				[2010, "Pascal Roge", "Desconocido"],
-				[2011, "John Barry", "Desconocido"],
+				[2010, "Pascal Roge"],
+				[2011, "John Barry"],
 				[2012, "Leonard Cohen", "Montreal, Quebec, Canadá"],
 				[2013, "Bonnie Raitt", "Burbank, California, Estados Unidos"],
 				[2014, "Bob Seger", "Dearborn, Michigan, Estados Unidos"],
 				[2015, "Silver Bullet Band", "No aplica"],
 				[2016, "B.B. King", "Indianola, Mississippi, Estados Unidos"],
-				[2017, "David Motion", "Desconocido"],
-				[2018, "Sally Potter", "Desconocido"],
+				[2017, "David Motion"],
+				[2018, "Sally Potter"],
 			];
 			const result = await qb.insert(table, rows).execute();
 			showResults(result);
@@ -2008,100 +2006,146 @@ WHERE TIPO_MUSICA = 'Country';`,
 			},
 		);
 	});
+	// Ejemplos extraidos del Capitulo 9
+	describe("Uso de predicados capitulo 9", async () => {
+		beforeEach(async () => {
+			qb = qb.use("INVENTARIO");
+		});
+		test(
+			"se consultará la tabla 'TIPOS_MUSICA' para obtener los 'NOMBRE_TIPO' de aquellas filas cuyo 'ID_TIPO' sea '11' o '12'",
+			{ only: false },
+			async () => {
+				const response = await qb
+					.select(["ID_TIPO", "NOMBRE_TIPO"])
+					.from("TIPOS_MUSICA")
+					.where(qb.or(qb.eq("ID_TIPO", 11), qb.eq("ID_TIPO", 12)))
+					.execute();
 
-	describe("Uso de predicados capitulo 9", { only: true }, async () => {
-		test("se consultará la tabla TIPOS_MUSICA para arrojar los nombres de aquellas filas cuyo valor ID_TIPO sea igual a 11 o 12", async () => {
-			const result = await qb
-				.select(["ID_TIPO", "NOMBRE_TIPO"])
-				.from("TIPOS_MUSICA")
-				.where(qb.or(qb.eq("ID_TIPO", 11), qb.eq("ID_TIPO", 12)))
-				.execute();
+				showResults(response);
 
-			showResults(result);
-
-			assert.equal(
-				await result.toString(),
-				`USE INVENTARIO;
+				assert.equal(
+					await response.toString(),
+					`USE INVENTARIO;
 SELECT ID_TIPO, NOMBRE_TIPO
 FROM TIPOS_MUSICA
 WHERE (ID_TIPO = 11
 OR ID_TIPO = 12);`,
-			);
-		});
-		test("se consultará la tabla ARTISTAS para buscar artistas diferentes a Patsy Cline y Bing Crosby", async () => {
-			const result = await qb
-				.select(["NOMBRE_ARTISTA", "LUGAR_DE_NACIMIENTO"])
-				.from("ARTISTAS")
-				.where(
-					qb.and(
-						qb.ne("NOMBRE_ARTISTA", "Patsy Cline"),
-						qb.ne("NOMBRE_ARTISTA", "Bing Crosby"),
-					),
-				)
-				.execute();
+				);
+				// rows[0] corresponde al primer comando 'USE INVENTARIO'
+				// rows[1] corresponde al segundo comando
+				const rows = response.result.rows[1];
+				// tiene que contener filas cuyo 'ID_TIPO' sea 11 o 12
+				assert.ok(
+					rows.every((item) => item.ID_TIPO === 11 || item.ID_TIPO === 12),
+					"Ha devuelto valores incorrectos",
+				);
+			},
+		);
+		test(
+			"se consultará la tabla 'ARTISTAS' para buscar artistas diferentes a 'Patsy Cline' y 'Bing Crosby'",
+			{ only: false },
+			async () => {
+				const response = await qb
+					.select(["NOMBRE_ARTISTA", "LUGAR_DE_NACIMIENTO"])
+					.from("ARTISTAS")
+					.where(
+						qb.and(
+							qb.ne("NOMBRE_ARTISTA", "Patsy Cline"),
+							qb.ne("NOMBRE_ARTISTA", "Bing Crosby"),
+						),
+					)
+					.execute();
 
-			showResults(result);
+				showResults(response);
 
-			assert.equal(
-				await result.toString(),
-				`USE INVENTARIO;
+				assert.equal(
+					await response.toString(),
+					`USE INVENTARIO;
 SELECT NOMBRE_ARTISTA, LUGAR_DE_NACIMIENTO
 FROM ARTISTAS
 WHERE (NOMBRE_ARTISTA <> 'Patsy Cline'
 AND NOMBRE_ARTISTA <> 'Bing Crosby');`,
-			);
-		});
-		test("combinar un predicado LIKE con otro predicado LIKE", async () => {
-			const result = await qb
-				.select("*")
-				.from("DISCOS_COMPACTOS")
-				.where(
-					qb.and(
-						qb.notLike("TITULO_CD", "%Christmas%"),
-						qb.like("TITULO_CD", "%Blue%"),
+				);
+				const rows = response.result.rows[1];
+				assert.ok(
+					rows.every(
+						(item) =>
+							item.NOMBRE_ARTISTA !== "Patsy Cline" &&
+							item.NOMBRE_ARTISTA !== "Bing Crosby",
 					),
-				)
-				.execute();
+					"Ha devuelto un artista incorrecto",
+				);
+			},
+		);
+		test(
+			"combinar un predicado 'LIKE' con otro predicado 'LIKE'",
+			{ only: false },
+			async () => {
+				const response = await qb
+					.select("*")
+					.from("DISCOS_COMPACTOS")
+					.where(
+						qb.and(
+							qb.notLike("TITULO_CD", "%Christmas%"),
+							qb.like("TITULO_CD", "%Blue%"),
+						),
+					)
+					.execute();
 
-			showResults(result);
+				showResults(response);
 
-			assert.equal(
-				await result.toString(),
-				`USE INVENTARIO;
+				assert.equal(
+					await response.toString(),
+					`USE INVENTARIO;
 SELECT *
 FROM DISCOS_COMPACTOS
 WHERE (TITULO_CD NOT LIKE ('%Christmas%')
 AND TITULO_CD LIKE ('%Blue%'));`,
-			);
-		});
+				);
 
-		test("creamos la tabla CDS_A_LA_MANO y añadimos registros", async () => {
-			const cds_a_la_mano = {
-				TITULO_CD: "varchar(60)",
-				DERECHOSDEAUTOR: "INT",
-				PRECIO_MENUDEO: "NUMERIC(5,2)",
-				INVENTARIO: "INT",
-			};
-			const cd_rows = [
-				["Famous Blue Raincoat", 1991, 16.99, 6],
-				["Blue", 1971, 14.99, 26],
-				["Past Light", 1983, 15.99, 18],
-				["Kojiki", 1990, 15.99, 2],
-				["That Christmas Feeling", 1993, 10.99, 5],
-				["Patsy Cline: 12 Greatest Hits", 1988, 16.99, 3],
-				["Court and Spark", 1974, 14.99, 25],
-			];
+				const rows = response.result.rows[1];
 
-			const result = await qb
-				.createTable("CDS_A_LA_MANO", { cols: cds_a_la_mano })
-				.insert("CDS_A_LA_MANO", [], cd_rows)
-				.execute();
+				assert.ok(
+					rows.every(
+						(item) =>
+							!item.TITULO_CD.includes("Christmas") &&
+							item.TITULO_CD.includes("Blue"),
+					),
+				);
+			},
+		);
 
-			showResults(result);
+		test(
+			"creamos la tabla 'CDS_A_LA_MANO' y añadimos registros",
+			{ only: false },
+			async () => {
+				const debug = false;
+				const cds_a_la_mano = {
+					TITULO_CD: "varchar(60)",
+					DERECHOSDEAUTOR: "INT",
+					PRECIO_MENUDEO: "NUMERIC(5,2)",
+					INVENTARIO: "INT",
+				};
+				const cd_rows = [
+					["Famous Blue Raincoat", 1991, 16.99, 6],
+					["Blue", 1971, 14.99, 26],
+					["Past Light", 1983, 15.99, 18],
+					["Kojiki", 1990, 15.99, 2],
+					["That Christmas Feeling", 1993, 10.99, 5],
+					["Patsy Cline: 12 Greatest Hits", 1988, 16.99, 3],
+					["Court and Spark", 1974, 14.99, 25],
+				];
 
-			assert.equal(
-				await result.toString(),
-				`USE INVENTARIO;
+				const result = await qb
+					.createTable("CDS_A_LA_MANO", { cols: cds_a_la_mano })
+					.insert("CDS_A_LA_MANO", cd_rows)
+					.execute(debug);
+
+				showResults(result, debug);
+
+				assert.equal(
+					await result.toString(),
+					`USE INVENTARIO;
 CREATE TABLE CDS_A_LA_MANO\n( TITULO_CD VARCHAR(60),
  DERECHOSDEAUTOR INT,
  PRECIO_MENUDEO DECIMAL(5,2),
@@ -2115,70 +2159,124 @@ VALUES
 ('That Christmas Feeling', 1993, 10.99, 5),
 ('Patsy Cline: 12 Greatest Hits', 1988, 16.99, 3),
 ('Court and Spark', 1974, 14.99, 25);`,
-			);
-		});
+				);
 
-		test("operador Igual a para comparar los valores en la columna TITULO_CD con uno de los títulos de CD", async () => {
-			const debug = true;
-			const query = `SELECT TITULO_CD, DERECHOSDEAUTOR
+				assert.ok(
+					await existTable(databaseTest, "inventario", "CDS_A_LA_MANO"),
+					"La tabla 'CDS_A_LA_MANO' no ha sido creada",
+				);
+				const describe = (
+					await describeTable(databaseTest, "inventario", "CDS_A_LA_MANO")
+				).map((item) => item.Field);
+				assert.ok(
+					Object.keys(cds_a_la_mano).every((col) => describe.includes(col)),
+					"Faltan campos por añadir",
+				);
+				const dataInTable = await getResultFromTest(
+					databaseTest,
+					"USE INVENTARIO",
+					"SELECT * FROM CDS_A_LA_MANO",
+				);
+				assert.ok(
+					dataInTable.length >= cd_rows.length,
+					"No se han insertado todos los elementos",
+				);
+			},
+		);
+		// operadores
+		test(
+			"operador 'igual a' para comparar los valores en la columna 'TITULO_CD'",
+			{ only: false },
+			async () => {
+				const debug = false;
+				const query = `SELECT TITULO_CD, DERECHOSDEAUTOR
 FROM CDS_A_LA_MANO
 WHERE TITULO_CD = 'Past Light';`;
 
-			const result = await qb
-				.select(["TITULO_CD", "DERECHOSDEAUTOR"])
-				.from("CDS_A_LA_MANO")
-				.where(eq("TITULO_CD", "Past Light"))
-				.execute(debug);
+				const response = await qb
+					.select(["TITULO_CD", "DERECHOSDEAUTOR"])
+					.from("CDS_A_LA_MANO")
+					.where(qb.eq("TITULO_CD", "Past Light"))
+					.execute(debug);
 
-			showResults(result, debug);
+				showResults(response, debug);
 
-			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
-		});
-		test("operador distinto a para comparar los valores en la columna TITULO_CD con uno de los títulos de CD", async () => {
-			const query = `SELECT TITULO_CD, DERECHOSDEAUTOR
+				assert.equal(await response.toString(), `USE INVENTARIO;\n${query}`);
+				const rows = response.result.rows[1];
+				assert.ok(
+					rows.every((item) => item.TITULO_CD === "Past Light"),
+					"Ha devuelto filas erroneas",
+				);
+			},
+		);
+		test(
+			"operador 'distinto a' para comparar los valores en la columna 'TITULO_CD' ",
+			{ only: false },
+			async () => {
+				const query = `SELECT TITULO_CD, DERECHOSDEAUTOR
 FROM CDS_A_LA_MANO
 WHERE TITULO_CD <> 'Past Light';`;
 
-			const result = await qb
-				.select(["TITULO_CD", "DERECHOSDEAUTOR"])
-				.from("CDS_A_LA_MANO")
-				.where(qb.ne("TITULO_CD", "Past Light"))
-				.execute();
+				const response = await qb
+					.select(["TITULO_CD", "DERECHOSDEAUTOR"])
+					.from("CDS_A_LA_MANO")
+					.where(qb.ne("TITULO_CD", "Past Light"))
+					.execute();
 
-			showResults(result);
+				showResults(response);
 
-			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
-		});
-		test("operador Menor que y al operador Mayor que", async () => {
-			const query = `SELECT TITULO_CD, INVENTARIO
+				assert.equal(await response.toString(), `USE INVENTARIO;\n${query}`);
+				const rows = response.result.rows[1];
+				assert.ok(
+					rows.every((item) => item.TITULO_CD !== "Past Light"),
+					"Ha devuelto filas erroneas",
+				);
+			},
+		);
+		test(
+			"operador 'AND', 'menor que', 'mayor que' y 'no igual'",
+			{ only: false },
+			async () => {
+				const query = `SELECT TITULO_CD, INVENTARIO
 FROM CDS_A_LA_MANO
 WHERE (INVENTARIO > 2
 AND INVENTARIO < 25
-AND  PRECIO_MENUDEO <> 16.99);`;
+AND PRECIO_MENUDEO <> 16.99);`;
 
-			const result = await qb
-				.select(["TITULO_CD", "INVENTARIO"])
-				.from("CDS_A_LA_MANO")
-				.where(
-					qb.and(
-						qb.gt("INVENTARIO", 2),
-						qb.lt("INVENTARIO", 25),
-						qb.ne(" PRECIO_MENUDEO", 16.99),
+				const response = await qb
+					.select(["TITULO_CD", "INVENTARIO"])
+					.from("CDS_A_LA_MANO")
+					.where(
+						qb.and(
+							qb.gt("INVENTARIO", 2),
+							qb.lt("INVENTARIO", 25),
+							qb.ne("PRECIO_MENUDEO", 16.99),
+						),
+					)
+					.execute();
+
+				showResults(response);
+
+				assert.equal(await response.toString(), `USE INVENTARIO;\n${query}`);
+				const rows = response.result.rows[1];
+				assert.ok(
+					rows.every(
+						(item) =>
+							item.INVENTARIO > 2 &&
+							item.INVENTARIO < 25 &&
+							item.PRECIO_MENUDEO !== 16.99,
 					),
-				)
-				.execute();
-
-			showResults(result);
-
-			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
-		});
-		test("Menor que o igual a y Mayor que o igual a.", async () => {
+					"Ha devuelto filas erroneas",
+				);
+			},
+		);
+		test("'Menor o igual' 'Mayor o igual'", { only: false }, async () => {
 			const query = `SELECT TITULO_CD, DERECHOSDEAUTOR
 FROM CDS_A_LA_MANO
 WHERE (DERECHOSDEAUTOR >= 1971
 AND DERECHOSDEAUTOR <= 1989);`;
 
-			const result = await qb
+			const response = await qb
 				.select(["TITULO_CD", "DERECHOSDEAUTOR"])
 				.from("CDS_A_LA_MANO")
 				.where(
@@ -2189,150 +2287,189 @@ AND DERECHOSDEAUTOR <= 1989);`;
 				)
 				.execute();
 
-			showResults(result);
+			showResults(response);
 
-			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await response.toString(), `USE INVENTARIO;\n${query}`);
+			assert.ok(
+				response.result.rows[1].every(
+					(item) =>
+						item.DERECHOSDEAUTOR >= 1971 && item.DERECHOSDEAUTOR <= 1989,
+				),
+				"Ha devuelto filas erroneas",
+			);
 		});
 
-		test("combinar dos o más predicados para formar una condición de búsqueda", async () => {
-			const query = `UPDATE CDS_A_LA_MANO
+		test(
+			"combinar dos o más predicados para formar una condición de búsqueda 'WHERE'",
+			{ only: false },
+			async () => {
+				const query = `UPDATE CDS_A_LA_MANO
 SET INVENTARIO = 3
 WHERE (TITULO_CD = 'That Christmas Feeling'
 AND DERECHOSDEAUTOR = 1993);`;
 
-			const result = await qb
-				.update("CDS_A_LA_MANO", { INVENTARIO: 3 })
-				.where(
-					qb.and(
-						qb.eq("TITULO_CD", "That Christmas Feeling"),
-						qb.eq("DERECHOSDEAUTOR", 1993),
-					),
+				const result = await qb
+					.update("CDS_A_LA_MANO", { INVENTARIO: 3 })
+					.where(
+						qb.and(
+							qb.eq("TITULO_CD", "That Christmas Feeling"),
+							qb.eq("DERECHOSDEAUTOR", 1993),
+						),
+					)
+					.execute();
+
+				showResults(result);
+
+				assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+				const data = (
+					await getResultFromTest(
+						databaseTest,
+						"use inventario",
+						"SELECT * FROM CDS_A_LA_MANO",
+					)
 				)
-				.execute();
+					.filter((item) => item.TITULO_CD === "That Christmas Feeling")
+					.filter((item) => item.DERECHOSDEAUTOR === 1993)
+					.map((item) => item.INVENTARIO);
 
-			showResults(result);
+				assert.ok(
+					data.every((item) => item === 3),
+					"No se han actualizado correctamente",
+				);
+			},
+		);
 
-			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
-		});
-
-		test("especifica un rango entre 14 y 16", async () => {
-			const query = `SELECT TITULO_CD, PRECIO_MENUDEO
+		test("especifica un rango entre 14 y 16", { only: false }, async () => {
+			const query = `SELECT TITULO_CD, PRECIO_MENUDEO, INVENTARIO
 FROM CDS_A_LA_MANO
 WHERE (PRECIO_MENUDEO BETWEEN 14 AND 16
 AND INVENTARIO > 10);`;
 
-			const result = await qb
-				.select(["TITULO_CD", "PRECIO_MENUDEO"])
+			const response = await qb
+				.select(["TITULO_CD", "PRECIO_MENUDEO", "INVENTARIO"])
 				.from("CDS_A_LA_MANO")
 				.where(
 					qb.and(qb.between("PRECIO_MENUDEO", 14, 16), qb.gt("INVENTARIO", 10)),
 				)
 				.execute();
 
-			showResults(result);
+			showResults(response);
 
-			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await response.toString(), `USE INVENTARIO;\n${query}`);
+			assert.ok(
+				response.result.rows[1].every(
+					(item) =>
+						item.PRECIO_MENUDEO >= 14 &&
+						item.PRECIO_MENUDEO <= 16 &&
+						item.INVENTARIO > 10,
+				),
+				"Ha devuelto filas erroneas",
+			);
 		});
 
-		test("excluye un rango entre 14 y 16", async () => {
+		test("excluye un rango entre 14 y 16", { only: false }, async () => {
 			const query = `SELECT TITULO_CD, PRECIO_MENUDEO
 FROM CDS_A_LA_MANO
 WHERE PRECIO_MENUDEO NOT BETWEEN 14 AND 16;`;
 
-			const result = await qb
+			const response = await qb
 				.select(["TITULO_CD", "PRECIO_MENUDEO"])
 				.from("CDS_A_LA_MANO")
 				.where(qb.notBetween("PRECIO_MENUDEO", 14, 16))
 				.execute();
 
-			showResults(result);
+			showResults(response);
 
-			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await response.toString(), `USE INVENTARIO;\n${query}`);
+			assert.ok(
+				response.result.rows[1].every(
+					(item) => item.PRECIO_MENUDEO < 14 || item.PRECIO_MENUDEO > 16,
+				),
+				"Ha devuelto filas erroneas",
+			);
 		});
 
-		test("arroja filas con un valor nulo", async () => {
+		test("filas con un valor de campo nulo", { only: false }, async () => {
 			const query = `SELECT *
 FROM ARTISTAS
 WHERE LUGAR_DE_NACIMIENTO IS NULL;`;
 
-			const result = await qb
+			const response = await qb
 				.select("*")
 				.from("ARTISTAS")
 				.where(qb.isNull("LUGAR_DE_NACIMIENTO"))
 				.execute();
 
-			showResults(result);
+			showResults(response);
 
-			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.equal(await response.toString(), `USE INVENTARIO;\n${query}`);
+			assert.ok(
+				response.result.rows[1].every(
+					(item) => item.LUGAR_DE_NACIMIENTO === null,
+				),
+				"Ha devuelto filas erroneas",
+			);
 		});
 		//fin test
-		test("arroja filas con un valor no nulo", async () => {
-			const query = `SELECT *
+		test(
+			"arroja filas con un valor de campo no nulo",
+			{ only: false },
+			async () => {
+				const query = `SELECT *
 FROM ARTISTAS
 WHERE LUGAR_DE_NACIMIENTO IS NOT NULL;`;
 
-			const result = await qb
-				.select("*")
-				.from("ARTISTAS")
-				.where(qb.isNotNull("LUGAR_DE_NACIMIENTO"))
-				.execute();
+				const response = await qb
+					.select("*")
+					.from("ARTISTAS")
+					.where(qb.isNotNull("LUGAR_DE_NACIMIENTO"))
+					.execute();
 
-			showResults(result);
+				showResults(response);
 
-			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
-		});
-		//fin test
-		test("encontrar cualquier CD que no contenga la palabra Christmas y si la palabra Blue en el título", async () => {
-			const query = `SELECT *
-FROM DISCOS_COMPACTOS
-WHERE (TITULO_CD NOT LIKE ('%Christmas%')
-AND TITULO_CD LIKE ('%Blue%'));`;
-
-			const result = await qb
-				.select("*")
-				.from("DISCOS_COMPACTOS")
-				.where(
-					qb.and(
-						qb.notLike("TITULO_CD", "%Christmas%"),
-						qb.like("TITULO_CD", "%Blue%"),
+				assert.equal(await response.toString(), `USE INVENTARIO;\n${query}`);
+				assert.ok(
+					response.result.rows[1].every(
+						(item) => item.LUGAR_DE_NACIMIENTO !== null,
 					),
-				)
-				.execute();
+					"Ha devuelto filas erroneas",
+				);
+			},
+		);
 
-			showResults(result);
-
-			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
-		});
 		//fin test
-		test("Crea las tablas MENUDEO_CD y REBAJA_CD", async () => {
-			const menudeo_cd = {
-				NOMBRE_CD: "VARCHAR(60)",
-				MENUDEO: "NUMERIC(5,2)",
-				EN_EXISTENCIA: "INT",
-			};
-			const rebaja_cd = {
-				TITULO: "VARCHAR(60)",
-				VENTA: "NUMERIC(5,2)",
-			};
-			const menudeo_cd_rows = [
-				["Famous Blue Raincoat", 16.99, 5],
-				["Blue", 14.99, 10],
-				["Court and Spark", 14.99, 12],
-				["Past Light", 15.99, 11],
-				["Kojiki", 15.99, 4],
-				["That Christmas Feeling", 10.99, 8],
-				["Patsy Cline: 12 Greatest Hits", 16.99, 14],
-			];
-			const rebaja_cd_rows = [
-				["Famous Blue Raincoat", 14.99],
-				["Blue", 12.99],
-				["Court and Spark", 14.99],
-				["Past Light", 14.99],
-				["Kojiki", 13.99],
-				["That Christmas Feeling", 10.99],
-				["Patsy Cline: 12 Greatest Hits", 16.99],
-			];
-			const query = `CREATE TABLE IF NOT EXISTS MENUDEO_CD
+		test(
+			"Crea y rellena las tablas 'MENUDEO_CD' y 'REBAJA_CD'",
+			{ only: false },
+			async () => {
+				const menudeo_cd = {
+					NOMBRE_CD: "VARCHAR(60)",
+					MENUDEO: "NUMERIC(5,2)",
+					EN_EXISTENCIA: "INT",
+				};
+				const rebaja_cd = {
+					TITULO: "VARCHAR(60)",
+					VENTA: "NUMERIC(5,2)",
+				};
+				const menudeo_cd_rows = [
+					["Famous Blue Raincoat", 16.99, 5],
+					["Blue", 14.99, 10],
+					["Court and Spark", 14.99, 12],
+					["Past Light", 15.99, 11],
+					["Kojiki", 15.99, 4],
+					["That Christmas Feeling", 10.99, 8],
+					["Patsy Cline: 12 Greatest Hits", 16.99, 14],
+				];
+				const rebaja_cd_rows = [
+					["Famous Blue Raincoat", 14.99],
+					["Blue", 12.99],
+					["Court and Spark", 14.99],
+					["Past Light", 14.99],
+					["Kojiki", 13.99],
+					["That Christmas Feeling", 10.99],
+					["Patsy Cline: 12 Greatest Hits", 16.99],
+				];
+				const query = `CREATE TABLE IF NOT EXISTS MENUDEO_CD
 ( NOMBRE_CD VARCHAR(60),
  MENUDEO DECIMAL(5,2),
  EN_EXISTENCIA INT );
@@ -2358,17 +2495,75 @@ VALUES
 ('That Christmas Feeling', 10.99),
 ('Patsy Cline: 12 Greatest Hits', 16.99);`;
 
-			const result = await qb
-				.createTable("MENUDEO_CD", { secure: true, cols: menudeo_cd })
-				.createTable("REBAJA_CD", { secure: true, cols: rebaja_cd })
-				.insert("MENUDEO_CD", [], menudeo_cd_rows)
-				.insert("REBAJA_CD", [], rebaja_cd_rows)
-				.execute();
+				const result = await qb
+					.createTable("MENUDEO_CD", { secure: true, cols: menudeo_cd })
+					.createTable("REBAJA_CD", { secure: true, cols: rebaja_cd })
+					.insert("MENUDEO_CD", menudeo_cd_rows)
+					.insert("REBAJA_CD", rebaja_cd_rows)
+					.execute();
 
-			showResults(result);
+				showResults(result);
 
-			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
-		});
+				assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+				// test tabla 'MENUDEO_CD'
+				assert.ok(
+					await existTable(databaseTest, "inventario", "MENUDEO_CD"),
+					"La tabla 'MENUDEO_CD' no ha sido creada",
+				);
+				const tablaMenudeo = (
+					await describeTable(databaseTest, "inventario", "MENUDEO_CD")
+				).map((item) => item.Field);
+				assert.ok(
+					Object.keys(menudeo_cd).every((item) => tablaMenudeo.includes(item)),
+					"Los campos no han sido definidos correctamente",
+				);
+				const dataMenudeo = (
+					await getResultFromTest(
+						databaseTest,
+						"use inventario",
+						"SELECT * FROM MENUDEO_CD",
+					)
+				).map((item) => item.NOMBRE_CD);
+
+				assert.ok(
+					dataMenudeo.length >= menudeo_cd_rows.length,
+					"Se han insertado menos lineas",
+				);
+				assert.ok(
+					menudeo_cd_rows.every((item) => dataMenudeo.includes(item[0])),
+					"Los campos 'NOMBRE_CD' no coinciden",
+				);
+
+				// test tabla 'REBAJA_CD'
+				assert.ok(
+					await existTable(databaseTest, "inventario", "REBAJA_CD"),
+					"La tabla 'REBAJA_CD' no ha sido creada",
+				);
+				const tablaRebaja = (
+					await describeTable(databaseTest, "inventario", "REBAJA_CD")
+				).map((item) => item.Field);
+				assert.ok(
+					Object.keys(rebaja_cd).every((item) => tablaRebaja.includes(item)),
+					"Los campos no han sido definidos correctamente",
+				);
+				const dataRebaja = (
+					await getResultFromTest(
+						databaseTest,
+						"use inventario",
+						"SELECT * FROM REBAJA_CD",
+					)
+				).map((item) => item.TITULO);
+
+				assert.ok(
+					dataRebaja.length >= rebaja_cd_rows.length,
+					"Se han insertado menos lineas",
+				);
+				assert.ok(
+					rebaja_cd_rows.every((item) => dataRebaja.includes(item[0])),
+					"Los campos 'TITULO' no coinciden",
+				);
+			},
+		);
 		//fin test
 		/**
 		 * Los valores RETAIL deberán ser de filas que tengan un valor EN_EXISTENCIA mayor a 9. En
@@ -2376,15 +2571,16 @@ otras palabras, la consulta deberá arrojar solamente aquellos CD cuyo precio re
 sea menor que algun precio de lista (MENUDEO) en aquellos CD que haya una existencia
 mayor a nueve.
 		 */
-		test("uso de ANY", async () => {
-			const debug = true;
+		test("uso de ANY", { only: false }, async () => {
+			//Esto significa que la condición es verdadera si al menos una comparación resulta verdadera. Equivale a un OR
+			const debug = false;
 			const query = `SELECT TITULO, VENTA
 FROM REBAJA_CD
 WHERE VENTA < ANY ( SELECT MENUDEO
 FROM MENUDEO_CD
 WHERE EN_EXISTENCIA > 9 );`;
 
-			const result = await qb
+			const response = await qb
 				.select(["TITULO", "VENTA"])
 				.from("REBAJA_CD")
 				.where(
@@ -2400,11 +2596,26 @@ WHERE EN_EXISTENCIA > 9 );`;
 				)
 				.execute(debug);
 
-			showResults(result, debug);
-			// assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+			showResults(response, debug);
+			assert.equal(await response.toString(), `USE INVENTARIO;\n${query}`);
+			const menudeoList = (
+				await getResultFromTest(
+					databaseTest,
+					"use inventario",
+					"SELECT MENUDEO FROM MENUDEO_CD WHERE EN_EXISTENCIA >9",
+				)
+			).map((item) => item.MENUDEO);
+			const rows = response.result.rows[1].map((item) => item.VENTA);
+			assert.ok(
+				rows.every(
+					(venta) => menudeoList.some((menudeo) => venta < menudeo),
+					"A devuelto filas que no cumplen",
+				),
+			);
 		});
 		//fin test
-		test("uso de SOME", async () => {
+		test("uso de SOME", { only: true }, async () => {
+			//SOME es un sinonimo de ANY
 			const query = `SELECT TITULO, VENTA
 FROM REBAJA_CD
 WHERE VENTA < SOME ( SELECT MENUDEO
@@ -2431,14 +2642,15 @@ WHERE EN_EXISTENCIA > 9 );`;
 			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
-		test("uso de ALL", async () => {
+		test("uso de ALL", { only: false }, async () => {
+			//la condición es verdadera para todos los valores en una lista o subconsulta equivale a un AND
 			const query = `SELECT TITULO, VENTA
 FROM REBAJA_CD
 WHERE VENTA < ALL ( SELECT MENUDEO
 FROM MENUDEO_CD
 WHERE EN_EXISTENCIA > 9 );`;
 
-			const result = await qb
+			const response = await qb
 				.select(["TITULO", "VENTA"])
 				.from("REBAJA_CD")
 				.where(
@@ -2454,8 +2666,22 @@ WHERE EN_EXISTENCIA > 9 );`;
 				)
 				.execute();
 
-			showResults(result);
-			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+			showResults(response);
+			assert.equal(await response.toString(), `USE INVENTARIO;\n${query}`);
+			const menudeoList = (
+				await getResultFromTest(
+					databaseTest,
+					"use inventario",
+					"SELECT MENUDEO FROM MENUDEO_CD WHERE EN_EXISTENCIA >9",
+				)
+			).map((item) => item.MENUDEO);
+			const rows = response.result.rows[1].map((item) => item.VENTA);
+			assert.ok(
+				rows.every(
+					(venta) => menudeoList.every((menudeo) => venta < menudeo),
+					"A devuelto filas que no cumplen",
+				),
+			);
 		});
 		//fin test
 	});
@@ -2466,7 +2692,7 @@ WHERE EN_EXISTENCIA > 9 );`;
 		 * SELECT deberá ser una función set o estar incluido en un grupo
 		 */
 
-		test("crea tabla CDS_VENDIDOS", async () => {
+		test("crea tabla CDS_VENDIDOS", { only: true }, async () => {
 			const cdsVendidos = {
 				NOMBRE_ARTISTA: "VARCHAR(60)",
 				NOMBRE_CD: "VARCHAR(60)",

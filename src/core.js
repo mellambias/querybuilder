@@ -471,17 +471,49 @@ class Core {
 
 	// Predicados
 	predicados() {
-		const operadores = {
+		//operaciones con un argumento
+		const operOneCol = {
+			isNull: "IS NULL",
+			isNotNull: "IS NOT NULL",
+		};
+		//operaciones con dos argumentos
+		const operTwoCols = {
 			eq: "=",
 			ne: "<>",
 			gt: ">",
 			gte: ">=",
 			lt: "<",
 			lte: "<=",
-			isNull: "IS NULL",
-			isNotNull: "IS NOT NULL",
 		};
-		for (const oper in operadores) {
+
+		//operaciones con tres argumentos
+		const operThreeArg = { between: "BETWEEN", notBetween: "NOT BETWEEN" };
+
+		//operaciones con n-argumentos
+		const logicos = {
+			and: "AND",
+			or: "OR",
+			not: "NOT",
+			like: "LIKE",
+			notLike: "NOT LIKE",
+			distinct: "DISTINCT",
+		};
+
+		// Operaciones con un argumento
+		for (const operOne in operOneCol) {
+			if (typeof this[operOne] === "function") {
+				continue;
+			}
+			this[operOne] = (a, next) => {
+				if (a instanceof QueryBuilder) {
+					return `${next.q.pop()} ${operOneCol[operOne]}`;
+				}
+				return `${a} ${operOneCol[operOne]}`;
+			};
+		}
+
+		// Operaciones con dos argumentos
+		for (const oper in operTwoCols) {
 			if (typeof this[oper] === "function") {
 				continue;
 			}
@@ -495,22 +527,16 @@ class Core {
 					valorDeA = next.q.pop();
 				}
 				if (valorDeB !== undefined) {
-					return `${valorDeA} ${operadores[oper]} ${typeof valorDeB === "string" ? (/^(ANY|SOME|ALL)$/.test(valorDeB.match(/^\w+/)[0]) ? valorDeB : `'${valorDeB}'`) : valorDeB}`;
+					return `${valorDeA} ${operTwoCols[oper]} ${typeof valorDeB === "string" ? (/^(ANY|SOME|ALL)$/.test(valorDeB.match(/^\w+/)[0]) ? valorDeB : `'${valorDeB}'`) : valorDeB}`;
 				}
 				if (Array.isArray(valorDeA)) {
-					return `${valorDeA.join(` ${operadores[oper]}\nAND `)} ${operadores[oper]}`;
+					return `${valorDeA.join(` ${operTwoCols[oper]}\nAND `)} ${operTwoCols[oper]}`;
 				}
-				return `${valorDeA} ${operadores[oper]}`;
+				return `${valorDeA} ${operTwoCols[oper]}`;
 			};
 		}
-		const logicos = {
-			and: "AND",
-			or: "OR",
-			not: "NOT",
-			like: "LIKE",
-			notLike: "NOT LIKE",
-			distinct: "DISTINCT",
-		};
+
+		// Operaciones logicas con n-argumentos
 		for (const oper in logicos) {
 			if (/^(and|or)$/i.test(oper)) {
 				this[oper] = (...predicados) => {
@@ -547,11 +573,12 @@ class Core {
 					`${logicos[oper].toUpperCase()} ${predicados}`;
 			}
 		}
-		const operTreeArg = { between: "BETWEEN", notBetween: "NOT BETWEEN" };
-		for (const oper in operTreeArg) {
+
+		// Operaciones con tres argumentos
+		for (const oper in operThreeArg) {
 			if (/^(between|notBetween)$/i.test(oper)) {
 				this[oper] = (campo, min, max) => {
-					return `${campo} ${operTreeArg[oper].toUpperCase()} ${min} AND ${max}`;
+					return `${campo} ${operThreeArg[oper].toUpperCase()} ${min} AND ${max}`;
 				};
 			}
 		}
