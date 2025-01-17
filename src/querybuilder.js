@@ -939,7 +939,7 @@ class QueryBuilder {
 		const names = ["count", "max", "min", "sum", "avg", "upper", "lower"];
 		for (const name of names) {
 			this[name] = (column, alias, next) => {
-				const command = this.language[name](column, alias);
+				const command = this.language[name](column, alias, next);
 				log(
 					["functionOneParam", " %s"],
 					"next %o Resultado: %o",

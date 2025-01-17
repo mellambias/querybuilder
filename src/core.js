@@ -74,16 +74,17 @@ class Core {
 	}
 
 	getSubselect(next) {
-		const subSelect = [next.q.pop()];
-		while (
-			!subSelect[0].toUpperCase().startsWith("SELECT") &&
-			next.q.length > 0
-		) {
-			subSelect.unshift(next.q.pop());
+		const start = next.q.findLastIndex((item) =>
+			item.toUpperCase().startsWith("SELECT"),
+		);
+		if (start === -1 || start < 2) {
+			// no existe un 'SELECT'
+			return [next.q.pop()];
 		}
+		const subSelect = next.q.splice(start, next.q.length - start);
 		log(
 			["Core", "getSubselect"],
-			"Modifica next %o\n devuelve: subSelect %o",
+			"Modifica next:\n%o\n subSelect:\n%o",
 			next,
 			subSelect,
 		);
@@ -521,13 +522,19 @@ class Core {
 				let valorDeA = a;
 				let valorDeB = b;
 				if (b instanceof QueryBuilder) {
-					valorDeB = next.q.pop();
+					valorDeB = `( ${this.getSubselect(next).join("\n")} )`;
 				}
 				if (a instanceof QueryBuilder) {
-					valorDeA = next.q.pop();
+					valorDeA = this.getSubselect(next).join("\n");
 				}
-				if (valorDeB !== undefined) {
-					return `${valorDeA} ${operTwoCols[oper]} ${typeof valorDeB === "string" ? (/^(ANY|SOME|ALL)$/.test(valorDeB.match(/^\w+/)[0]) ? valorDeB : `'${valorDeB}'`) : valorDeB}`;
+				if (b !== undefined) {
+					if (typeof b === "string") {
+						if (/^(ANY|SOME|ALL)$/.test(b.match(/^\w+/)[0])) {
+							valorDeB = b;
+						}
+						valorDeB = `'${b}'`;
+					}
+					return `${valorDeA} ${operTwoCols[oper]} ${valorDeB}`;
 				}
 				if (Array.isArray(valorDeA)) {
 					return `${valorDeA.join(` ${operTwoCols[oper]}\nAND `)} ${operTwoCols[oper]}`;
@@ -747,8 +754,14 @@ class Core {
 			 * @argument {string|column} column - Nombre de la columna sobre la funcion
 			 * @argument {string} alias - alias de la columna AS
 			 */
-			this[name] = (column, alias) =>
-				`${name.toUpperCase()}(${column})${typeof alias !== "undefined" ? ` AS ${alias}` : ""}`;
+			this[name] = (column, alias, next) => {
+				let colName = column;
+				if (column instanceof QueryBuilder) {
+					colName = next.q.pop();
+				}
+
+				return `${name.toUpperCase()}(${colName})${typeof alias !== "undefined" ? ` AS ${alias}` : ""}`;
+			};
 		}
 	}
 

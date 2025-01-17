@@ -48,14 +48,13 @@ export const select = {
 					colStack[index] = `${colValue}`;
 					log("despues QB", "colStack", colStack);
 				} else {
-					log("colValue?.col", "colValue colStack", colValue.col, colStack);
-					if (colValue?.col !== undefined) {
-						if (colValue.as !== undefined) {
-							colStack[index] = `${colValue.col} AS ${colValue.as}`;
-						} else {
-							colStack[index] = `${colValue.col}`;
-						}
-					}
+					log(
+						["sql2006", "columns", "colValue?.col"],
+						"colValue colStack",
+						colValue,
+						colStack,
+					);
+					colStack[index] = `${colValue}`;
 				}
 			}
 

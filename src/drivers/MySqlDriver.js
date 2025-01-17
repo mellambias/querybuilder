@@ -14,7 +14,8 @@ class MySqlDriver extends Driver {
 			user: this.username,
 			password: this.password,
 			database: this.database || "",
-			multipleStatements: true,
+			multipleStatements: true, // Permite varias consultas en una llamada
+			decimalNumbers: true, //DECIMAL and NEWDECIMAL types always returned as string unless you pass this config option. Could lose precision on the number as Javascript Number is a Float!
 		});
 		return this;
 	}

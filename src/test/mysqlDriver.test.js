@@ -10,6 +10,8 @@ import {
 	existView,
 	describeTable,
 	restriccionesTable,
+	colsExistInTable,
+	getColValuesFrom,
 } from "./utilsForTest/resultUtils.js";
 
 const MySql8 = config.databases.MySql8;
@@ -2614,7 +2616,7 @@ WHERE EN_EXISTENCIA > 9 );`;
 			);
 		});
 		//fin test
-		test("uso de SOME", { only: true }, async () => {
+		test("uso de SOME", { only: false }, async () => {
 			//SOME es un sinonimo de ANY
 			const query = `SELECT TITULO, VENTA
 FROM REBAJA_CD
@@ -2687,12 +2689,15 @@ WHERE EN_EXISTENCIA > 9 );`;
 	});
 
 	describe("uso de funciones SET capitulo 10", async () => {
+		beforeEach(async () => {
+			qb = qb.use("INVENTARIO");
+		});
 		/**
 		 * Cada vez que se incluya una función set en una instrucción SQL, cada argumento en la lista
 		 * SELECT deberá ser una función set o estar incluido en un grupo
 		 */
 
-		test("crea tabla CDS_VENDIDOS", { only: true }, async () => {
+		test("crea tabla CDS_VENDIDOS", { only: false }, async () => {
 			const cdsVendidos = {
 				NOMBRE_ARTISTA: "VARCHAR(60)",
 				NOMBRE_CD: "VARCHAR(60)",
@@ -2730,64 +2735,117 @@ VALUES
 
 			const result = await qb
 				.createTable("CDS_VENDIDOS", { cols: cdsVendidos, secure: true })
-				.insert("CDS_VENDIDOS", [], cdsVendidosRows)
+				.insert("CDS_VENDIDOS", cdsVendidosRows)
 				.execute();
 
 			showResults(result);
 			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.ok(
+				await existTable(databaseTest, "inventario", "CDS_VENDIDOS"),
+				"la tabla no ha sido creada",
+			);
+			assert.ok(
+				await colsExistInTable(
+					databaseTest,
+					"inventario",
+					"CDS_VENDIDOS",
+					cdsVendidos,
+				),
+				"Las columnas no coinciden",
+			);
+			const nombresCdInTable = await getColValuesFrom(
+				databaseTest,
+				"inventario",
+				"CDS_VENDIDOS",
+				"NOMBRE_CD",
+			);
+			assert.ok(
+				cdsVendidosRows.every((item) => nombresCdInTable.includes(item[1])),
+				"Los 'NOMBRE_CD' no existen en la base de datos",
+			);
 		});
 		//fin test
-		test("contar registros", async () => {
+		test("contar registros", { only: false }, async () => {
 			const query = `SELECT COUNT(*) AS FILAS_TOTALES
 FROM CDS_VENDIDOS;`;
 
-			const result = await qb
+			const response = await qb
 				.select(qb.count("*", "FILAS_TOTALES"))
 				.from("CDS_VENDIDOS")
 				.execute();
 
-			showResults(result);
-			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+			showResults(response);
+			assert.equal(await response.toString(), `USE INVENTARIO;\n${query}`);
+			const rows = response.result.rows[1];
+			const values = await getColValuesFrom(
+				databaseTest,
+				"inventario",
+				"CDS_VENDIDOS",
+				"NOMBRE_ARTISTA",
+			);
+			assert.equal(values.length, rows.map((item) => item.FILAS_TOTALES)[0]);
 		});
 		//fin test
-		test("contar valores en una columna", async () => {
+		test("contar valores en una columna", { only: false }, async () => {
 			const query = `SELECT COUNT(NOMBRE_ARTISTA) AS TOTAL_DE_ARTISTAS
 FROM CDS_VENDIDOS
 WHERE VENDIDOS > 20;`;
 
-			const result = await qb
+			const response = await qb
 				.select(qb.count("NOMBRE_ARTISTA", "TOTAL_DE_ARTISTAS"))
 				.from("CDS_VENDIDOS")
 				.where(qb.gt("VENDIDOS", 20))
 				.execute();
 
-			showResults(result);
-			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+			showResults(response);
+			assert.equal(await response.toString(), `USE INVENTARIO;\n${query}`);
+			const rows = response.result.rows[1];
+			const values = (
+				await getColValuesFrom(
+					databaseTest,
+					"inventario",
+					"CDS_VENDIDOS",
+					"VENDIDOS",
+				)
+			).filter((item) => item > 20);
+			assert.equal(
+				values.length,
+				rows.map((item) => item.TOTAL_DE_ARTISTAS)[0],
+			);
 		});
 		//fin test
-		test("contar valores unicos en una columna", async () => {
+		test("contar valores unicos en una columna", { only: false }, async () => {
 			const query = `SELECT COUNT(DISTINCT NOMBRE_ARTISTA) AS TOTAL_DE_ARTISTAS
 FROM CDS_VENDIDOS
 WHERE VENDIDOS > 20;`;
 
-			const result = await qb
+			const response = await qb
 				.select(qb.count(qb.distinct("NOMBRE_ARTISTA"), "TOTAL_DE_ARTISTAS"))
 				.from("CDS_VENDIDOS")
 				.where(qb.gt("VENDIDOS", 20))
 				.execute();
 
-			showResults(result);
-			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+			showResults(response);
+			assert.equal(await response.toString(), `USE INVENTARIO;\n${query}`);
+			const rows = response.result.rows[1];
+			const unique = new Set(); // solo admite valores unicos
+			// biome-ignore lint/complexity/noForEach: <explanation>
+			(await getColValuesFrom(databaseTest, "inventario", "CDS_VENDIDOS", "*"))
+				.filter((item) => item.VENDIDOS > 20)
+				.forEach((item) => {
+					unique.add(item.NOMBRE_ARTISTA);
+				});
+			assert.equal(unique.size, rows.map((item) => item.TOTAL_DE_ARTISTAS)[0]);
 		});
 		//fin test
 
-		test("el valor mas alto para una columna", async () => {
+		test("el valor mas alto para una columna", { only: false }, async () => {
 			const query = `SELECT NOMBRE_ARTISTA, NOMBRE_CD, VENDIDOS
 FROM CDS_VENDIDOS
 WHERE VENDIDOS = ( SELECT MAX(VENDIDOS)
 FROM CDS_VENDIDOS );`;
 
-			const result = await qb
+			const response = await qb
 				.select(["NOMBRE_ARTISTA", "NOMBRE_CD", "VENDIDOS"])
 				.from("CDS_VENDIDOS")
 				.where(
@@ -2795,65 +2853,152 @@ FROM CDS_VENDIDOS );`;
 				)
 				.execute();
 
-			showResults(result);
-			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+			showResults(response);
+			assert.equal(await response.toString(), `USE INVENTARIO;\n${query}`);
+			const valorMaximo = Math.max(
+				...(await getColValuesFrom(
+					databaseTest,
+					"inventario",
+					"CDS_VENDIDOS",
+					"VENDIDOS",
+				)),
+			);
+			assert.ok(
+				response.result.rows[1].every((item) => item.VENDIDOS === valorMaximo),
+				"Las filas devueltas no corresponden a lo esperado",
+			);
 		});
 		//fin test
-		test("el valor mas alto para una columna usando agrupacion", async () => {
-			const query = `SELECT NOMBRE_ARTISTA, MAX(VENDIDOS) AS MAX_VENDIDOS
+		test(
+			"el valor 'maximo' para una columna usando agrupacion",
+			{ only: false },
+			async () => {
+				const query = `SELECT NOMBRE_ARTISTA, MAX(VENDIDOS) AS MAX_VENDIDOS
+FROM CDS_VENDIDOS
+WHERE VENDIDOS > 20
+GROUP BY NOMBRE_ARTISTA;`;
+
+				const response = await qb
+					.select(["NOMBRE_ARTISTA", qb.max("VENDIDOS", "MAX_VENDIDOS")])
+					.from("CDS_VENDIDOS")
+					.where(qb.gt("VENDIDOS", 20))
+					.groupBy("NOMBRE_ARTISTA")
+					.execute();
+
+				showResults(response);
+				assert.equal(await response.toString(), `USE INVENTARIO;\n${query}`);
+				assert.ok(
+					response.result.rows[1].length === 6,
+					"El número de filas devueltas debe ser 6",
+				);
+			},
+		);
+		//fin test
+		test(
+			"suma de valores de una columna usando 'GROUP BY'",
+			{ only: false },
+			async () => {
+				const query = `SELECT NOMBRE_ARTISTA, SUM(VENDIDOS) AS TOTAL_VENDIDOS
 FROM CDS_VENDIDOS
 WHERE VENDIDOS > 30
 GROUP BY NOMBRE_ARTISTA;`;
 
-			const result = await qb
-				.select(["NOMBRE_ARTISTA", qb.max("VENDIDOS", "MAX_VENDIDOS")])
-				.from("CDS_VENDIDOS")
-				.where(qb.gt("VENDIDOS", 30))
-				.groupBy("NOMBRE_ARTISTA")
-				.execute();
+				const result = await qb
+					.select(["NOMBRE_ARTISTA", qb.sum("VENDIDOS", "TOTAL_VENDIDOS")])
+					.from("CDS_VENDIDOS")
+					.where(qb.gt("VENDIDOS", 30))
+					.groupBy("NOMBRE_ARTISTA")
+					.execute();
 
-			showResults(result);
-			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
-		});
+				showResults(result);
+				assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+				const data = (
+					await getColValuesFrom(
+						databaseTest,
+						"inventario",
+						"CDS_VENDIDOS",
+						"*",
+					)
+				)
+					.filter((item) => item.VENDIDOS > 30)
+					.reduce((acumulados, actual) => {
+						if (acumulados[actual.NOMBRE_ARTISTA] === undefined) {
+							acumulados[actual.NOMBRE_ARTISTA] = actual.VENDIDOS;
+						} else {
+							acumulados[actual.NOMBRE_ARTISTA] += actual.VENDIDOS;
+						}
+						return acumulados;
+					}, {});
+				assert.ok(
+					result.result.rows[1].every(
+						(item) => data[item.NOMBRE_ARTISTA] === item.TOTAL_VENDIDOS,
+					),
+					"Los valores devueltos no suman correctamente",
+				);
+			},
+		);
 		//fin test
-		test("suma de valores de una columna usando grupos", async () => {
-			const query = `SELECT NOMBRE_ARTISTA, SUM(VENDIDOS) AS TOTAL_VENDIDOS
+		test(
+			"promedio de valores de una columna usando 'GROUP BY'",
+			{ only: false },
+			async () => {
+				const query = `SELECT NOMBRE_ARTISTA, AVG(VENDIDOS) AS PROM_VENDIDOS
 FROM CDS_VENDIDOS
 WHERE VENDIDOS > 30
 GROUP BY NOMBRE_ARTISTA;`;
 
-			const result = await qb
-				.select(["NOMBRE_ARTISTA", qb.sum("VENDIDOS", "TOTAL_VENDIDOS")])
-				.from("CDS_VENDIDOS")
-				.where(qb.gt("VENDIDOS", 30))
-				.groupBy("NOMBRE_ARTISTA")
-				.execute();
+				const result = await qb
+					.select(["NOMBRE_ARTISTA", qb.avg("VENDIDOS", "PROM_VENDIDOS")])
+					.from("CDS_VENDIDOS")
+					.where(qb.gt("VENDIDOS", 30))
+					.groupBy("NOMBRE_ARTISTA")
+					.execute();
 
-			showResults(result);
-			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
-		});
-		//fin test
-		test("promedio de valores de una columna usando grupos", async () => {
-			const query = `SELECT NOMBRE_ARTISTA, AVG(VENDIDOS) AS PROM_VENDIDOS
-FROM CDS_VENDIDOS
-WHERE VENDIDOS > 30
-GROUP BY NOMBRE_ARTISTA;`;
+				showResults(result);
+				assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 
-			const result = await qb
-				.select(["NOMBRE_ARTISTA", qb.avg("VENDIDOS", "PROM_VENDIDOS")])
-				.from("CDS_VENDIDOS")
-				.where(qb.gt("VENDIDOS", 30))
-				.groupBy("NOMBRE_ARTISTA")
-				.execute();
-
-			showResults(result);
-			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
-		});
+				const data = (
+					await getColValuesFrom(
+						databaseTest,
+						"inventario",
+						"CDS_VENDIDOS",
+						"*",
+					)
+				)
+					.filter((item) => item.VENDIDOS > 30)
+					.reduce((acumulados, actual) => {
+						if (acumulados[actual.NOMBRE_ARTISTA] === undefined) {
+							acumulados[actual.NOMBRE_ARTISTA] = {
+								acumulado: actual.VENDIDOS,
+								inputs: 1,
+								avg: actual.VENDIDOS,
+							};
+						} else {
+							acumulados[actual.NOMBRE_ARTISTA] = {
+								acumulado:
+									acumulados[actual.NOMBRE_ARTISTA].acumulado + actual.VENDIDOS,
+								inputs: acumulados[actual.NOMBRE_ARTISTA].inputs + 1,
+								avg:
+									(acumulados[actual.NOMBRE_ARTISTA].acumulado +
+										actual.VENDIDOS) /
+									(acumulados[actual.NOMBRE_ARTISTA].inputs + 1),
+							};
+						}
+						return acumulados;
+					}, {});
+				assert.ok(
+					result.result.rows[1].every(
+						(item) => data[item.NOMBRE_ARTISTA].avg === item.PROM_VENDIDOS,
+					),
+					"El promedio devuelto no corresponde al calculado",
+				);
+			},
+		);
 		//fin test
 	});
 
 	describe("uso de funciones de valor capitulo 10", () => {
-		test("crea tabla FECHAS_VENTAS", async () => {
+		test("crea tabla FECHAS_VENTAS", { only: true }, async () => {
 			const fechasVentas = {
 				DISCO_COMPACTO: "VARCHAR(60)",
 				FECHA_VENTA: "TIMESTAMP",

@@ -235,3 +235,38 @@ WHERE
 	const valuesData = await getResultFromTest(driver, values);
 	return { claves: clavesData, check: checkData, values: valuesData };
 }
+
+/**
+ * Devuelve true si todos los atributos de cols estan definidos en la tabla
+ * @param {object} databaseTest Driver que conecta con la base de datos
+ * @param {string} dataBase Nombre de la base de datos
+ * @param {string} table Nombre de la tabla
+ * @param {Object} cols Objeto con pares atributo:valor
+ * @returns true|false
+ */
+export async function colsExistInTable(databaseTest, dataBase, table, cols) {
+	const tabla = (await describeTable(databaseTest, dataBase, table)).map(
+		(item) => item.Field,
+	);
+	return Object.keys(cols).every((item) => tabla.includes(item));
+}
+
+/**
+ * Devuelve una Promesa que resuelve con una lista con los valores del campo 'col'
+ * @param {object} databaseTest Driver que conecta con la base de datos
+ * @param {string} dataBase Nombre de la base de datos
+ * @param {string} table Nombre de la tabla
+ * @param {string} col Nombre de la columna
+ * @returns
+ */
+export async function getColValuesFrom(databaseTest, dataBase, table, col) {
+	const data = await getResultFromTest(
+		databaseTest,
+		`use ${dataBase}`,
+		`SELECT * FROM ${table}`,
+	);
+	if (col === "*") {
+		return data;
+	}
+	return data.map((item) => item[col]);
+}
