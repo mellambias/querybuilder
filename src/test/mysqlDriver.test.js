@@ -13,6 +13,7 @@ import {
 	colsExistInTable,
 	getColValuesFrom,
 } from "./utilsForTest/resultUtils.js";
+import { formatDate } from "../utils/utils.js";
 
 const MySql8 = config.databases.MySql8;
 let qb;
@@ -2688,7 +2689,7 @@ WHERE EN_EXISTENCIA > 9 );`;
 		//fin test
 	});
 
-	describe("uso de funciones SET capitulo 10", async () => {
+	describe("uso de funciones SET capitulo 10A", async () => {
 		beforeEach(async () => {
 			qb = qb.use("INVENTARIO");
 		});
@@ -2997,8 +2998,11 @@ GROUP BY NOMBRE_ARTISTA;`;
 		//fin test
 	});
 
-	describe("uso de funciones de valor capitulo 10", () => {
-		test("crea tabla FECHAS_VENTAS", { only: true }, async () => {
+	describe("uso de funciones de valor 'capitulo 10B'", () => {
+		beforeEach(async () => {
+			qb = qb.use("INVENTARIO");
+		});
+		test("crea tabla FECHAS_VENTAS", { only: false }, async () => {
 			const fechasVentas = {
 				DISCO_COMPACTO: "VARCHAR(60)",
 				FECHA_VENTA: "TIMESTAMP",
@@ -3034,59 +3038,137 @@ VALUES
 
 			const result = await qb
 				.createTable("FECHAS_VENTAS", { cols: fechasVentas, secure: true })
-				.insert("FECHAS_VENTAS", [], fechasVentasRows)
+				.insert("FECHAS_VENTAS", fechasVentasRows)
 				.execute();
 
 			showResults(result);
 			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.ok(
+				await existTable(databaseTest, "inventario", "FECHAS_VENTAS"),
+				"la tabla 'FECHAS_VENTAS' no ha sido creada",
+			);
+			assert.ok(
+				await colsExistInTable(
+					databaseTest,
+					"inventario",
+					"FECHAS_VENTAS",
+					fechasVentas,
+				),
+				"Las columnas no coinciden",
+			);
+			const discosInTable = await getColValuesFrom(
+				databaseTest,
+				"inventario",
+				"FECHAS_VENTAS",
+				"DISCO_COMPACTO",
+			);
+			assert.ok(
+				fechasVentasRows.every((item) => discosInTable.includes(item[0])),
+				"Las filas a insertar no se encuentran en la tabla",
+			);
 		});
 		//fin test
-		test("extrae un número definido de caracteres", async () => {
-			const query = `SELECT SUBSTRING(DISCO_COMPACTO FROM 1 FOR 10) AS NOMBRE_ABREVIADO
+		test(
+			"extrae un numero definido de caracteres con 'substring'",
+			{ only: false },
+			async () => {
+				const query = `SELECT SUBSTRING(DISCO_COMPACTO FROM 1 FOR 10) AS NOMBRE_ABREVIADO
 FROM FECHAS_VENTAS;`;
 
-			const result = await qb
-				.select([qb.substr("DISCO_COMPACTO", 1, 10, "NOMBRE_ABREVIADO")])
-				.from("FECHAS_VENTAS")
-				.execute();
+				const response = await qb
+					.select([qb.substr("DISCO_COMPACTO", 1, 10, "NOMBRE_ABREVIADO")])
+					.from("FECHAS_VENTAS")
+					.execute();
 
-			showResults(result);
-			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
-		});
+				showResults(response);
+				assert.equal(await response.toString(), `USE INVENTARIO;\n${query}`);
+
+				const actual = response.result.rows[1].map(
+					(item) => item.NOMBRE_ABREVIADO,
+				);
+				const expect = (
+					await getColValuesFrom(
+						databaseTest,
+						"inventario",
+						"FECHAS_VENTAS",
+						"DISCO_COMPACTO",
+					)
+				).map((item) => item.substring(0, 10));
+
+				assert.deepEqual(actual, expect, "No son iguales");
+			},
+		);
 		//fin test
-		test("uso de substring en la clausula WHERE", async () => {
-			const query = `SELECT DISCO_COMPACTO, FECHA_VENTA
+		test(
+			"uso de 'substring' en la clausula 'WHERE'",
+			{ only: false },
+			async () => {
+				const query = `SELECT DISCO_COMPACTO, FECHA_VENTA
 FROM FECHAS_VENTAS
 WHERE SUBSTRING(DISCO_COMPACTO FROM 1 FOR 4) = 'Blue';`;
 
-			const result = await qb
-				.select(["DISCO_COMPACTO", "FECHA_VENTA"])
-				.from("FECHAS_VENTAS")
-				.where(qb.eq(qb.substr("DISCO_COMPACTO", 1, 4), "Blue"))
-				.execute();
+				const response = await qb
+					.select(["DISCO_COMPACTO", "FECHA_VENTA"])
+					.from("FECHAS_VENTAS")
+					.where(qb.eq(qb.substr("DISCO_COMPACTO", 1, 4), "Blue"))
+					.execute();
 
-			showResults(result);
-			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
-		});
+				showResults(response);
+				assert.equal(await response.toString(), `USE INVENTARIO;\n${query}`);
+				const actual = response.result.rows[1].map(
+					(item) => item.DISCO_COMPACTO,
+				);
+				const expect = (
+					await getColValuesFrom(
+						databaseTest,
+						"inventario",
+						"FECHAS_VENTAS",
+						"DISCO_COMPACTO",
+					)
+				).filter((item) => item.substring(0, 4) === "Blue");
+
+				assert.deepEqual(actual, expect, "No son iguales");
+			},
+		);
 		//fin test
-		test("uso de UPPER y LOWER", async () => {
-			const query = `SELECT UPPER(DISCO_COMPACTO) AS TITULO, FECHA_VENTA
+		test(
+			"uso de 'UPPER' para poner el mayusculas",
+			{ only: false },
+			async () => {
+				const query = `SELECT UPPER(DISCO_COMPACTO) AS TITULO, FECHA_VENTA
 FROM FECHAS_VENTAS
 WHERE SUBSTRING(DISCO_COMPACTO FROM 1 FOR 4) = 'Blue';`;
 
-			const result = await qb
-				.select([qb.upper("DISCO_COMPACTO", "TITULO"), "FECHA_VENTA"])
-				.from("FECHAS_VENTAS")
-				.where(qb.eq(qb.substr("DISCO_COMPACTO", 1, 4), "Blue"))
-				.execute();
+				const result = await qb
+					.select([qb.upper("DISCO_COMPACTO", "TITULO"), "FECHA_VENTA"])
+					.from("FECHAS_VENTAS")
+					.where(qb.eq(qb.substr("DISCO_COMPACTO", 1, 4), "Blue"))
+					.execute();
 
-			showResults(result);
-			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
-		});
+				showResults(result);
+				assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+				const actual = result.result.rows[1].map((item) => item.TITULO);
+				const expect = (
+					await getColValuesFrom(
+						databaseTest,
+						"inventario",
+						"FECHAS_VENTAS",
+						"DISCO_COMPACTO",
+					)
+				)
+					.filter((item) => item.substring(0, 4) === "Blue")
+					.map((item) => item.toUpperCase());
+
+				assert.deepEqual(actual, expect, "No son iguales");
+			},
+		);
 		//fin test
 	});
 	describe("uso de funciones valor  numericas", () => {
-		test("crea la tabla RASTREO_CD", async () => {
+		beforeEach(async () => {
+			qb = qb.use("INVENTARIO");
+		});
+		test("crea la tabla RASTREO_CD", { only: false }, async () => {
 			const rastreoCd = {
 				NOMBRE_CD: "VARCHAR(60)",
 				CATEGORIA_CD: "CHAR(4)",
@@ -3130,14 +3212,34 @@ VALUES
 					cols: rastreoCd,
 					secure: true,
 				})
-				.insert("RASTREO_CD", [], rastreoCdRows)
+				.insert("RASTREO_CD", rastreoCdRows)
 				.execute();
 
 			showResults(result);
 			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+
+			assert.ok(
+				await colsExistInTable(
+					databaseTest,
+					"inventario",
+					"RASTREO_CD",
+					rastreoCd,
+				),
+				"Las columnas no coinciden",
+			);
+			const discosInTable = await getColValuesFrom(
+				databaseTest,
+				"inventario",
+				"RASTREO_CD",
+				"NOMBRE_CD",
+			);
+			assert.ok(
+				rastreoCdRows.every((item) => discosInTable.includes(item[0])),
+				"Las filas a insertar no se encuentran en la tabla",
+			);
 		});
 		//fin test
-		test("expresion de valor numerico", async () => {
+		test("expresion de valor numerico", { only: false }, async () => {
 			const query = `SELECT NOMBRE_CD, EN_EXISTENCIA, EN_PEDIDO, (EN_EXISTENCIA + EN_PEDIDO) AS TOTAL
 FROM RASTREO_CD
 WHERE (EN_EXISTENCIA + EN_PEDIDO) > 25;`;
@@ -3155,9 +3257,17 @@ WHERE (EN_EXISTENCIA + EN_PEDIDO) > 25;`;
 
 			showResults(result);
 			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+			const actual = result.result.rows[1].map((item) => item.TOTAL);
+			const expect = (
+				await getColValuesFrom(databaseTest, "inventario", "RASTREO_CD", "*")
+			)
+				.filter((item) => item.EN_EXISTENCIA + item.EN_PEDIDO > 25)
+				.map((item) => item.EN_EXISTENCIA + item.EN_PEDIDO);
+
+			assert.deepEqual(actual, expect, "No son iguales");
 		});
 		//fin test
-		test("expresion de valor numerico case", async () => {
+		test("expresion de valor numerico case", { only: false }, async () => {
 			const query = `SELECT NOMBRE_CD, EN_PEDIDO, CASE
 WHEN EN_PEDIDO < 6 THEN EN_PEDIDO + 4
 WHEN EN_PEDIDO BETWEEN 6 AND 8 THEN EN_PEDIDO + 2
@@ -3185,53 +3295,116 @@ WHERE EN_PEDIDO < 11;`;
 
 			showResults(result);
 			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+			const actual = result.result.rows[1].map((item) => item.NUEVAS_ORDENES);
+			const expect = (
+				await getColValuesFrom(databaseTest, "inventario", "RASTREO_CD", "*")
+			)
+				.filter((item) => item.EN_PEDIDO < 11)
+				.map((item) => {
+					switch (true) {
+						case item.EN_PEDIDO < 6:
+							return item.EN_PEDIDO + 4;
+						case item.EN_PEDIDO >= 6 && item.EN_PEDIDO <= 8:
+							return item.EN_PEDIDO + 2;
+						default:
+							return item.EN_PEDIDO;
+					}
+				});
+
+			assert.deepEqual(actual, expect, "No son iguales");
 		});
 		//fin test
-		test("expresion de valor numerico case en un SET", async () => {
-			const query = `UPDATE RASTREO_CD
-SET EN_PEDIDO = CASE
+		test(
+			"expresion de valor numerico case en un SET",
+			{ only: false },
+			async () => {
+				const query = `UPDATE RASTREO_CD
+SET EN_PEDIDO =
+( CASE
 WHEN EN_PEDIDO < 6 THEN EN_PEDIDO + 4
 WHEN EN_PEDIDO BETWEEN 6 AND 8 THEN EN_PEDIDO + 2
 ELSE EN_PEDIDO
-END;`;
+END );`;
 
-			const result = await qb
-				.update("RASTREO_CD", {
-					EN_PEDIDO: qb.case(
-						[
-							[qb.lt("EN_PEDIDO", 6), "EN_PEDIDO + 4"],
-							[qb.between("EN_PEDIDO", 6, 8), "EN_PEDIDO + 2"],
-						],
-						"EN_PEDIDO",
-					),
-				})
-				.execute();
+				const actual = (
+					await getColValuesFrom(databaseTest, "inventario", "RASTREO_CD", "*")
+				).map((item) => {
+					switch (true) {
+						case item.EN_PEDIDO < 6:
+							item.EN_PEDIDO = item.EN_PEDIDO + 4;
+							break;
+						case item.EN_PEDIDO >= 6 && item.EN_PEDIDO <= 8:
+							item.EN_PEDIDO = item.EN_PEDIDO + 2;
+							break;
+					}
+					return item.EN_PEDIDO;
+				});
+				const result = await qb
+					.update("RASTREO_CD", {
+						EN_PEDIDO: qb.case(
+							[
+								[qb.lt("EN_PEDIDO", 6), "EN_PEDIDO + 4"],
+								[qb.between("EN_PEDIDO", 6, 8), "EN_PEDIDO + 2"],
+							],
+							"EN_PEDIDO",
+						),
+					})
+					.execute();
 
-			showResults(result);
-			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
-		});
+				showResults(result);
+				assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+				const expect = await getColValuesFrom(
+					databaseTest,
+					"inventario",
+					"RASTREO_CD",
+					"EN_PEDIDO",
+				);
+
+				assert.deepEqual(actual, expect, "No son iguales");
+			},
+		);
 		//fin test
-		test("utilizar la expresión CAST en SELECT", async () => {
-			const query = `SELECT DISCO_COMPACTO, FECHA_VENTA, CAST(FECHA_VENTA AS CHAR(25)) AS CHAR_FECHA
+		test(
+			"utilizar la expresion 'CAST' en 'SELECT' para cambiar el tipo",
+			{ only: true },
+			async () => {
+				const query = `SELECT DISCO_COMPACTO, FECHA_VENTA, CAST(FECHA_VENTA AS CHAR(25)) AS CHAR_FECHA
 FROM FECHAS_VENTAS
 WHERE DISCO_COMPACTO LIKE ('%Blue%');`;
 
-			const result = await qb
-				.select([
-					"DISCO_COMPACTO",
-					"FECHA_VENTA",
-					"CAST(FECHA_VENTA AS CHAR(25)) AS CHAR_FECHA",
-				])
-				.from("FECHAS_VENTAS")
-				.where(qb.like("DISCO_COMPACTO", "%Blue%"))
-				.execute();
+				const result = await qb
+					.select([
+						"DISCO_COMPACTO",
+						"FECHA_VENTA",
+						"CAST(FECHA_VENTA AS CHAR(25)) AS CHAR_FECHA",
+					])
+					.from("FECHAS_VENTAS")
+					.where(qb.like("DISCO_COMPACTO", "%Blue%"))
+					.execute();
 
-			showResults(result);
-			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
-		});
+				showResults(result);
+				assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+				const actual = result.result.rows[1].map((item) => item.CHAR_FECHA);
+				const expect = (
+					await getColValuesFrom(
+						databaseTest,
+						"inventario",
+						"FECHAS_VENTAS",
+						"*",
+					)
+				)
+					.filter((item) => item.DISCO_COMPACTO.includes("Blue"))
+					.map((item) => formatDate(item.FECHA_VENTA, "YYYY-MM-DD HH:mm:ss"));
+				console.log({ actual, expect });
+				assert.deepEqual(actual, expect, "No son iguales");
+			},
+		);
 		//fin test
 	});
 	describe("Capitulo 11 Acceso a multiples tablas", () => {
+		beforeEach(async () => {
+			qb = qb.use("INVENTARIO");
+		});
 		test("crea la tabla INVENTARIO_CD", async () => {
 			const inventarioCD = {
 				NOMBRE_CD: "VARCHAR(60)",

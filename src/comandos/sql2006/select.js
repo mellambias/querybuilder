@@ -37,7 +37,7 @@ export const select = {
 				const colValue = next.q.pop();
 				if (colValue instanceof Column || colValue instanceof Expresion) {
 					log(
-						["sql2006", "select"],
+						["sql2006", "select", "QueryBuilder"],
 						"col isColumn: %o, isExpresion: %o valor:%s indice:%o",
 						colValue instanceof Column,
 						colValue instanceof Expresion,

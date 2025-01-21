@@ -192,6 +192,8 @@ class QueryBuilder {
 				} else if (valor instanceof Cursor) {
 					log("toNext", "Devuelve un cursor");
 					return { q: [valor] };
+				} else if (valor instanceof Expresion) {
+					log("toNext", "Es una expresion");
 				} else {
 					valor = Object.keys(valor).reduce((obj, key) => {
 						if (valor[key] instanceof QueryBuilder) {
@@ -968,8 +970,9 @@ class QueryBuilder {
 	 * @param {string} defecto - Caso else
 	 * @returns {string}
 	 */
-	case(column, casos, defecto) {
-		return this.language.case(column, casos, defecto);
+	case(column, casos, defecto, next) {
+		const response = this.language.case(column, casos, defecto, next);
+		return this.toNext([response, next]);
 	}
 
 	functionDate() {

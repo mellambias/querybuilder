@@ -13,6 +13,12 @@ class Expresion {
 		this.alias = alias;
 		return this;
 	}
+	toUpperCase() {
+		return this.toString().toUpperCase();
+	}
+	toLowerCase() {
+		return this.toString().toLowerCase();
+	}
 }
 
 export default Expresion;

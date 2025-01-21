@@ -135,6 +135,38 @@ function log(command, text, ...data) {
 	return console.log(`[${command}] ${text}`, ...data);
 }
 
+function formatDate(date, format) {
+	//'padStart' agrega a la izquierda si tiene menos de dos dígitos.
+	const components = {
+		YYYY: date.getFullYear(), // Año completo (ej: 2025)
+		YY: String(date.getFullYear()).slice(-2), // Últimos dos dígitos del año (ej: 25)
+		MMMM: date.toLocaleString("default", { month: "long" }), // Nombre completo del mes (ej: December)
+		MMM: date.toLocaleString("default", { month: "short" }), // Nombre corto del mes (ej: Dec)
+		MM: String(date.getMonth() + 1).padStart(2, "0"), // Mes con 2 dígitos (ej: 12)
+		M: String(date.getMonth() + 1), // Mes sin ceros iniciales (ej: 12)
+		DD: String(date.getDate()).padStart(2, "0"), // Día con 2 dígitos (ej: 09)
+		D: String(date.getDate()), // Día sin ceros iniciales (ej: 9)
+		dddd: date.toLocaleString("default", { weekday: "long" }), // Nombre completo del día (ej: Sunday)
+		ddd: date.toLocaleString("default", { weekday: "short" }), // Nombre corto del día (ej: Sun)
+		HH: String(date.getHours()).padStart(2, "0"), // Hora en formato 24h con 2 dígitos (ej: 08)
+		H: String(date.getHours()), // Hora en formato 24h sin ceros iniciales (ej: 8)
+		hh: String(date.getHours() % 12 || 12).padStart(2, "0"), // Hora en formato 12h con 2 dígitos (ej: 08)
+		h: String(date.getHours() % 12 || 12), // Hora en formato 12h sin ceros iniciales (ej: 8)
+		mm: String(date.getMinutes()).padStart(2, "0"), // Minutos con 2 dígitos (ej: 05)
+		m: String(date.getMinutes()), // Minutos sin ceros iniciales (ej: 5)
+		ss: String(date.getSeconds()).padStart(2, "0"), // Segundos con 2 dígitos (ej: 09)
+		s: String(date.getSeconds()), // Segundos sin ceros iniciales (ej: 9)
+		A: date.getHours() < 12 ? "AM" : "PM", // AM o PM
+		a: date.getHours() < 12 ? "am" : "pm", // am o pm
+		Z: Intl.DateTimeFormat().resolvedOptions().timeZone, // Zona horaria (ej: America/New_York)
+	};
+
+	return format.replace(
+		/YYYY|YY|MMMM|MMM|MM|M|DD|D|dddd|ddd|HH|H|hh|h|mm|m|ss|s|A|a|Z/g,
+		(match) => components[match],
+	);
+}
+
 export {
 	dataTypes,
 	Types,
@@ -146,4 +178,5 @@ export {
 	jsonReviver,
 	isJSObject,
 	log,
+	formatDate,
 };

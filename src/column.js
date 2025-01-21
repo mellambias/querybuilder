@@ -75,5 +75,11 @@ class Column {
 		this._cast = value.toDataType(this.dataType);
 		return this;
 	}
+	toUpperCase() {
+		return this.toString().toUpperCase();
+	}
+	toLowerCase() {
+		return this.toString().toLowerCase();
+	}
 }
 export default Column;

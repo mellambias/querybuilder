@@ -74,21 +74,26 @@ class Core {
 	}
 
 	getSubselect(next) {
-		const start = next.q.findLastIndex((item) =>
-			item.toUpperCase().startsWith("SELECT"),
-		);
-		if (start === -1 || start < 2) {
-			// no existe un 'SELECT'
-			return [next.q.pop()];
+		try {
+			const start = next.q.findLastIndex((item) =>
+				item.toUpperCase().startsWith("SELECT"),
+			);
+			if (start === -1 || start < 2) {
+				const lastItem = next.q.pop();
+				log(["Core", "getSubselect"], "No existe un SELECT", lastItem);
+				return [lastItem];
+			}
+			const subSelect = next.q.splice(start, next.q.length - start);
+			log(
+				["Core", "getSubselect"],
+				"Modifica next:\n%o\n subSelect:\n%o",
+				next,
+				subSelect,
+			);
+			return subSelect;
+		} catch (error) {
+			log(["Core", "getSubselect", "ERROR"], "Error", error);
 		}
-		const subSelect = next.q.splice(start, next.q.length - start);
-		log(
-			["Core", "getSubselect"],
-			"Modifica next:\n%o\n subSelect:\n%o",
-			next,
-			subSelect,
-		);
-		return subSelect;
 	}
 
 	getListValues(values, next) {
@@ -731,6 +736,7 @@ class Core {
 					next,
 				);
 				const subSelect = this.getSubselect(next).join("\n");
+				log(["Core", "update"], "el SubSelect es", subSelect);
 				setStack.push(`${col} =\n( ${subSelect} )`);
 			} else {
 				setStack.push(`${col} = ${sets[col]}`);
@@ -801,21 +807,22 @@ class Core {
 			this[name] = () => names[name];
 		}
 	} /**
-	 * Este metodo tienr dos firmas:
-	 * case(column, casos, defecto)
+	 * Este metodo tiene dos firmas:
+	 * case(column, casos, defecto,next)
 	 * columna = CASE [WHEN condicion THEN resultado,..] ELSE defecto END
 	 * @param {string|column} column - nombre de la columna AS
 	 * @param {Array<Casos>} Casos - Array<column,string> => [ [condicion, resultado],...]
 	 * @param {string} defecto - Caso else
 	 *
 	 * @returns {Expresion} - instancia de Expresion
-	 * case(casos,defecto)
+	 * case(casos,defecto,next)
 	 * @param {Array<column,string>} casos - {Array<Casos>} Casos  Array<column,string> => [ [condicion, resultado],...]
 	 * @param {string} defecto - Caso else
 	 *
 	 * @returns {Expresion} - instancia de Expresion
 	 */
-	case(column, casos, defecto) {
+	case(column, casos, defecto, next) {
+		log(["Core", "case"], "Recibe", next);
 		let command = "CASE\n";
 		let items;
 		let lastChance = "";
@@ -827,13 +834,21 @@ class Core {
 			lastChance = defecto;
 		}
 
+		next.q.reverse(); // invierte el array para que los resultados esten en el orden correcto
 		command += items
+			.reverse()
 			.map((item) => {
-				return `WHEN ${item[0]} THEN ${item[1]}`;
+				let [caso, resultado] = item;
+				if (caso instanceof QueryBuilder) {
+					caso = next.q.shift();
+				}
+				return `WHEN ${caso} THEN ${resultado}`;
 			})
+			.reverse()
 			.join("\n");
 		command += `\n${lastChance !== undefined ? `ELSE ${lastChance}\n` : ""}`;
 		command += `${Array.isArray(column) ? "END" : `END AS ${column}`}`;
+		next.q.reverse(); // devuelve el orden inicial
 		return new Expresion(command);
 	}
 	// cursores
