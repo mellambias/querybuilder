@@ -147,7 +147,9 @@ class MySQL extends Core {
 	}
 
 	fullJoin(tables, alias) {
-		return new Error("MySQL no soporta de forma nativa 'FULL OUTER JOIN'");
+		return new Error("Comando no soportado 'fullJoin'", {
+			cause: "MySQL no soporta de forma nativa 'FULL OUTER JOIN'",
+		});
 	}
 	limit(limit) {
 		return `LIMIT ${limit}`;

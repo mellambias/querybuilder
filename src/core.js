@@ -75,13 +75,22 @@ class Core {
 
 	getSubselect(next) {
 		try {
-			const start = next.q.findLastIndex((item) =>
-				item.toUpperCase().startsWith("SELECT"),
+			const start = next.q.findLastIndex(
+				(item) =>
+					item.toUpperCase().startsWith("SELECT") ||
+					item.toUpperCase().includes("SELECT"),
 			);
-			if (start === -1 || start < 2) {
+			log(["Core", "getSubselect"], "start", start, next.q);
+			if (start === -1 || start < 1) {
+				log(["Core", "getSubselect"], "No encuentra el SubSelect next:", next);
 				const lastItem = next.q.pop();
-				log(["Core", "getSubselect"], "No existe un SELECT", lastItem);
-				return [lastItem];
+				log(
+					["Core", "getSubselect"],
+					"(%o) No existe un 'SELECT', devuelve el ultimo item %o",
+					start,
+					lastItem,
+				);
+				return lastItem;
 			}
 			const subSelect = next.q.splice(start, next.q.length - start);
 			log(
@@ -123,7 +132,8 @@ class Core {
 		} else {
 			if (values instanceof QueryBuilder) {
 				log(["Core", "getListValues(values, next)"], "Es un QB next", next);
-				return this.getSubselect(next).join("\n");
+				const resolve = this.getSubselect(next);
+				return Array.isArray(resolve) ? resolve.join("\n") : resolve;
 			}
 			arrayValues = [values];
 		}
@@ -422,7 +432,8 @@ class Core {
 		const qbSelect = [];
 		for (const select of selects) {
 			if (select instanceof QueryBuilder) {
-				qbSelect.push(this.getSubselect(next).join("\n"));
+				const resolve = this.getSubselect(next);
+				qbSelect.push(Array.isArray(resolve) ? resolve.join("\n") : resolve);
 				sql.push("QB");
 			}
 			if (typeof select === "string") {
@@ -527,10 +538,16 @@ class Core {
 				let valorDeA = a;
 				let valorDeB = b;
 				if (b instanceof QueryBuilder) {
-					valorDeB = `( ${this.getSubselect(next).join("\n")} )`;
+					valorDeB = this.getSubselect(next);
+					if (Array.isArray(valorDeB)) {
+						valorDeB = `${valorDeB.join("\n")}`;
+					}
 				}
 				if (a instanceof QueryBuilder) {
-					valorDeA = this.getSubselect(next).join("\n");
+					valorDeA = this.getSubselect(next);
+					if (Array.isArray(valorDeA)) {
+						valorDeA = valorDeA.join("\n");
+					}
 				}
 				if (b !== undefined) {
 					if (typeof b === "string") {
@@ -691,9 +708,11 @@ class Core {
 										return `'${item}'`;
 									}
 									if (item instanceof QueryBuilder) {
-										console.log("[Core][insert]next", next);
-
-										return this.getSubselect(next).join("\n");
+										log(["Core", "insert"], "Es un QB. Recibe next:", next);
+										const resolve = this.getSubselect(next);
+										return Array.isArray(resolve)
+											? resolve.join("\n")
+											: resolve;
 									}
 									return item;
 								})
@@ -714,7 +733,8 @@ class Core {
 				.join(", ")} )`;
 		}
 		if (values instanceof QueryBuilder) {
-			sql = `${sql}\n${this.getSubselect(next).join("\n")}`;
+			const resolve = this.getSubselect(next);
+			sql = `${sql}\n${Array.isArray(resolve) ? resolve.join("\n") : resolve}`;
 		}
 		if (typeof values === "string") {
 			sql = `${sql}\n${values}`;
@@ -735,9 +755,11 @@ class Core {
 					col,
 					next,
 				);
-				const subSelect = this.getSubselect(next).join("\n");
+				const subSelect = this.getSubselect(next);
 				log(["Core", "update"], "el SubSelect es", subSelect);
-				setStack.push(`${col} =\n( ${subSelect} )`);
+				setStack.push(
+					`${col} =\n( ${Array.isArray(subSelect) ? subSelect.join("\n") : subSelect} )`,
+				);
 			} else {
 				setStack.push(`${col} = ${sets[col]}`);
 			}

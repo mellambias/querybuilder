@@ -33,29 +33,28 @@ export const select = {
 			if (typeof column === "string") {
 				colStack[index] = `${column}`;
 			}
+			if (column instanceof Column || column instanceof Expresion) {
+				log(
+					["sql2006", "select", "QueryBuilder"],
+					"col isColumn: %o, isExpresion: %o valor:%s indice:%o",
+					column instanceof Column,
+					column instanceof Expresion,
+					column,
+					index,
+				);
+
+				colStack[index] = `${column}`;
+				log("despues QB", "colStack", colStack);
+			}
 			if (column instanceof QueryBuilder) {
 				const colValue = next.q.pop();
-				if (colValue instanceof Column || colValue instanceof Expresion) {
-					log(
-						["sql2006", "select", "QueryBuilder"],
-						"col isColumn: %o, isExpresion: %o valor:%s indice:%o",
-						colValue instanceof Column,
-						colValue instanceof Expresion,
-						colValue,
-						index,
-					);
-
-					colStack[index] = `${colValue}`;
-					log("despues QB", "colStack", colStack);
-				} else {
-					log(
-						["sql2006", "columns", "colValue?.col"],
-						"colValue colStack",
-						colValue,
-						colStack,
-					);
-					colStack[index] = `${colValue}`;
-				}
+				log(
+					["sql2006", "columns", "colValue?.col"],
+					"colValue colStack",
+					colValue,
+					colStack,
+				);
+				colStack[index] = `${colValue}`;
 			}
 
 			log("despues column?.col", "colStack", colStack);

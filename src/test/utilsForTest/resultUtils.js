@@ -1,6 +1,7 @@
 import { jsonReviver } from "../../noSql/mongoUtils.js";
 import QueryBuilder from "../../querybuilder.js";
 import { log } from "../../utils/utils.js";
+import assert from "node:assert/strict";
 export function tableFormat(columns, rows, responses, query) {
 	// console.log(
 	// 	"columns %o\nrows %o\nresponses %o\n query %o",
@@ -269,4 +270,47 @@ export async function getColValuesFrom(databaseTest, dataBase, table, col) {
 		return data;
 	}
 	return data.map((item) => item[col]);
+}
+
+/**
+ * Comprueba la existencia de la tabla en la base de datos inventario
+ * y que las columnas esten definidas
+ * @param {String} tablaToTest Nombre de la tabla
+ * @param {Object} cols Definicion de columnas
+ * @param {Object} databaseTest Driver a la SGBD
+ * @param {String} dataBase Nombre de la base de datos
+ */
+
+export async function checktable(tablaToTest, cols) {
+	const { databaseTest, dataBase } = this;
+	assert.ok(
+		await existTable(databaseTest, dataBase, tablaToTest),
+		`La tabla '${tablaToTest}' no existe en '${dataBase}'`,
+	);
+	// Probar si las columnas de la tabla coinciden con la definicion
+	assert.ok(
+		await colsExistInTable(databaseTest, dataBase, tablaToTest, cols),
+		`Las columnas de ${tablaToTest} no coinciden`,
+	);
+}
+
+/**
+ * Busca las filas en la tabla
+ * @param {String} tabla nombre de la tabla
+ * @param {Array} rows Array con las filas a combrobar
+ */
+export async function checkRows(tabla, rows) {
+	const { databaseTest, dataBase } = this;
+	const rowsInTable = await getColValuesFrom(
+		databaseTest,
+		dataBase,
+		tabla,
+		"*",
+	);
+	assert.ok(
+		rows.every(([key]) =>
+			rowsInTable.find((item) => Object.values(item).includes(key)),
+		),
+		`los registros no existen en la tabla'${tabla}' de '${dataBase}'`,
+	);
 }

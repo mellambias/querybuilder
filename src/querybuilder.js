@@ -53,6 +53,9 @@ class QueryBuilder {
 			"checkFrom",
 			"openCursor",
 			"valueOf",
+			"exp",
+			"col",
+			"coltn",
 		];
 		this.returnPromise = ["createCursor", "closeCursor", "setTransaction"];
 		this.handler = {
@@ -178,9 +181,10 @@ class QueryBuilder {
 			let [valor, next] = data;
 			if (next?.q?.length > 0 && firstCommand) {
 				// Siendo un comando inicial el anterior debe acabar en ';'
-				next.q[next.q.length - 1] += next.q[next.q.length - 1].endsWith(";")
-					? ""
-					: ";";
+				const previusItem = next.q[next.q.length - 1];
+				if (typeof previusItem === "string") {
+					next.q[next.q.length - 1] += previusItem.endsWith(";") ? "" : ";";
+				}
 			}
 			if (valor === null) {
 				return next;
@@ -194,6 +198,7 @@ class QueryBuilder {
 					return { q: [valor] };
 				} else if (valor instanceof Expresion) {
 					log("toNext", "Es una expresion");
+					return next;
 				} else {
 					valor = Object.keys(valor).reduce((obj, key) => {
 						if (valor[key] instanceof QueryBuilder) {
@@ -314,15 +319,20 @@ class QueryBuilder {
 	createDatabase(name, options, next) {
 		try {
 			const command = this.language.createDatabase(name.validSqlId(), options);
-			return this.toNext([command, next], ";");
+			return this.toNext([command, next], ";", true);
 		} catch (error) {
-			this.error = error.message;
-			return next;
+			next.error = error.message;
+			return this.toNext([null, next]);
 		}
 	}
 	dropDatabase(name, options, next) {
-		const command = this.language.dropDatabase(name, options);
-		return this.toNext([command, next]);
+		try {
+			const command = this.language.dropDatabase(name, options);
+			return this.toNext([command, next], ";", true);
+		} catch (error) {
+			next.error = error.message;
+			return this.toNext([null, next]);
+		}
 	}
 	createSchema(name, options, next) {
 		try {
@@ -330,8 +340,8 @@ class QueryBuilder {
 			return this.toNext([command, next]);
 		} catch (error) {
 			next.error = error.message;
+			return this.toNext([null, next]);
 		}
-		return this.toNext([null, next]);
 	}
 
 	dropSchema(name, options, next) {
@@ -603,13 +613,12 @@ class QueryBuilder {
 					const result = this.language[join](tables, alias);
 					if (result instanceof Error) {
 						next.error = result;
-					} else {
-						return this.toNext([result, next]);
+						return this.toNext([null, next]);
 					}
-				} else {
-					next.error =
-						"No es posible aplicar, falta un comando previo 'select' u 'on'";
+					return this.toNext([result, next]);
 				}
+				next.error =
+					"No es posible aplicar, falta un comando previo 'select' u 'on'";
 				return this.toNext([null, next]);
 			};
 		}
@@ -788,7 +797,7 @@ class QueryBuilder {
 	 * @param {string} table - nombre de la tabla
 	 * @returns {Column}
 	 */
-	col(name, table, next) {
+	col(name, table) {
 		// biome-ignore lint/style/noArguments: <explanation>
 		const args = [...arguments];
 		const error = check(
@@ -799,7 +808,7 @@ class QueryBuilder {
 			throw new Error(error);
 		}
 		const columna = new Column(name, table, this.language.dataType);
-		return this.toNext([columna, next]);
+		return columna;
 	}
 	/**
 	 * Es igual a col salvo el orden de los parametros
@@ -807,7 +816,7 @@ class QueryBuilder {
 	 * @param {string} name - nombre de la columna
 	 * @returns {Column}
 	 */
-	coltn(table, name, next) {
+	coltn(table, name) {
 		// biome-ignore lint/style/noArguments: <explanation>
 		const args = [...arguments];
 		const error = check(
@@ -817,8 +826,7 @@ class QueryBuilder {
 		if (error) {
 			throw new Error(error);
 		}
-		this.commandStack.push("coltn");
-		return this.toNext([new Column(name, table, this.language.dataType), next]);
+		return new Column(name, table, this.language.dataType);
 	}
 
 	exp(expresion) {
@@ -1062,7 +1070,7 @@ class QueryBuilder {
 		this.alterTableStack = [];
 		this.promise = Promise.resolve({});
 		this.promiseStack = [];
-		return this.toNext(this.promise);
+		return this.toNext([this.promise, {}]);
 	}
 	//toString function on Object QueryBuilder
 	async toString(options) {
@@ -1092,8 +1100,10 @@ class QueryBuilder {
 			this.error = undefined;
 			return this;
 		} catch (error) {
+			log(["QB", "execute"], "Se ha producido un error", error.message);
 			this.error = error.message;
 			this.result = undefined;
+			this.dropQuery();
 			return this;
 		}
 	}

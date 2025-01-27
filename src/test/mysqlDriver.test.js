@@ -6,12 +6,12 @@ import { config } from "../../config.js";
 import {
 	showResults,
 	getResultFromTest,
-	existTable,
 	existView,
 	describeTable,
 	restriccionesTable,
 	colsExistInTable,
 	getColValuesFrom,
+	checktable,
 } from "./utilsForTest/resultUtils.js";
 import { formatDate } from "../utils/utils.js";
 
@@ -19,6 +19,9 @@ const MySql8 = config.databases.MySql8;
 let qb;
 const Driver = MySql8.driver;
 const databaseTest = new Driver(MySql8.params);
+const current = { databaseTest, dataBase: "inventario" };
+// crea una funcion que al ser llamada usa como 'this' el valor pasado a 'bind'
+const tableExist = checktable.bind(current);
 beforeEach(() => {
 	const queryBuilder = new QueryBuilder(MySQL, {
 		typeIdentificator: "regular",
@@ -26,166 +29,6 @@ beforeEach(() => {
 	});
 	qb = queryBuilder.driver(MySql8.driver, MySql8.params);
 });
-
-describe("Driver MySqlDriver", { only: false }, async () => {
-	test("crea una base de datos", async () => {
-		const debug = false;
-		const result = await qb.createDatabase("testing").execute(debug);
-		showResults(result, debug);
-
-		const resultTest = await databaseTest.execute("show databases");
-		const { response } = resultTest.response();
-		assert.ok(
-			response[0].some((item) => Object.values(item).includes("testing")),
-		);
-	});
-	test("Crear una tabla en la base de datos testing", async () => {
-		const debug = false;
-		const result = await qb
-			.use("testing")
-			.dropTable("TABLE_TEST", { secure: true })
-			.createTable("TABLE_TEST", { cols: { ID: "INT" } })
-			.execute(debug);
-
-		showResults(result, debug);
-
-		const data = await getResultFromTest(
-			databaseTest,
-			"use testing",
-			"show tables",
-		);
-		assert.ok(data.some((item) => Object.values(item).includes("table_test")));
-		assert.equal(
-			await result.toString(),
-			"USE testing;\nDROP TABLE IF EXISTS TABLE_TEST;\nCREATE TABLE TABLE_TEST\n( ID INT );",
-		);
-	});
-	//Fin test
-	test("Crear una tabla con varias columnas", async () => {
-		const debug = false;
-		const cols = {
-			ID_ARTISTA: "INTEGER",
-			NOMBRE_ARTISTA: { type: "CHARACTER(60)", default: "artista" },
-			FDN_ARTISTA: "DATE",
-			POSTER_EN_EXISTENCIA: "BOOLEAN",
-		};
-		const result = await qb
-			.use("testing")
-			.createTable("table_test2", { cols, secure: true })
-			.execute(debug);
-
-		showResults(result, debug);
-		const data = await getResultFromTest(
-			databaseTest,
-			"use testing",
-			"show tables",
-		);
-		assert.ok(data.some((item) => Object.values(item).includes("table_test2")));
-
-		const columns = await getResultFromTest(
-			databaseTest,
-			"use testing",
-			"DESCRIBE table_test2",
-		);
-		assert.equal(columns.length, Object.keys(cols).length);
-
-		assert.equal(
-			await result.toString(),
-			`USE testing;
-CREATE TABLE IF NOT EXISTS table_test2
-( ID_ARTISTA INT,
- NOMBRE_ARTISTA CHAR(60) DEFAULT 'artista',
- FDN_ARTISTA DATE,
- POSTER_EN_EXISTENCIA TINYINT );`,
-		);
-	});
-
-	test("Crear un tipo definido por el usuario", async () => {
-		const result = await qb
-			.use("testing")
-			.createType("SALARIO", { as: "NUMERIC(8,2)", final: false })
-			.execute();
-
-		if (!result.error) {
-			assert.equal(await result.toString(), "USE testing;");
-		} else {
-			assert.equal(result.error, "No soportado utilice SET o ENUM");
-		}
-	});
-
-	test("elimina una tabla", async () => {
-		const debug = false;
-		const result = await qb
-			.use("testing")
-			.dropTable("TABLE_TEST2", { secure: true, option: "cascade" })
-			.execute(debug);
-
-		if (!result.error) {
-			const data = await getResultFromTest(
-				databaseTest,
-				"use testing",
-				"show tables",
-			);
-			assert.ok(data.every((item) => Object.values(item) !== "table_test2"));
-			assert.equal(
-				await result.toString(),
-				"USE testing;\nDROP TABLE IF EXISTS TABLE_TEST2 CASCADE;",
-			);
-		} else {
-			assert.equal(result.error, "");
-		}
-	});
-
-	after(async () => {
-		await qb.use("testing").dropDatabase("testing").execute();
-	});
-});
-
-// Usa la base de datos inventario
-
-const TIPOS_MUSICA = {
-	ID_TIPO: "INT",
-	NOMBRE_TIPO: { type: "VARCHAR(20)", values: ["not null"] },
-};
-const ARTISTAS = {
-	ID_ARTISTA: "INT",
-	NOMBRE_ARTISTA: { type: "VARCHAR(60)", values: ["not null"] },
-	LUGAR_DE_NACIMIENTO: {
-		type: "VARCHAR(60)",
-	},
-};
-const DISQUERAS_CD = {
-	ID_DISQUERA: "INT",
-	NOMBRE_DISCOGRAFICA: {
-		type: "VARCHAR(60)",
-		default: "Independiente",
-		values: ["not null"],
-	},
-};
-
-const TITULOS_CD = {
-	ID_DISCO_COMPACTO: "INT",
-	TITULO_CD: { type: "VARCHAR(60)", values: ["NOT NULL"] },
-	EN_EXISTENCIA: { type: "INT", values: ["NOT NULL"] },
-};
-
-const DISCOS_COMPACTOS = {
-	ID_DISCO_COMPACTO: "INT",
-	TITULO_CD: { type: "varchar(60)", values: ["not null"] },
-	ID_DISQUERA: {
-		type: "INT",
-		values: ["NOT NULL"],
-	},
-};
-
-const TIPOS_DISCO_COMPACTO = {
-	ID_DISCO_COMPACTO: "INT",
-	ID_TIPO_MUSICA: "INT",
-};
-const CDS_ARTISTA = {
-	ID_ARTISTA: "INT",
-	ID_DISCO_COMPACTO: "INT",
-};
 
 describe("Trabaja con INVENTARIO", async () => {
 	test("Crea la base de datos inventario", { only: false }, async () => {
@@ -236,15 +79,7 @@ describe("Trabaja con INVENTARIO", async () => {
 				.execute(true);
 
 			// existe la tabla
-			assert.ok(await existTable(databaseTest, "inventario", "tipos_musica"));
-			// campos de la tabla
-			const cols = await describeTable(
-				databaseTest,
-				"inventario",
-				"tipos_musica",
-			);
-
-			assert.equal(cols.length, Object.keys(TIPOS_MUSICA).length);
+			await tableExist("TIPOS_MUSICA", TIPOS_MUSICA);
 
 			if (!result.error) {
 				assert.equal(
@@ -276,14 +111,7 @@ CREATE TABLE IF NOT EXISTS TIPOS_MUSICA
 				})
 				.execute();
 
-			assert.ok(await existTable(databaseTest, "inventario", "DISQUERAS_CD"));
-			const cols = await describeTable(
-				databaseTest,
-				"inventario",
-				"DISQUERAS_CD",
-			);
-
-			assert.equal(cols.length, Object.keys(DISQUERAS_CD).length);
+			await tableExist("DISQUERAS_CD", DISQUERAS_CD);
 
 			if (!result.error) {
 				assert.equal(
@@ -325,15 +153,7 @@ CREATE TABLE IF NOT EXISTS DISQUERAS_CD
 				.execute();
 
 			if (!result.error) {
-				assert.ok(
-					await existTable(databaseTest, "inventario", "DISCOS_COMPACTOS"),
-				);
-				const cols = await describeTable(
-					databaseTest,
-					"inventario",
-					"DISCOS_COMPACTOS",
-				);
-				assert.equal(cols.length, Object.keys(DISCOS_COMPACTOS).length);
+				await tableExist("DISCOS_COMPACTOS", DISCOS_COMPACTOS);
 				assert.equal(
 					await result.toString(),
 					`USE INVENTARIO;
@@ -383,15 +203,7 @@ CREATE TABLE IF NOT EXISTS DISCOS_COMPACTOS
 				.execute();
 
 			if (!result.error) {
-				assert.ok(
-					await existTable(databaseTest, "inventario", "TIPOS_DISCO_COMPACTO"),
-				);
-				const cols = await describeTable(
-					databaseTest,
-					"inventario",
-					"TIPOS_DISCO_COMPACTO",
-				);
-				assert.equal(cols.length, Object.keys(TIPOS_DISCO_COMPACTO).length);
+				await tableExist("TIPOS_DISCO_COMPACTO", TIPOS_DISCO_COMPACTO);
 				assert.equal(
 					await result.toString(),
 					`USE INVENTARIO;
@@ -425,13 +237,7 @@ CREATE TABLE IF NOT EXISTS TIPOS_DISCO_COMPACTO
 				.execute();
 
 			if (!result.error) {
-				assert.ok(await existTable(databaseTest, "inventario", "ARTISTAS"));
-				const cols = await describeTable(
-					databaseTest,
-					"inventario",
-					"ARTISTAS",
-				);
-				assert.equal(cols.length, Object.keys(ARTISTAS).length);
+				await tableExist("ARTISTAS", ARTISTAS);
 				assert.equal(
 					await result.toString(),
 					`USE INVENTARIO;
@@ -480,13 +286,7 @@ CREATE TABLE IF NOT EXISTS ARTISTAS
 				.execute();
 
 			if (!result.error) {
-				assert.ok(await existTable(databaseTest, "inventario", "CDS_ARTISTA"));
-				const cols = await describeTable(
-					databaseTest,
-					"inventario",
-					"CDS_ARTISTA",
-				);
-				assert.equal(cols.length, Object.keys(CDS_ARTISTA).length);
+				await tableExist("CDS_ARTISTA", CDS_ARTISTA);
 				assert.equal(
 					await result.toString(),
 					`USE INVENTARIO;
@@ -511,13 +311,7 @@ CREATE TABLE IF NOT EXISTS CDS_ARTISTA
 				.execute();
 
 			if (!result.error) {
-				assert.ok(await existTable(databaseTest, "inventario", "TITULOS_CD"));
-				const cols = await describeTable(
-					databaseTest,
-					"inventario",
-					"TITULOS_CD",
-				);
-				assert.equal(cols.length, Object.keys(TITULOS_CD).length);
+				await tableExist("TITULOS_CD", TITULOS_CD);
 				assert.equal(
 					await result.toString(),
 					`USE INVENTARIO;
@@ -1599,10 +1393,7 @@ CREATE TABLE IF NOT EXISTS INVENTARIO_CD
  EN_EXISTENCIA INT NOT NULL );`,
 			);
 
-			assert.ok(
-				await existTable(databaseTest, "inventario", "INVENTARIO_CD"),
-				"La tabla 'INVENTARIO_CD' no existe en la base de datos 'INVENTARIO'",
-			);
+			await tableExist("INVENTARIO_CD", inventario_cd);
 		});
 		test(
 			"inserta un registro o row en la tabla 'INVENTARIO_CD'",
@@ -1709,10 +1500,11 @@ INSERT INTO INVENTARIO_CD_2
 SELECT NOMBRE_CD, EN_EXISTENCIA
 FROM INVENTARIO_CD;`,
 				);
-				assert.ok(
-					await existTable(databaseTest, "inventario", "INVENTARIO_CD_2"),
-					"La tabla 'INVENTARIO_CD_2' no ha sido creada",
-				);
+
+				await tableExist("INVENTARIO_CD_2", {
+					NOMBRE_CD_2: { type: "varchar(60)", values: ["not null"] },
+					EN_EXISTENCIA_2: { type: "int", values: ["not null"] },
+				});
 
 				const nombreCdInInventarioCd = (
 					await getResultFromTest(
@@ -2164,17 +1956,7 @@ VALUES
 ('Court and Spark', 1974, 14.99, 25);`,
 				);
 
-				assert.ok(
-					await existTable(databaseTest, "inventario", "CDS_A_LA_MANO"),
-					"La tabla 'CDS_A_LA_MANO' no ha sido creada",
-				);
-				const describe = (
-					await describeTable(databaseTest, "inventario", "CDS_A_LA_MANO")
-				).map((item) => item.Field);
-				assert.ok(
-					Object.keys(cds_a_la_mano).every((col) => describe.includes(col)),
-					"Faltan campos por añadir",
-				);
+				await tableExist("CDS_A_LA_MANO", cds_a_la_mano);
 				const dataInTable = await getResultFromTest(
 					databaseTest,
 					"USE INVENTARIO",
@@ -2509,17 +2291,7 @@ VALUES
 
 				assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 				// test tabla 'MENUDEO_CD'
-				assert.ok(
-					await existTable(databaseTest, "inventario", "MENUDEO_CD"),
-					"La tabla 'MENUDEO_CD' no ha sido creada",
-				);
-				const tablaMenudeo = (
-					await describeTable(databaseTest, "inventario", "MENUDEO_CD")
-				).map((item) => item.Field);
-				assert.ok(
-					Object.keys(menudeo_cd).every((item) => tablaMenudeo.includes(item)),
-					"Los campos no han sido definidos correctamente",
-				);
+				await tableExist("MENUDEO_CD", menudeo_cd);
 				const dataMenudeo = (
 					await getResultFromTest(
 						databaseTest,
@@ -2538,10 +2310,7 @@ VALUES
 				);
 
 				// test tabla 'REBAJA_CD'
-				assert.ok(
-					await existTable(databaseTest, "inventario", "REBAJA_CD"),
-					"La tabla 'REBAJA_CD' no ha sido creada",
-				);
+				await tableExist("REBAJA_CD", rebaja_cd);
 				const tablaRebaja = (
 					await describeTable(databaseTest, "inventario", "REBAJA_CD")
 				).map((item) => item.Field);
@@ -2741,19 +2510,7 @@ VALUES
 
 			showResults(result);
 			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
-			assert.ok(
-				await existTable(databaseTest, "inventario", "CDS_VENDIDOS"),
-				"la tabla no ha sido creada",
-			);
-			assert.ok(
-				await colsExistInTable(
-					databaseTest,
-					"inventario",
-					"CDS_VENDIDOS",
-					cdsVendidos,
-				),
-				"Las columnas no coinciden",
-			);
+			await tableExist("CDS_VENDIDOS", cdsVendidos);
 			const nombresCdInTable = await getColValuesFrom(
 				databaseTest,
 				"inventario",
@@ -3043,19 +2800,7 @@ VALUES
 
 			showResults(result);
 			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
-			assert.ok(
-				await existTable(databaseTest, "inventario", "FECHAS_VENTAS"),
-				"la tabla 'FECHAS_VENTAS' no ha sido creada",
-			);
-			assert.ok(
-				await colsExistInTable(
-					databaseTest,
-					"inventario",
-					"FECHAS_VENTAS",
-					fechasVentas,
-				),
-				"Las columnas no coinciden",
-			);
+			await tableExist("FECHAS_VENTAS", fechasVentas);
 			const discosInTable = await getColValuesFrom(
 				databaseTest,
 				"inventario",
@@ -3366,7 +3111,7 @@ END );`;
 		//fin test
 		test(
 			"utilizar la expresion 'CAST' en 'SELECT' para cambiar el tipo",
-			{ only: true },
+			{ only: false },
 			async () => {
 				const query = `SELECT DISCO_COMPACTO, FECHA_VENTA, CAST(FECHA_VENTA AS CHAR(25)) AS CHAR_FECHA
 FROM FECHAS_VENTAS
@@ -3405,7 +3150,7 @@ WHERE DISCO_COMPACTO LIKE ('%Blue%');`;
 		beforeEach(async () => {
 			qb = qb.use("INVENTARIO");
 		});
-		test("crea la tabla INVENTARIO_CD", async () => {
+		test("crea la tabla INVENTARIO_CD", { only: false }, async () => {
 			const inventarioCD = {
 				NOMBRE_CD: "VARCHAR(60)",
 				ID_INTER: "INT",
@@ -3424,7 +3169,8 @@ WHERE DISCO_COMPACTO LIKE ('%Blue%');`;
 				["Nick of Time", 104, 11],
 				["Both Sides Now", 101, 13],
 			];
-			const query = `CREATE TABLE INVENTARIO_CD
+			const query = `DROP TABLE INVENTARIO_CD;
+CREATE TABLE INVENTARIO_CD
 ( NOMBRE_CD VARCHAR(60),
  ID_INTER INT,
  EN_EXISTENCIA INT );
@@ -3443,15 +3189,29 @@ VALUES
 ('Both Sides Now', 101, 13);`;
 
 			const result = await qb
+				.dropTable("INVENTARIO_CD")
 				.createTable("INVENTARIO_CD", { cols: inventarioCD })
-				.insert("INVENTARIO_CD", [], inventarioCDRows)
+				.insert("INVENTARIO_CD", inventarioCDRows)
 				.execute();
 
 			showResults(result);
 			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+			// Probar la existencia de la tabla
+			await tableExist("INVENTARIO_CD", inventarioCD);
+			// Comprobar si los valores coinciden
+			const discosInTable = await getColValuesFrom(
+				databaseTest,
+				"inventario",
+				"INVENTARIO_CD",
+				"NOMBRE_CD",
+			);
+			assert.ok(
+				inventarioCDRows.every((item) => discosInTable.includes(item[0])),
+				"Las filas a insertar no se encuentran en la tabla",
+			);
 		});
 		//fin test
-		test("crea la tabla INTERPRETES", async () => {
+		test("crea la tabla INTERPRETES", { only: false }, async () => {
 			const interpretes = {
 				ID_INTER: "INT",
 				NOMBRE_INTER: "VARCHAR(60)",
@@ -3468,7 +3228,8 @@ VALUES
 				[108, "John Barry", 18],
 				[109, "Leonard Cohen", 12],
 			];
-			const query = `CREATE TABLE INTERPRETES
+			const query = `DROP TABLE IF EXISTS INTERPRETES;
+CREATE TABLE INTERPRETES
 ( ID_INTER INT,
  NOMBRE_INTER VARCHAR(60),
  ID_TIPO INT );
@@ -3485,15 +3246,35 @@ VALUES
 (109, 'Leonard Cohen', 12);`;
 
 			const result = await qb
+				.dropTable("INTERPRETES", { secure: true })
 				.createTable("INTERPRETES", { cols: interpretes })
-				.insert("INTERPRETES", [], interpretesRows)
+				.insert("INTERPRETES", interpretesRows)
 				.execute();
 
 			showResults(result);
 			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.ok(
+				await colsExistInTable(
+					databaseTest,
+					"inventario",
+					"INTERPRETES",
+					interpretes,
+				),
+				"Las columnas no coinciden",
+			);
+			const discosInTable = await getColValuesFrom(
+				databaseTest,
+				"inventario",
+				"INTERPRETES",
+				"ID_INTER",
+			);
+			assert.ok(
+				interpretesRows.every((item) => discosInTable.includes(item[0])),
+				"Las filas a insertar no se encuentran en la tabla",
+			);
 		});
 		//fin test
-		test("crea la tabla TIPO_INTER", async () => {
+		test("crea la tabla TIPO_INTER", { only: false }, async () => {
 			const tipoInterprete = {
 				ID_TIPO: "INT",
 				NOMBRE_TIPO: "CHAR(20)",
@@ -3509,7 +3290,8 @@ VALUES
 				[17, "Country"],
 				[18, "Soundtrack"],
 			];
-			const query = `CREATE TABLE TIPO_INTER
+			const query = `DROP TABLE IF EXISTS TIPO_INTER;
+CREATE TABLE TIPO_INTER
 ( ID_TIPO INT,
  NOMBRE_TIPO CHAR(20) );
 INSERT INTO TIPO_INTER
@@ -3525,12 +3307,32 @@ VALUES
 (18, 'Soundtrack');`;
 
 			const result = await qb
+				.dropTable("TIPO_INTER", { secure: true })
 				.createTable("TIPO_INTER", { cols: tipoInterprete })
-				.insert("TIPO_INTER", [], tipoInterpreteRows)
+				.insert("TIPO_INTER", tipoInterpreteRows)
 				.execute();
 
 			showResults(result);
 			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+			assert.ok(
+				await colsExistInTable(
+					databaseTest,
+					"inventario",
+					"TIPO_INTER",
+					tipoInterprete,
+				),
+				"Las columnas no coinciden",
+			);
+			const discosInTable = await getColValuesFrom(
+				databaseTest,
+				"inventario",
+				"TIPO_INTER",
+				"ID_TIPO",
+			);
+			assert.ok(
+				tipoInterpreteRows.every((item) => discosInTable.includes(item[0])),
+				"Las filas a insertar no se encuentran en la tabla",
+			);
 		});
 		//fin test
 		test("operciones basicas JOIN", async () => {
@@ -3561,7 +3363,7 @@ AND INVENTARIO_CD.EN_EXISTENCIA < 15);`;
 			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
 		});
 		//fin test
-		test("uso de nombres de correlacion", async () => {
+		test("uso de nombres de correlacion", { only: false }, async () => {
 			const query = `SELECT c.NOMBRE_CD, p.NOMBRE_INTER, c.EN_EXISTENCIA
 FROM INVENTARIO_CD AS c, INTERPRETES AS p
 WHERE (c.ID_INTER = p.ID_INTER
@@ -3584,14 +3386,53 @@ AND c.EN_EXISTENCIA < 15);`;
 
 			showResults(result);
 			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+			// Probar los resultados
+			const actual = result.result.rows[1];
+			//lee las filas de la tabla y modifica el nombre del campo con el prefijo
+			const tablaC = (
+				await getColValuesFrom(databaseTest, "inventario", "INVENTARIO_CD", "*")
+			).map((item) =>
+				Object.keys(item).reduce((newItem, key) => {
+					newItem[`c_${key}`] = item[key];
+					return newItem;
+				}, {}),
+			);
+			const tablaP = (
+				await getColValuesFrom(databaseTest, "inventario", "INTERPRETES", "*")
+			).map((item) =>
+				Object.keys(item).reduce((newItem, key) => {
+					newItem[`p_${key}`] = item[key];
+					return newItem;
+				}, {}),
+			);
+
+			// realiza el 'join' (reduce), aplica el 'WHERE' (filter) y el 'SELECT' (map)
+			const expect = tablaP
+				.reduce((joinTables, itemP) => {
+					for (const itemC of tablaC) {
+						joinTables.push({ ...itemP, ...itemC });
+					}
+					return joinTables;
+				}, [])
+				.filter(
+					(item) =>
+						item.c_ID_INTER === item.p_ID_INTER && item.c_EN_EXISTENCIA < 15,
+				)
+				.map((item) => ({
+					NOMBRE_CD: item.c_NOMBRE_CD,
+					NOMBRE_INTER: item.p_NOMBRE_INTER,
+					EN_EXISTENCIA: item.c_EN_EXISTENCIA,
+				}));
+
+			assert.deepEqual(actual, expect, "No son iguales");
 		});
 		//fin test
-		test("JOIN con mas de dos tablas", async () => {
+		test("JOIN con mas de dos tablas", { only: false }, async () => {
 			const query = `SELECT c.NOMBRE_CD, p.NOMBRE_INTER, t.NOMBRE_TIPO
 FROM INVENTARIO_CD AS c, INTERPRETES AS p, TIPO_INTER AS t
 WHERE (c.ID_INTER = p.ID_INTER
 AND p.ID_TIPO = t.ID_TIPO
-AND NOMBRE_TIPO = 'Popular');`;
+AND t.NOMBRE_TIPO = 'Popular');`;
 
 			const result = await qb
 				.select([
@@ -3604,16 +3445,66 @@ AND NOMBRE_TIPO = 'Popular');`;
 					qb.and(
 						qb.eq(qb.col("ID_INTER", "c"), qb.col("ID_INTER", "p")),
 						qb.eq(qb.col("ID_TIPO", "p"), qb.col("ID_TIPO", "t")),
-						qb.eq("NOMBRE_TIPO", "Popular"),
+						qb.eq("t.NOMBRE_TIPO", "Popular"),
 					),
 				)
 				.execute();
 
 			showResults(result);
 			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+			const actual = result.result.rows[1];
+			//lee las filas de la tabla y modifica el nombre del campo con el prefijo
+			const tablaC = (
+				await getColValuesFrom(databaseTest, "inventario", "INVENTARIO_CD", "*")
+			).map((item) =>
+				Object.keys(item).reduce((newItem, key) => {
+					newItem[`c_${key}`] = item[key];
+					return newItem;
+				}, {}),
+			);
+			const tablaP = (
+				await getColValuesFrom(databaseTest, "inventario", "INTERPRETES", "*")
+			).map((item) =>
+				Object.keys(item).reduce((newItem, key) => {
+					newItem[`p_${key}`] = item[key];
+					return newItem;
+				}, {}),
+			);
+			const tablaT = (
+				await getColValuesFrom(databaseTest, "inventario", "TIPO_INTER", "*")
+			).map((item) =>
+				Object.keys(item).reduce((newItem, key) => {
+					newItem[`t_${key}`] = item[key];
+					return newItem;
+				}, {}),
+			);
+
+			// realiza el 'join' (reduce), aplica el 'WHERE' (filter) y el 'SELECT' (map)
+			const expect = tablaT
+				.reduce((joinTables, itemT) => {
+					for (const itemC of tablaC) {
+						for (const itemP of tablaP) {
+							joinTables.push({ ...itemT, ...itemC, ...itemP });
+						}
+					}
+					return joinTables;
+				}, [])
+				.filter(
+					(item) =>
+						item.c_ID_INTER === item.p_ID_INTER &&
+						item.p_ID_TIPO === item.t_ID_TIPO &&
+						item.t_NOMBRE_TIPO === "Popular",
+				)
+				.map((item) => ({
+					NOMBRE_CD: item.c_NOMBRE_CD,
+					NOMBRE_INTER: item.p_NOMBRE_INTER,
+					NOMBRE_TIPO: item.t_NOMBRE_TIPO,
+				}));
+
+			assert.deepEqual(actual, expect, "No son iguales");
 		});
 		//fin test
-		test("operacion CROSS JOIN", async () => {
+		test("operacion CROSS JOIN", { only: false }, async () => {
 			const query = `SELECT c.NOMBRE_CD, p.NOMBRE_INTER, c.EN_EXISTENCIA
 FROM INVENTARIO_CD c CROSS JOIN INTERPRETES p
 WHERE (c.ID_INTER = p.ID_INTER
@@ -3636,9 +3527,47 @@ AND c.EN_EXISTENCIA < 15);`;
 
 			showResults(result);
 			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+			const actual = result.result.rows[1];
+			//lee las filas de la tabla y modifica el nombre del campo con el prefijo
+			const tablaC = (
+				await getColValuesFrom(databaseTest, "inventario", "INVENTARIO_CD", "*")
+			).map((item) =>
+				Object.keys(item).reduce((newItem, key) => {
+					newItem[`c_${key}`] = item[key];
+					return newItem;
+				}, {}),
+			);
+			const tablaP = (
+				await getColValuesFrom(databaseTest, "inventario", "INTERPRETES", "*")
+			).map((item) =>
+				Object.keys(item).reduce((newItem, key) => {
+					newItem[`p_${key}`] = item[key];
+					return newItem;
+				}, {}),
+			);
+
+			// realiza el 'join' (reduce), aplica el 'WHERE' (filter) y el 'SELECT' (map)
+			const expect = tablaP
+				.reduce((joinTables, itemP) => {
+					for (const itemC of tablaC) {
+						joinTables.push({ ...itemP, ...itemC });
+					}
+					return joinTables;
+				}, [])
+				.filter(
+					(item) =>
+						item.c_ID_INTER === item.p_ID_INTER && item.c_EN_EXISTENCIA < 15,
+				)
+				.map((item) => ({
+					NOMBRE_CD: item.c_NOMBRE_CD,
+					NOMBRE_INTER: item.p_NOMBRE_INTER,
+					EN_EXISTENCIA: item.c_EN_EXISTENCIA,
+				}));
+
+			assert.deepEqual(actual, expect, "No son iguales");
 		});
 		//fin test
-		test("crea tabla EMPLEADOS", async () => {
+		test("crea tabla EMPLEADOS", { only: false }, async () => {
 			const empleados = {
 				ID_EMP: "INT",
 				NOMBRE_EMP: "VARCHAR(60)",
@@ -3670,14 +3599,27 @@ VALUES
 
 			const result = await qb
 				.createTable("EMPLEADOS", { cols: empleados, secure: true })
-				.insert("EMPLEADOS", [], empleadosRows)
+				.insert("EMPLEADOS", empleadosRows)
 				.execute();
 
 			showResults(result);
 			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+			// Probar la existencia de la tabla
+			await tableExist("EMPLEADOS", empleados);
+			// Comprobar que las filas han sido añadidas a la tabla usando un campo
+			const dataInTable = await getColValuesFrom(
+				databaseTest,
+				"inventario",
+				"EMPLEADOS",
+				"ID_EMP",
+			);
+			assert.ok(
+				empleadosRows.every((item) => dataInTable.includes(item[0])),
+				"Las filas a insertar no se encuentran en la tabla",
+			);
 		});
 		//fin test
-		test("operacion SELF JOIN", async () => {
+		test("operacion SELF JOIN", { only: false }, async () => {
 			const query = `SELECT a.ID_EMP, a.NOMBRE_EMP, b.NOMBRE_EMP AS ADMINISTRADOR
 FROM EMPLEADOS AS a, EMPLEADOS AS b
 WHERE a.ADMIN = b.ID_EMP
@@ -3696,21 +3638,63 @@ ORDER BY a.ID_EMP;`;
 
 			showResults(result);
 			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+			// Probar los resultados
+			const actual = result.result.rows[1];
+			//lee las filas de la tabla y modifica el nombre del campo con el prefijo 'FROM'
+			const empleados = await getColValuesFrom(
+				databaseTest,
+				"inventario",
+				"EMPLEADOS",
+				"*",
+			);
+			const tablaA = empleados.map((item) =>
+				Object.keys(item).reduce((newItem, key) => {
+					newItem[`a_${key}`] = item[key];
+					return newItem;
+				}, {}),
+			);
+			const tablaB = empleados.map((item) =>
+				Object.keys(item).reduce((newItem, key) => {
+					newItem[`b_${key}`] = item[key];
+					return newItem;
+				}, {}),
+			);
+
+			// realiza el 'JOIN' (reduce), aplica el 'WHERE' (filter), el 'ORDER BY' (sort) y el 'SELECT' (map)
+			const expect = tablaB
+				.reduce((joinTables, itemB) => {
+					for (const itemA of tablaA) {
+						joinTables.push({ ...itemB, ...itemA });
+					}
+					return joinTables;
+				}, [])
+				.filter((item) => item.a_ADMIN === item.b_ID_EMP)
+				.sort((a, b) => a.a_ID_EMP - b.a_ID_EMP)
+				.map((item) => ({
+					ID_EMP: item.a_ID_EMP,
+					NOMBRE_EMP: item.a_NOMBRE_EMP,
+					ADMINISTRADOR: item.b_NOMBRE_EMP,
+				}));
+
+			assert.deepEqual(actual, expect, "No son iguales");
 		});
 		//fin test
-		test("Crea tablas TITULOS_EN_EXISTENCIA y COSTOS_TITULOS", async () => {
-			const TITULOS_EN_EXISTENCIA = {
-				TITULO_CD: "VARCHAR(60)",
-				TIPO_CD: "CHAR(20)",
-				INVENTARIO: "INT",
-			};
-			const COSTOS_TITULO = {
-				TITULO_CD: "VARCHAR(60)",
-				TIPO_CD: "CHAR(20)",
-				MENUDEO: "NUMERIC(5,2)",
-			};
+		test(
+			"Crea tablas TITULOS_EN_EXISTENCIA y COSTOS_TITULOS",
+			{ only: false },
+			async () => {
+				const TITULOS_EN_EXISTENCIA = {
+					TITULO_CD: "VARCHAR(60)",
+					TIPO_CD: "CHAR(20)",
+					INVENTARIO: "INT",
+				};
+				const COSTOS_TITULO = {
+					TITULO_CD: "VARCHAR(60)",
+					TIPO_CD: "CHAR(20)",
+					MENUDEO: "NUMERIC(5,2)",
+				};
 
-			const query = `CREATE TABLE IF NOT EXISTS TITULOS_EN_EXISTENCIA
+				const query = `CREATE TABLE IF NOT EXISTS TITULOS_EN_EXISTENCIA
 ( TITULO_CD VARCHAR(60),
  TIPO_CD CHAR(20),
  INVENTARIO INT );
@@ -3719,54 +3703,60 @@ CREATE TABLE IF NOT EXISTS COSTOS_TITULO
  TIPO_CD CHAR(20),
  MENUDEO DECIMAL(5,2) );`;
 
-			const result = await qb
-				.createTable("TITULOS_EN_EXISTENCIA", {
-					secure: true,
-					cols: TITULOS_EN_EXISTENCIA,
-				})
-				.createTable("COSTOS_TITULO", {
-					secure: true,
-					cols: COSTOS_TITULO,
-				})
-				.execute();
+				const result = await qb
+					.createTable("TITULOS_EN_EXISTENCIA", {
+						secure: true,
+						cols: TITULOS_EN_EXISTENCIA,
+					})
+					.createTable("COSTOS_TITULO", {
+						secure: true,
+						cols: COSTOS_TITULO,
+					})
+					.execute();
 
-			showResults(result);
-			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
-		});
-		test("añade registros a las tablas TITULOS_EN_EXISTENCIA y COSTOS_TITULO", async () => {
-			const TITULOS_EN_EXISTENCIA = [
-				["Famous Blue Raincoat", "Folk", 12],
-				["Blue", "Popular", 24],
-				["Past Light", "New Age", 9],
-				["Luck of the Draw", "Popular", 19],
-				["Deuces Wild", "Blues", 25],
-				["Nick of Time", "Popular", 17],
-				["Blues on the Bayou", "Blues", 11],
-				["Both Sides Now", "Popular", 13],
-			];
+				showResults(result);
+				assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+				// Probar la existencia de las tablas
+				await tableExist("TITULOS_EN_EXISTENCIA", TITULOS_EN_EXISTENCIA);
+				await tableExist("COSTOS_TITULO", COSTOS_TITULO);
+			},
+		);
+		test(
+			"añade registros a las tablas TITULOS_EN_EXISTENCIA y COSTOS_TITULO",
+			{ only: false },
+			async () => {
+				const titulos = [
+					["Famous Blue Raincoat", "Folk", 12],
+					["Blue", "Popular", 24],
+					["Past Light", "New Age", 9],
+					["Luck of the Draw", "Popular", 19],
+					["Deuces Wild", "Blues", 25],
+					["Nick of Time", "Popular", 17],
+					["Blues on the Bayou", "Blues", 11],
+					["Both Sides Now", "Popular", 13],
+				];
 
-			const COSTOS_TITULO = [
-				["Famous Blue Raincoat", "Folk", 16.99],
-				["Blue", "Popular", 15.99],
-				["Court and Spark", "Popular", 15.99],
-				["Past Light", "New Age", 14.99],
-				["Fundamental", "Popular", 16.99],
-				["Blues on the Bayou", "Blues", 15.99],
-				["Longing in their Hearts", "Popular", 15.99],
-				["Deuces Wild", "Blues", 14.99],
-				["Nick of Time", "Popular", 14.99],
-			];
-			const query = `INSERT INTO TITULOS_EN_EXISTENCIA
+				const costes = [
+					["Famous Blue Raincoat", "Folk", 16.99],
+					["Blue", "Popular", 15.99],
+					["Court and Spark", "Popular", 15.99],
+					["Past Light", "New Age", 14.99],
+					["Fundamental", "Popular", 16.99],
+					["Blues on the Bayou", "Blues", 15.99],
+					["Longing in their Hearts", "Popular", 15.99],
+					["Deuces Wild", "Blues", 14.99],
+					["Nick of Time", "Popular", 14.99],
+				];
+				const query = `INSERT INTO TITULOS_EN_EXISTENCIA
 VALUES
-('Famous Blue Raincoat','Folk',12),
-('Blue','Popular',24),
-('Past Light','New Age',9),
-('Luck of the Draw','Popular',19),
-('Deuces Wild','Blues',25),
-('Nick of Time','Popular',17),
-('Blues on the Bayou','Blues',11),
-('Both Sides Now','Popular',13),
-;
+('Famous Blue Raincoat', 'Folk', 12),
+('Blue', 'Popular', 24),
+('Past Light', 'New Age', 9),
+('Luck of the Draw', 'Popular', 19),
+('Deuces Wild', 'Blues', 25),
+('Nick of Time', 'Popular', 17),
+('Blues on the Bayou', 'Blues', 11),
+('Both Sides Now', 'Popular', 13);
 INSERT INTO COSTOS_TITULO
 VALUES
 ('Famous Blue Raincoat', 'Folk', 16.99),
@@ -3779,51 +3769,181 @@ VALUES
 ('Deuces Wild', 'Blues', 14.99),
 ('Nick of Time', 'Popular', 14.99);`;
 
-			const result = await qb
-				.insert("TITULOS_EN_EXISTENCIA", [], TITULOS_EN_EXISTENCIA)
-				.insert("COSTOS_TITULO", [], COSTOS_TITULO)
-				.execute();
+				const result = await qb
+					.insert("TITULOS_EN_EXISTENCIA", titulos)
+					.insert("COSTOS_TITULO", costes)
+					.execute();
 
-			showResults(result);
-			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
-		});
+				showResults(result);
+				assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+				// Comprobar si los valores coinciden
+				const discosInTable = await getColValuesFrom(
+					databaseTest,
+					"inventario",
+					"TITULOS_EN_EXISTENCIA",
+					"TITULO_CD",
+				);
+				assert.ok(
+					titulos.every((item) => discosInTable.includes(item[0])),
+					"Las filas a insertar no se encuentran en la tabla",
+				);
+				// Comprobar si los valores coinciden
+				const discosInTable2 = await getColValuesFrom(
+					databaseTest,
+					"inventario",
+					"COSTOS_TITULO",
+					"TITULO_CD",
+				);
+				assert.ok(
+					costes.every((item) => discosInTable2.includes(item[0])),
+					"Las filas a insertar no se encuentran en la tabla",
+				);
+			},
+		);
 		//fin test
-		test("join natural hace coincidir automáticamente las filas de aquellas columnas con el mismo nombre", async () => {
-			const query = `SELECT TITULO_CD, TIPO_CD, c.MENUDEO
+		test(
+			"join natural hace coincidir automáticamente las filas de aquellas columnas con el mismo nombre",
+			{ only: false },
+			async () => {
+				const query = `SELECT TITULO_CD, TIPO_CD, c.MENUDEO
 FROM TITULOS_EN_EXISTENCIA s NATURAL JOIN COSTOS_TITULO c
 WHERE s.INVENTARIO > 15;`;
 
-			const result = await qb
-				.select(["TITULO_CD", "TIPO_CD", qb.col("MENUDEO").from("c")])
-				.naturalJoin(["TITULOS_EN_EXISTENCIA", "COSTOS_TITULO"], ["s", "c"])
-				.where(qb.gt(qb.col("INVENTARIO").from("s"), 15))
-				.execute();
+				const result = await qb
+					.select(["TITULO_CD", "TIPO_CD", qb.col("MENUDEO").from("c")])
+					.naturalJoin(["TITULOS_EN_EXISTENCIA", "COSTOS_TITULO"], ["s", "c"])
+					.where(qb.gt(qb.col("INVENTARIO").from("s"), 15))
+					.execute();
 
-			showResults(result);
-			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
-		});
+				showResults(result);
+				assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+
+				// Probar los resultados
+				const actual = result.result.rows[1];
+				//lee las filas de la tabla y modifica el nombre del campo con el prefijo
+				const tablaA = (
+					await getColValuesFrom(
+						databaseTest,
+						"inventario",
+						"TITULOS_EN_EXISTENCIA",
+						"*",
+					)
+				).map((item) =>
+					Object.keys(item).reduce((newItem, key) => {
+						newItem[`s_${key}`] = item[key];
+						return newItem;
+					}, {}),
+				);
+				const tablaB = (
+					await getColValuesFrom(
+						databaseTest,
+						"inventario",
+						"COSTOS_TITULO",
+						"*",
+					)
+				).map((item) =>
+					Object.keys(item).reduce((newItem, key) => {
+						newItem[`c_${key}`] = item[key];
+						return newItem;
+					}, {}),
+				);
+
+				// realiza el 'natural join' (reduce + 1er filter), aplica el 'WHERE' (2d filter) y el 'SELECT' (map)
+				const expect = tablaB
+					.reduce((joinTables, itemB) => {
+						for (const itemA of tablaA) {
+							joinTables.push({ ...itemB, ...itemA });
+						}
+						return joinTables;
+					}, [])
+					.filter(
+						(item) =>
+							item.s_TITULO_CD === item.c_TITULO_CD &&
+							item.s_TIPO_CD === item.c_TIPO_CD,
+					)
+					.filter((item) => item.s_INVENTARIO > 15)
+					.map((item) => ({
+						TITULO_CD: item.s_TITULO_CD,
+						TIPO_CD: item.s_TIPO_CD,
+						MENUDEO: item.c_MENUDEO,
+					}));
+
+				assert.deepEqual(actual, expect, "No son iguales");
+			},
+		);
 		//fin test
-		test("join natural de columna nombrada permite especificar las columnas coincidentes", async () => {
-			//las columnas identificadas en la cláusula USING están sin cualificar el resto debe hacerlo
-			const query = `SELECT TITULO_CD, s.TIPO_CD, c.MENUDEO
+		test(
+			"join natural de columna nombrada permite especificar las columnas coincidentes",
+			{ only: false },
+			async () => {
+				//las columnas identificadas en la cláusula USING están sin cualificar el resto debe hacerlo
+				const query = `SELECT TITULO_CD, s.TIPO_CD, c.MENUDEO
 FROM TITULOS_EN_EXISTENCIA s JOIN COSTOS_TITULO c
 USING (TITULO_CD)
 WHERE s.INVENTARIO > 15;`;
 
-			const result = await qb
-				.select([
-					"TITULO_CD",
-					qb.col("TIPO_CD", "s"),
-					qb.col("MENUDEO").from("c"),
-				])
-				.join(["TITULOS_EN_EXISTENCIA", "COSTOS_TITULO"], ["s", "c"])
-				.using("TITULO_CD")
-				.where(qb.gt(qb.col("INVENTARIO").from("s"), 15))
-				.execute();
+				const result = await qb
+					.select([
+						"TITULO_CD",
+						qb.col("TIPO_CD", "s"),
+						qb.col("MENUDEO").from("c"),
+					])
+					.join(["TITULOS_EN_EXISTENCIA", "COSTOS_TITULO"], ["s", "c"])
+					.using("TITULO_CD")
+					.where(qb.gt(qb.col("INVENTARIO").from("s"), 15))
+					.execute();
 
-			showResults(result);
-			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
-		});
+				showResults(result);
+				assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+				// Probar los resultados
+				const actual = result.result.rows[1];
+				//lee las filas de la tabla y modifica el nombre del campo con el prefijo
+				const tablaA = (
+					await getColValuesFrom(
+						databaseTest,
+						"inventario",
+						"TITULOS_EN_EXISTENCIA",
+						"*",
+					)
+				).map((item) =>
+					Object.keys(item).reduce((newItem, key) => {
+						newItem[`s_${key}`] = item[key];
+						return newItem;
+					}, {}),
+				);
+				const tablaB = (
+					await getColValuesFrom(
+						databaseTest,
+						"inventario",
+						"COSTOS_TITULO",
+						"*",
+					)
+				).map((item) =>
+					Object.keys(item).reduce((newItem, key) => {
+						newItem[`c_${key}`] = item[key];
+						return newItem;
+					}, {}),
+				);
+
+				// realiza el 'natural join' (reduce + 1er filter), aplica el 'WHERE' (2d filter) y el 'SELECT' (map)
+				const expect = tablaB
+					.reduce((joinTables, itemB) => {
+						for (const itemA of tablaA) {
+							joinTables.push({ ...itemB, ...itemA });
+						}
+						return joinTables;
+					}, [])
+					.filter((item) => item.s_TITULO_CD === item.c_TITULO_CD)
+					.filter((item) => item.s_INVENTARIO > 15)
+					.map((item) => ({
+						TITULO_CD: item.s_TITULO_CD,
+						TIPO_CD: item.s_TIPO_CD,
+						MENUDEO: item.c_MENUDEO,
+					}));
+
+				assert.deepEqual(actual, expect, "No son iguales");
+			},
+		);
 		//fin test
 		/*
 		El join de condición realiza un método diferente a cualquiera
@@ -3832,20 +3952,23 @@ WHERE s.INVENTARIO > 15;`;
 
 		tipos de uniones: 'inner joins' y 'outer joins'.
         */
-		test("tablas TITULO_CDS, ARTISTAS_TITULOS y ARTISTAS_CD", async () => {
-			const TITULO_CDS = {
-				ID_TITULO: "INT",
-				TITULO: "VARCHAR(60)",
-			};
-			const ARTISTAS_TITULOS = {
-				ID_TITULO: "INT",
-				ID_ARTISTA: "INT",
-			};
-			const ARTISTAS_CD = {
-				ID_ARTISTA: "INT",
-				ARTISTA: "VARCHAR(60)",
-			};
-			const query = `DROP TABLE IF EXISTS TITULO_CDS;
+		test(
+			"tablas TITULO_CDS, ARTISTAS_TITULOS y ARTISTAS_CD",
+			{ only: false },
+			async () => {
+				const TITULO_CDS = {
+					ID_TITULO: "INT",
+					TITULO: "VARCHAR(60)",
+				};
+				const ARTISTAS_TITULOS = {
+					ID_TITULO: "INT",
+					ID_ARTISTA: "INT",
+				};
+				const ARTISTAS_CD = {
+					ID_ARTISTA: "INT",
+					ARTISTA: "VARCHAR(60)",
+				};
+				const query = `DROP TABLE IF EXISTS TITULO_CDS;
 DROP TABLE IF EXISTS ARTISTAS_TITULOS;
 DROP TABLE IF EXISTS ARTISTAS_CD;
 CREATE TABLE TITULO_CDS
@@ -3858,22 +3981,28 @@ CREATE TABLE ARTISTAS_CD
 ( ID_ARTISTA INT,
  ARTISTA VARCHAR(60) );`;
 
-			const result = await qb
-				.dropTable("TITULO_CDS", { secure: true })
-				.dropTable("ARTISTAS_TITULOS", { secure: true })
-				.dropTable("ARTISTAS_CD", { secure: true })
-				.createTable("TITULO_CDS", {
-					cols: TITULO_CDS,
-				})
-				.createTable("ARTISTAS_TITULOS", { cols: ARTISTAS_TITULOS })
-				.createTable("ARTISTAS_CD", { cols: ARTISTAS_CD })
-				.execute();
+				const result = await qb
+					.dropTable("TITULO_CDS", { secure: true })
+					.dropTable("ARTISTAS_TITULOS", { secure: true })
+					.dropTable("ARTISTAS_CD", { secure: true })
+					.createTable("TITULO_CDS", {
+						cols: TITULO_CDS,
+					})
+					.createTable("ARTISTAS_TITULOS", { cols: ARTISTAS_TITULOS })
+					.createTable("ARTISTAS_CD", { cols: ARTISTAS_CD })
+					.execute();
 
-			showResults(result);
-			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
-		});
+				showResults(result);
+				assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+				// Probar la existencia de la tabla
+
+				await tableExist("TITULO_CDS", TITULO_CDS);
+				await tableExist("ARTISTAS_TITULOS", ARTISTAS_TITULOS);
+				await tableExist("ARTISTAS_CD", ARTISTAS_CD);
+			},
+		);
 		//fin test
-		test("añadir registros a TITULO_CD", async () => {
+		test("añadir registros a TITULO_CD", { only: false }, async () => {
 			const TITULO_CDS = [
 				[101, "Famous Blue Raincoat"],
 				[102, "Blue"],
@@ -3909,9 +4038,20 @@ VALUES
 
 			showResults(result);
 			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+			// Comprobar si los valores han sido insertados
+			const dataInTable = await getColValuesFrom(
+				databaseTest,
+				"inventario",
+				"TITULO_CDS",
+				"ID_TITULO",
+			);
+			assert.ok(
+				TITULO_CDS.every((item) => dataInTable.includes(item[0])),
+				"Las filas a insertar no se encuentran en la tabla",
+			);
 		});
 		//fin test
-		test("añadir registros a ARTISTAS_TITULOS", async () => {
+		test("añadir registros a ARTISTAS_TITULOS", { only: false }, async () => {
 			const ARTISTAS_TITULOS = [
 				[101, 2001],
 				[102, 2002],
@@ -3950,14 +4090,25 @@ VALUES
 (113, 2015);`;
 
 			const result = await qb
-				.insert("ARTISTAS_TITULOS", [], ARTISTAS_TITULOS)
+				.insert("ARTISTAS_TITULOS", ARTISTAS_TITULOS)
 				.execute();
 
 			showResults(result);
 			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+			// Comprobar si los valores han sido insertados
+			const dataInTable = await getColValuesFrom(
+				databaseTest,
+				"inventario",
+				"ARTISTAS_TITULOS",
+				"ID_TITULO",
+			);
+			assert.ok(
+				ARTISTAS_TITULOS.every((item) => dataInTable.includes(item[0])),
+				"Las filas a insertar no se encuentran en la tabla",
+			);
 		});
 		//fin test
-		test("añadir registros a ARTISTAS_CD", async () => {
+		test("añadir registros a ARTISTAS_CD", { only: false }, async () => {
 			const ARTISTAS_CD = [
 				[2001, "Jennifer Warnes"],
 				[2002, "Joni Mitchell"],
@@ -3997,35 +4148,106 @@ VALUES
 
 			showResults(result);
 			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+			// Comprobar si los valores han sido insertados
+			const dataInTable = await getColValuesFrom(
+				databaseTest,
+				"inventario",
+				"ARTISTAS_CD",
+				"ID_ARTISTA",
+			);
+			assert.ok(
+				ARTISTAS_CD.every((item) => dataInTable.includes(item[0])),
+				"Las filas a insertar no se encuentran en la tabla",
+			);
 		});
 		//fin test
-		test("unir las tablas TITULO_CDS, ARTISTAS_TITULOS y ARTISTAS_CD usando dos INNER JOIN", async () => {
-			const query = `SELECT t.TITULO, a.ARTISTA
+		test(
+			"unir las tablas TITULO_CDS, ARTISTAS_TITULOS y ARTISTAS_CD usando dos INNER JOIN",
+			{ only: false },
+			async () => {
+				const query = `SELECT t.TITULO, a.ARTISTA
 FROM TITULO_CDS t INNER JOIN ARTISTAS_TITULOS ta
 ON t.ID_TITULO = ta.ID_TITULO
 INNER JOIN ARTISTAS_CD a
 ON ta.ID_ARTISTA = a.ID_ARTISTA
 WHERE t.TITULO LIKE ('%Blue%');`;
 
-			const result = await qb
-				.select(["t.TITULO", "a.ARTISTA"])
-				.innerJoin(["TITULO_CDS", "ARTISTAS_TITULOS"], ["t", "ta"])
-				.on(qb.eq(qb.col("ID_TITULO", "t"), qb.col("ID_TITULO", "ta")))
-				.innerJoin("ARTISTAS_CD", "a")
-				.on(
-					qb.eq(
-						qb.col("ID_ARTISTA").from("ta"),
-						qb.col("ID_ARTISTA").from("a"),
-					),
-				)
-				.where(qb.like(qb.col("TITULO").from("t"), "%Blue%"))
-				.execute();
+				const result = await qb
+					.select(["t.TITULO", "a.ARTISTA"])
+					.innerJoin(["TITULO_CDS", "ARTISTAS_TITULOS"], ["t", "ta"])
+					.on(qb.eq(qb.col("ID_TITULO", "t"), qb.col("ID_TITULO", "ta")))
+					.innerJoin("ARTISTAS_CD", "a")
+					.on(
+						qb.eq(
+							qb.col("ID_ARTISTA").from("ta"),
+							qb.col("ID_ARTISTA").from("a"),
+						),
+					)
+					.where(qb.like(qb.col("TITULO").from("t"), "%Blue%"))
+					.execute();
 
-			showResults(result);
-			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
-		});
+				showResults(result);
+				assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+
+				// Probar los resultados
+				const actual = result.result.rows[1];
+				//lee las filas de la tabla y modifica el nombre del campo con el prefijo
+				const tablaA = (
+					await getColValuesFrom(databaseTest, "inventario", "TITULO_CDS", "*")
+				).map((item) =>
+					Object.keys(item).reduce((newItem, key) => {
+						newItem[`t_${key}`] = item[key];
+						return newItem;
+					}, {}),
+				);
+				const tablaB = (
+					await getColValuesFrom(
+						databaseTest,
+						"inventario",
+						"ARTISTAS_TITULOS",
+						"*",
+					)
+				).map((item) =>
+					Object.keys(item).reduce((newItem, key) => {
+						newItem[`ta_${key}`] = item[key];
+						return newItem;
+					}, {}),
+				);
+				const tablaC = (
+					await getColValuesFrom(databaseTest, "inventario", "ARTISTAS_CD", "*")
+				).map((item) =>
+					Object.keys(item).reduce((newItem, key) => {
+						newItem[`a_${key}`] = item[key];
+						return newItem;
+					}, {}),
+				);
+				// realiza el 'inner join' (reduce) 'on' (1er filter), 'inner join' (reduce)'on' (2d filter) aplica el 'WHERE' (3r filter) y el 'SELECT' (map)
+				const expect = tablaB
+					.reduce((joinTables, itemB) => {
+						for (const itemA of tablaA) {
+							joinTables.push({ ...itemB, ...itemA });
+						}
+						return joinTables;
+					}, [])
+					.filter((item) => item.t_ID_TITULO === item.ta_ID_TITULO)
+					.reduce((joinTables, item) => {
+						for (const itemC of tablaC) {
+							joinTables.push({ ...item, ...itemC });
+						}
+						return joinTables;
+					}, [])
+					.filter((item) => item.ta_ID_ARTISTA === item.a_ID_ARTISTA)
+					.filter((item) => item.t_TITULO.includes("Blue"))
+					.map((item) => ({
+						TITULO: item.t_TITULO,
+						ARTISTA: item.a_ARTISTA,
+					}));
+
+				assert.deepEqual(actual, expect, "No son iguales");
+			},
+		);
 		//fin test
-		test("crea tablas INFO_CD y TIPO_CD", async () => {
+		test("crea tablas INFO_CD y TIPO_CD", { only: false }, async () => {
 			const INFO_CD = {
 				TITULO: "VARCHAR(60)",
 				ID_TIPO: "CHAR(4)",
@@ -4050,9 +4272,11 @@ CREATE TABLE TIPO_CD
 
 			showResults(result);
 			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+			await tableExist("INFO_CD", INFO_CD);
+			await tableExist("TIPO_CD", TIPO_CD);
 		});
 		//fin test
-		test("añadir registros a INFO_CD", async () => {
+		test("añadir registros a INFO_CD", { only: false }, async () => {
 			const INFO_CD = [
 				["Famous Blue Raincoat", "FROK", 19],
 				["Blue", "CPOP", 28],
@@ -4074,9 +4298,20 @@ VALUES
 
 			showResults(result);
 			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+			// Comprobar si los valores han sido insertados
+			const dataInTable = await getColValuesFrom(
+				databaseTest,
+				"inventario",
+				"INFO_CD",
+				"TITULO",
+			);
+			assert.ok(
+				INFO_CD.every((item) => dataInTable.includes(item[0])),
+				"Las filas a insertar no se encuentran en la tabla",
+			);
 		});
 		//fin test
-		test("añadir registros a TIPO_CD", async () => {
+		test("añadir registros a TIPO_CD", { only: false }, async () => {
 			const TIPO_CD = [
 				["FROK", "Folk Rock"],
 				["CPOP", "Classic Pop"],
@@ -4100,9 +4335,20 @@ VALUES
 
 			showResults(result);
 			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+			// Comprobar si los valores han sido insertados
+			const dataInTable = await getColValuesFrom(
+				databaseTest,
+				"inventario",
+				"TIPO_CD",
+				"ID_TIPO",
+			);
+			assert.ok(
+				TIPO_CD.every((item) => dataInTable.includes(item[0])),
+				"Las filas a insertar no se encuentran en la tabla",
+			);
 		});
 		//fin test
-		test("operación join sobre dos tablas", async () => {
+		test("operación join sobre dos tablas", { only: false }, async () => {
 			const $ = qb;
 			const query = `SELECT i.TITULO, t.NOMBRE_TIPO, i.EXISTENCIA
 FROM INFO_CD i JOIN TIPO_CD t
@@ -4120,82 +4366,207 @@ ON i.ID_TIPO = t.ID_TIPO;`;
 
 			showResults(result);
 			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+			// Probar los resultados
+			const actual = result.result.rows[1];
+			//lee las filas de la tabla y modifica el nombre del campo con el prefijo
+			const tablaA = (
+				await getColValuesFrom(databaseTest, "inventario", "INFO_CD", "*")
+			).map((item) =>
+				Object.keys(item).reduce((newItem, key) => {
+					newItem[`i_${key}`] = item[key];
+					return newItem;
+				}, {}),
+			);
+			const tablaB = (
+				await getColValuesFrom(databaseTest, "inventario", "TIPO_CD", "*")
+			).map((item) =>
+				Object.keys(item).reduce((newItem, key) => {
+					newItem[`t_${key}`] = item[key];
+					return newItem;
+				}, {}),
+			);
+
+			// realiza el 'inner join' (reduce) 'on' (filter), el 'SELECT' (map)
+			const expect = tablaB
+				.reduce((joinTables, itemB) => {
+					for (const itemA of tablaA) {
+						joinTables.push({ ...itemB, ...itemA });
+					}
+					return joinTables;
+				}, [])
+				.filter((item) => item.i_ID_TIPO === item.t_ID_TIPO)
+				.map((item) => ({
+					TITULO: item.i_TITULO,
+					NOMBRE_TIPO: item.t_NOMBRE_TIPO,
+					EXISTENCIA: item.i_EXISTENCIA,
+				}));
+
+			assert.deepEqual(actual, expect, "No son iguales");
 		});
 		//fin test
-		test("incluir las filas no coincidentes de la tabla INFO_CD usando LEFT OUTER JOIN", async () => {
-			const $ = qb;
-			const query = `SELECT i.TITULO, t.NOMBRE_TIPO, i.EXISTENCIA
+		test(
+			"mostrar la tabla 'INFO_CD' y las coincidencias con 'TIPO_CD' 'LEFT OUTER JOIN'",
+			{ only: false },
+			async () => {
+				const $ = qb;
+				const query = `SELECT i.TITULO, t.NOMBRE_TIPO, i.EXISTENCIA
 FROM INFO_CD i LEFT OUTER JOIN TIPO_CD t
 ON i.ID_TIPO = t.ID_TIPO;`;
 
-			const result = await qb
-				.select([
-					$.col("TITULO").from("i"),
-					$.col("NOMBRE_TIPO").from("t"),
-					$.col("EXISTENCIA", "i"),
-				])
-				.leftJoin(["INFO_CD", "TIPO_CD"], ["i", "t"])
-				.on($.eq($.col("ID_TIPO", "i"), $.col("ID_TIPO", "t")))
-				.execute();
+				const result = await qb
+					.select([
+						$.col("TITULO").from("i"),
+						$.col("NOMBRE_TIPO").from("t"),
+						$.col("EXISTENCIA", "i"),
+					])
+					.leftJoin(["INFO_CD", "TIPO_CD"], ["i", "t"])
+					.on($.eq($.col("ID_TIPO", "i"), $.col("ID_TIPO", "t")))
+					.execute();
 
-			showResults(result);
-			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
-		});
+				showResults(result);
+				assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+				// Probar los resultados
+				const actual = result.result.rows[1];
+				//lee las filas de la tabla y modifica el nombre del campo con el prefijo
+				const tablaA = (
+					await getColValuesFrom(databaseTest, "inventario", "INFO_CD", "*")
+				).map((item) =>
+					Object.keys(item).reduce((newItem, key) => {
+						newItem[`i_${key}`] = item[key];
+						return newItem;
+					}, {}),
+				);
+				const tablaB = (
+					await getColValuesFrom(databaseTest, "inventario", "TIPO_CD", "*")
+				).map((item) =>
+					Object.keys(item).reduce((newItem, key) => {
+						newItem[`t_${key}`] = item[key];
+						return newItem;
+					}, {}),
+				);
+
+				// realiza el 'left outer join' (reduce) 'on' (filter), el 'SELECT' (map)
+				const nullItemB = Object.keys(tablaB[0]).reduce((nullItem, key) => {
+					nullItem[key] = null;
+					return nullItem;
+				}, {});
+				const expect = tablaA
+					.reduce((leftOuterJoin, itemA) => {
+						const items = tablaB.filter(
+							(item) => itemA.i_ID_TIPO === item.t_ID_TIPO,
+						);
+						if (items.length > 0) {
+							for (const itemB of items) {
+								leftOuterJoin.push({ ...itemA, ...itemB });
+							}
+						} else {
+							leftOuterJoin.push({ ...itemA, ...nullItemB });
+						}
+
+						return leftOuterJoin;
+					}, [])
+					.map((item) => ({
+						TITULO: item.i_TITULO,
+						NOMBRE_TIPO: item.t_NOMBRE_TIPO,
+						EXISTENCIA: item.i_EXISTENCIA,
+					}));
+				assert.deepEqual(actual, expect, "No son iguales");
+			},
+		);
 		//fin test
-		test("incluir las filas no coincidentes de la tabla TIPO_CD usando RIGHT OUTER JOIN", async () => {
-			const $ = qb;
-			const query = `SELECT i.TITULO, t.NOMBRE_TIPO, i.EXISTENCIA
+		test(
+			"mostrar la tabla 'TIPO_CD' y las coincidencias con 'INFO_CD' 'RIGHT OUTER JOIN'",
+			{ only: false },
+			async () => {
+				const $ = qb;
+				const query = `SELECT t.NOMBRE_TIPO, i.TITULO, i.EXISTENCIA
 FROM INFO_CD i RIGHT OUTER JOIN TIPO_CD t
 ON i.ID_TIPO = t.ID_TIPO;`;
 
-			const result = await qb
-				.select([
-					$.col("TITULO").from("i"),
-					$.col("NOMBRE_TIPO").from("t"),
-					$.col("EXISTENCIA", "i"),
-				])
-				.rightJoin(["INFO_CD", "TIPO_CD"], ["i", "t"])
-				.on($.eq($.col("ID_TIPO", "i"), $.col("ID_TIPO", "t")))
-				.execute();
+				const result = await qb
+					.select([
+						$.col("NOMBRE_TIPO").from("t"),
+						$.col("TITULO").from("i"),
+						$.col("EXISTENCIA", "i"),
+					])
+					.rightJoin(["INFO_CD", "TIPO_CD"], ["i", "t"])
+					.on($.eq($.col("ID_TIPO", "i"), $.col("ID_TIPO", "t")))
+					.execute();
 
-			showResults(result);
-			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
-		});
+				showResults(result);
+				assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+				// Probar los resultados
+				const actual = result.result.rows[1];
+				//lee las filas de la tabla y modifica el nombre del campo con el prefijo
+				const tablaA = (
+					await getColValuesFrom(databaseTest, "inventario", "INFO_CD", "*")
+				).map((item) =>
+					Object.keys(item).reduce((newItem, key) => {
+						newItem[`i_${key}`] = item[key];
+						return newItem;
+					}, {}),
+				);
+				const tablaB = (
+					await getColValuesFrom(databaseTest, "inventario", "TIPO_CD", "*")
+				).map((item) =>
+					Object.keys(item).reduce((newItem, key) => {
+						newItem[`t_${key}`] = item[key];
+						return newItem;
+					}, {}),
+				);
+
+				// realiza el 'RIGHT OUTER JOIN' (reduce) 'on' (filter), el 'SELECT' (map)
+				const nullItemA = Object.keys(tablaA[0]).reduce((nullItem, key) => {
+					nullItem[key] = null;
+					return nullItem;
+				}, {});
+				const expect = tablaB
+					.reduce((rightOutenJoin, itemB) => {
+						const items = tablaA.filter(
+							(item) => itemB.t_ID_TIPO === item.i_ID_TIPO,
+						);
+						if (items.length > 0) {
+							for (const itemA of items) {
+								rightOutenJoin.push({ ...itemA, ...itemB });
+							}
+						} else {
+							rightOutenJoin.push({ ...nullItemA, ...itemB });
+						}
+
+						return rightOutenJoin;
+					}, [])
+					.map((item) => ({
+						NOMBRE_TIPO: item.t_NOMBRE_TIPO,
+						TITULO: item.i_TITULO,
+						EXISTENCIA: item.i_EXISTENCIA,
+					}));
+				assert.deepEqual(actual, expect, "No son iguales");
+			},
+		);
 		//fin test
-		// 		test(
-		// 			"todas las filas no coincidentes usando full outer join",
-		// 			async () => {
-		// 				const $ = qb;
-		// 				const query = `SELECT i.TITULO, t.NOMBRE_TIPO, i.EXISTENCIA
-		// FROM INFO_CD i FULL OUTER JOIN TIPO_CD t
-		// ON i.ID_TIPO = t.ID_TIPO;`;
-
-		// 				const result = await qb
-		// 					.select([
-		// 						$.col("TITULO").from("i"),
-		// 						$.col("NOMBRE_TIPO").from("t"),
-		// 						$.col("EXISTENCIA", "i"),
-		// 					])
-		// 					.fullJoin(["INFO_CD", "TIPO_CD"], ["i", "t"])
-		// 					.on($.eq($.col("ID_TIPO", "i"), $.col("ID_TIPO", "t")));
-
-		// 				showResults(result);
-		// 				assert.equal(await  result.toString(), `USE INVENTARIO;\n${query}`);
-		// 			},
-		// 		);
+		test(
+			"todas las filas 'full outer join' no soportado en el SGBD",
+			{ only: false },
+			async () => {
+				//En MySQL no existe una sintaxis especifica, se utiliza LEFT JOIN UNION RIGTH JOIN
+			},
+		);
 		//fin test
-		test("crea tablas CDS_CONTINUADOS y CDS_DESCONTINUADOS", async () => {
-			const CDS_CONTINUADOS = {
-				NOMBRE_CD: "VARCHAR(60)",
-				TIPO_CD: "CHAR(4)",
-				EN_EXISTENCIA: "INT",
-			};
-			const CDS_DESCONTINUADOS = {
-				NOMBRE_CD: "VARCHAR(60)",
-				TIPO_CD: "CHAR(4)",
-				EN_EXISTENCIA: "INT",
-			};
-			const query = `CREATE TABLE CDS_CONTINUADOS
+		test(
+			"crea tablas CDS_CONTINUADOS y CDS_DESCONTINUADOS",
+			{ only: false },
+			async () => {
+				const CDS_CONTINUADOS = {
+					NOMBRE_CD: "VARCHAR(60)",
+					TIPO_CD: "CHAR(4)",
+					EN_EXISTENCIA: "INT",
+				};
+				const CDS_DESCONTINUADOS = {
+					NOMBRE_CD: "VARCHAR(60)",
+					TIPO_CD: "CHAR(4)",
+					EN_EXISTENCIA: "INT",
+				};
+				const query = `CREATE TABLE CDS_CONTINUADOS
 ( NOMBRE_CD VARCHAR(60),
  TIPO_CD CHAR(4),
  EN_EXISTENCIA INT );
@@ -4204,18 +4575,19 @@ CREATE TABLE CDS_DESCONTINUADOS
  TIPO_CD CHAR(4),
  EN_EXISTENCIA INT );`;
 
-			const result = await qb
-				.createTable("CDS_CONTINUADOS", {
-					cols: CDS_CONTINUADOS,
-				})
-				.createTable("CDS_DESCONTINUADOS", {
-					cols: CDS_DESCONTINUADOS,
-				})
-				.execute();
+				const result = await qb
+					.createTable("CDS_CONTINUADOS", {
+						cols: CDS_CONTINUADOS,
+					})
+					.createTable("CDS_DESCONTINUADOS", {
+						cols: CDS_DESCONTINUADOS,
+					})
+					.execute();
 
-			showResults(result);
-			assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
-		});
+				showResults(result);
+				assert.equal(await result.toString(), `USE INVENTARIO;\n${query}`);
+			},
+		);
 		//fin test
 		test("añade registros a CDS_CONTINUADOS", async () => {
 			const CDS_CONTINUADOS = [

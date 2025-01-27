@@ -6,12 +6,12 @@ class Expresion {
 		this.value = expresion;
 		this.alias = undefined;
 	}
-	toString() {
-		return `${this.value}${this.alias !== undefined ? ` AS ${this.alias}` : ""}`;
-	}
 	as(alias) {
 		this.alias = alias;
 		return this;
+	}
+	toString() {
+		return `${this.value}${this.alias !== undefined ? ` AS ${this.alias}` : ""}`;
 	}
 	toUpperCase() {
 		return this.toString().toUpperCase();
