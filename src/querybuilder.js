@@ -212,33 +212,7 @@ class QueryBuilder {
 				item.toUpperCase().includes(command.toUpperCase()),
 		);
 	}
-	async hello(texto, next) {
-		next.isQB = texto instanceof QueryBuilder;
-		if (isJSObject(texto)) {
-			return this.toNext([texto, next], "\n");
-		}
-		if (texto instanceof QueryBuilder) {
-			const result = next.q.pop();
-			return this.toNext([`HELLO: ${result}`, next], "\n");
-		}
-		const nuevoTexto = `HELLO: ${texto}`;
-		return this.toNext([nuevoTexto, next], "\n");
-	}
-	say(texto, next) {
-		console.log(
-			"[say] next:%o type:%o isQB:%o",
-			next,
-			typeof texto,
-			texto instanceof QueryBuilder,
-		);
-		next.isQB = texto instanceof QueryBuilder;
-		if (texto instanceof QueryBuilder) {
-			const result = next.q.pop();
-			return this.toNext([`SAY: ${result}`, next], "\n");
-		}
-		const nuevoTexto = `SAY: ${texto}`;
-		return this.toNext([nuevoTexto, next], "\n");
-	}
+
 	/**
 	 * Añade una instancia del controlador para ejecutar los comandos y
 	 * enviarlos a una base de datos
@@ -594,7 +568,6 @@ class QueryBuilder {
 	}
 
 	using(columnsInCommon, next) {
-		log(["QB", "using"], "Recibe next", next);
 		// solo se puede aplicar si el ultimo comando es un join del tipo incluido en el array
 		if (["innerJoin", "join", "leftJoin", "rightJoin"].includes(next.last)) {
 			const response = this.language.using(columnsInCommon);
