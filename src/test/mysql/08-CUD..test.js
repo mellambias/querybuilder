@@ -23,7 +23,7 @@ const current = { databaseTest, dataBase: "inventario" };
 // crea funciones que al ser llamadas usa como 'this' el valor pasado a 'bind'
 const tableExist = checktable.bind(current);
 
-suite("capitulo 8 Modificar datos SQL", async () => {
+suite("capitulo 8 Modificar datos SQL", { concurrency: false }, async () => {
 	beforeEach(async () => {
 		qb = qb.use("INVENTARIO");
 	});

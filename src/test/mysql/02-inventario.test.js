@@ -26,10 +26,10 @@ const queryBuilder = new QueryBuilder(MySQL, {
 });
 let qb = queryBuilder.driver(MySql8.driver, MySql8.params);
 
-suite("Base de datos INVENTARIO", async () => {
+suite("Base de datos INVENTARIO", { concurrency: false }, async () => {
 	test("Crea la base de datos 'inventario'", async () => {
 		const result = await qb
-			.dropDatabase("INVENTARIO")
+			.dropDatabase("INVENTARIO", { secure: true })
 			.createDatabase("INVENTARIO")
 			.execute();
 		qb.dropQuery();
@@ -43,7 +43,7 @@ suite("Base de datos INVENTARIO", async () => {
 	});
 });
 
-suite("Crea las tablas de 'inventario'", async () => {
+suite("Crea las tablas de 'inventario'", { concurrency: false }, async () => {
 	beforeEach(async () => {
 		qb = qb.use("INVENTARIO");
 	});

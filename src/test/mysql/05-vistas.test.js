@@ -15,7 +15,7 @@ const queryBuilder = new QueryBuilder(MySQL, {
 });
 let qb = queryBuilder.driver(MySql8.driver, MySql8.params);
 
-suite("Trabajar con vistas", () => {
+suite("Trabajar con vistas", { concurrency: false }, async () => {
 	beforeEach(async () => {
 		qb = qb.use("INVENTARIO");
 	});
@@ -23,7 +23,7 @@ suite("Trabajar con vistas", () => {
 		qb.dropQuery();
 	});
 	test("crea la vista 'CDS_EN_EXISTENCIA'", async () => {
-		await qb
+		const result = await qb
 			.createView("CDS_EN_EXISTENCIA", {
 				as: qb
 					.select(["TITULO_CD", "EN_EXISTENCIA"])
@@ -39,7 +39,7 @@ suite("Trabajar con vistas", () => {
 		);
 	});
 	test("crea la vista la vista 'EDITORES_CD'", async () => {
-		await qb
+		const result = await qb
 			.createView("EDITORES_CD", {
 				cols: ["TITULO_CD", "EDITOR"],
 				as: qb
@@ -65,7 +65,7 @@ suite("Trabajar con vistas", () => {
 
 		assert.ok(
 			await existView(databaseTest, "inventario", "EDITORES_CD"),
-			"La vista EDITORES_CD no existe",
+			"La vista 'EDITORES_CD' no existe ",
 		);
 	});
 

@@ -24,7 +24,7 @@ const tableExist = checktable.bind(current);
 const rowsInTableExist = checkRows.bind(current);
 
 // Ejemplos extraidos del Capitulo 9 de libro SQL2006
-suite("Uso de predicados", async () => {
+suite("Uso de predicados", { concurrency: false }, async () => {
 	beforeEach(async () => {
 		qb = qb.use("INVENTARIO");
 	});

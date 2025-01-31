@@ -9,8 +9,15 @@ class Column {
 		this._type = type;
 		this._alias = undefined;
 		this._cast = undefined;
+		this._qb = name instanceof QueryBuilder;
 	}
 	toString() {
+		if (this._qb) {
+			if (this._alias === undefined) {
+				throw new Error("El campo subselect tiene que usar un alias AS");
+			}
+			return `(${this.name}) AS ${this._alias}`;
+		}
 		if (typeof this.name === "string") {
 			const [table, name] = this.name.split(".");
 			if (name !== undefined) {
@@ -25,12 +32,7 @@ class Column {
 			}
 			return `${this.name}${this._alias !== undefined ? ` AS ${this._alias}` : ""}`;
 		}
-		if (this.name instanceof QueryBuilder) {
-			if (this._alias === undefined) {
-				throw new Error("El campo subselect tiene que usar un alias AS");
-			}
-			return `( ${this.name.toString({ as: "subselect" })} ) AS ${this._alias}`;
-		}
+
 		if (this.name instanceof Expresion) {
 			return `${this.name} AS ${this._alias}`;
 		}

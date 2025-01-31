@@ -72,8 +72,13 @@ class Core {
 			return `'${userOrRole?.name}'${userOrRole?.host !== undefined ? `@'${userOrRole.host}'` : `@'${host}'`}`;
 		}
 	}
-
-	getSubselect(next) {
+	/**
+	 * Devuelve un array con el select o el último valor resuelto
+	 * @param {Object} next valor que contiene el array con las resoluciones
+	 * @param {boolean} all true incluye tambien primer select
+	 * @returns
+	 */
+	getSubselect(next, all = false) {
 		try {
 			const start = next.q.findLastIndex(
 				(item) =>
@@ -81,7 +86,7 @@ class Core {
 					item.toUpperCase().includes("SELECT"),
 			);
 			log(["Core", "getSubselect"], "start", start, next.q);
-			if (start === -1 || start < 1) {
+			if (start === -1 || (start === 1 && !all)) {
 				log(["Core", "getSubselect"], "No encuentra el SubSelect next:", next);
 				const lastItem = next.q.pop();
 				log(
@@ -160,7 +165,11 @@ class Core {
 	}
 	dropDatabase(name, options) {
 		this.useDatabase = null;
-		const query = `DROP DATABASE ${name}`;
+		options?.secure;
+		const query = "DROP DATABASE".concat(
+			options?.secure === true ? " IF EXISTS " : " ",
+			name,
+		);
 		return query;
 	}
 
@@ -426,8 +435,8 @@ class Core {
 		return `USING (${columnsInCommon})`;
 	}
 
-	union(selects, next, options) {
-		let union = "\nUNION\n";
+	multiTabla(selects, next, options) {
+		let command = `\n${options.command}\n`;
 		const sql = [];
 		const qbSelect = [];
 		for (const select of selects) {
@@ -447,10 +456,23 @@ class Core {
 			return item;
 		});
 		if (options?.all) {
-			union = "\nUNION ALL\n";
+			command = `\n${options.command} ALL\n`;
 		}
-		return `${result.join(union)}`;
+		return `${result.join(command)}`;
 	}
+	union(selects, next, options) {
+		options.command = "UNION";
+		return this.multiTabla(selects, next, options);
+	}
+	intersect(selects, next, options) {
+		options.command = "INTERSECT";
+		return this.multiTabla(selects, next, options);
+	}
+	except(selects, next, options) {
+		options.command = "EXCEPT";
+		return this.multiTabla(selects, next, options);
+	}
+
 	where(predicados, next) {
 		const sql = "WHERE";
 		if (predicados instanceof QueryBuilder) {
@@ -540,9 +562,10 @@ class Core {
 				if (b instanceof QueryBuilder) {
 					valorDeB = this.getSubselect(next);
 					if (Array.isArray(valorDeB)) {
-						valorDeB = `${valorDeB.join("\n")}`;
+						valorDeB = valorDeB.join("\n");
 					}
 				}
+
 				if (a instanceof QueryBuilder) {
 					valorDeA = this.getSubselect(next);
 					if (Array.isArray(valorDeA)) {
@@ -555,6 +578,13 @@ class Core {
 							valorDeB = b;
 						}
 						valorDeB = `'${b}'`;
+					}
+				}
+				if (valorDeB !== undefined) {
+					if (typeof valorDeB === "string") {
+						if (valorDeB.startsWith("SELECT")) {
+							valorDeB = `( ${valorDeB} )`;
+						}
 					}
 					return `${valorDeA} ${operTwoCols[oper]} ${valorDeB}`;
 				}
@@ -708,7 +738,11 @@ class Core {
 										return `'${item}'`;
 									}
 									if (item instanceof QueryBuilder) {
-										log(["Core", "insert"], "Es un QB. Recibe next:", next);
+										log(
+											["Core", "insert"],
+											"El primer elemento es un Array Recibe next:",
+											next,
+										);
 										const resolve = this.getSubselect(next);
 										return Array.isArray(resolve)
 											? resolve.join("\n")
@@ -726,7 +760,15 @@ class Core {
 						return `'${value}'`;
 					}
 					if (value instanceof QueryBuilder) {
-						return `${next.q}`;
+						log(
+							["Core", "insert"],
+							"El primer elemento no es un Array. Recibe next:",
+							next,
+						);
+						const resolve = this.getSubselect(next, true);
+						return Array.isArray(resolve)
+							? `( ${resolve.join("\n")} )`
+							: resolve;
 					}
 					return value;
 				})

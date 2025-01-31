@@ -19,7 +19,7 @@ const queryBuilder = new QueryBuilder(MySQL, {
 let qb = queryBuilder.driver(MySql8.driver, MySql8.params);
 const current = { databaseTest, dataBase: "inventario" };
 
-suite("Manipulacion de datos CRUD", async () => {
+suite("Manipulacion de datos CRUD", { concurrency: false }, async () => {
 	beforeEach(async () => {
 		qb = qb.use("INVENTARIO");
 	});

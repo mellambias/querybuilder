@@ -1,112 +1,159 @@
 import QueryBuilder from "./querybuilder.js";
+import { log } from "./utils/utils.js";
 
 class Transaction {
 	constructor(builder, options = {}) {
 		this.options = options;
 		this.builder = builder;
 		this.driver = builder?.driverDB;
-		this.stack = [];
-		this.error = undefined;
-		this.commandStack = [];
-		this.setTransaction();
+		this.error = [];
+		this.promise = Promise.resolve({ commandStack: [], stack: [], error: [] });
+		this.returnOriginal = [...builder.returnOriginal, "start", "connect"];
+		this.handler = {
+			get(target, prop, receiver) {
+				const original = Reflect.get(target, prop, receiver);
+				if (typeof original === "function") {
+					if (target.returnOriginal.indexOf(prop) >= 0) {
+						return original;
+					}
+					return (...args) => {
+						// añade la función a la cadena de promesas
+						target.promise = target.promise.then((next) => {
+							// iguala el numero de argumentos que recibe la función
+							while (args.length < original.length - 1) {
+								args.push(undefined);
+							}
+							// pasa 'next' como ultimo argumento de la función original
+							args.push({ ...next });
+							// ejecuta la funcion
+							const response = original.apply(receiver, args);
+							return response;
+						});
+						return receiver;
+					};
+				}
+				return original;
+			},
+		};
+		// biome-ignore lint/correctness/noConstructorReturn: <explanation>
+		return new Proxy(this, this.handler);
 	}
 
-	setTransaction() {
+	setUpTransaction(next) {
 		if (this.options !== undefined) {
-			this.commandStack = [
+			next.commandStack = [
 				`${this.builder.language.setTransaction(this.options)};`,
 			];
+			return next;
 		}
 	}
-	async connect() {
-		if (this.stack.length === 0) {
-			this.error = new Error(
-				"Para iniciar una transacción es necesario tener consultas",
+	async connect(next) {
+		if (next.stack.length === 0) {
+			next.error.push(
+				new Error("Para iniciar una transacción es necesario tener consultas"),
 			);
 		}
-		return this;
+		return next;
 	}
 
-	add(...querys) {
+	async add(...querys) {
+		const next = querys.pop();
 		for (const query of querys) {
 			if (query instanceof QueryBuilder) {
-				this.stack.push(query.toString());
+				const resolve = await query.promise;
+				const lastIndex = resolve.q.length - 1;
+				resolve.q[lastIndex] += !resolve.q[lastIndex].endsWith(";") ? ";" : "";
+				const endCommandIndex = resolve.q.findIndex((item) =>
+					item.endsWith(";"),
+				);
+				const command = resolve.q.splice(0, endCommandIndex + 1);
+				next.stack.push(command.join("\n"));
+			} else {
+				next.stack.push(query.endsWith(";") ? query : query.concat(";"));
 			}
 		}
-		return this;
+		return next;
 	}
 
 	async start(options) {
-		const transaccion = await this.connect();
-		if (transaccion.error) {
-			throw new Error(transaccion.error);
+		let next = await this.promise;
+		next = await this.connect(next);
+		if (next.error.length) {
+			throw new Error("Problemas con la transaccion", { cause: next.error });
 		}
 		try {
-			this.setTransaction();
-			this.commandStack.push(
+			next.commandStack.push(
 				`${this.builder.language.startTransaction(options)};`,
 			);
-			for (const command of this.stack) {
-				if (command !== null) {
-					this.commandStack.push(command);
-				}
+			const transaction = await this.toString();
+			if (options?.debug) {
+				return this;
 			}
 			if (this.driver) {
-				await this.driver.execute(this.commandStack.join("\n"), {
+				await this.driver.execute(transaction, {
 					transaction: true,
 				});
 				this.result = this.driver.response();
-				this.error = undefined;
+				this.error = [];
 				await this.driver.execute("COMMIT;");
 				return this;
 			}
 		} catch (error) {
-			this.error = `Capture on Transaction [start-rollback] ${error.message}`;
+			next.error.push(
+				`Capture on Transaction [start-rollback] ${error.message}`,
+			);
+			this.error = next.error;
 			this.result = undefined;
 			await this.driver.execute("ROLLBACK;");
-			return this;
+			throw new Error(`[Transaction][startTransaction] ${next.error}`, {
+				cause: next.error,
+			});
 		}
 	}
 
-	setSavePoint(name) {
+	setSavePoint(name, next) {
 		try {
 			const savePoint = `${this.builder.language.setSavePoint(name)};`;
-			this.stack.push(savePoint);
+			next.stack.push(savePoint);
 		} catch (error) {
-			this.error = error.message;
+			next.error.push(error.message);
 		}
-		return this;
+		return next;
 	}
 
-	clearSavePoint(name) {
+	clearSavePoint(name, next) {
 		try {
-			this.stack.push(`${this.builder.language.clearSavePoint(name)};`);
+			next.stack.push(`${this.builder.language.clearSavePoint(name)};`);
 		} catch (error) {
-			this.error = error.message;
+			next.error.push(error.message);
 		}
-		return this;
+		return next;
 	}
 
-	commit() {
+	commit(next) {
 		try {
-			this.stack.push(`${this.builder.language.commit()};`);
+			next.stack.push(`${this.builder.language.commit()};`);
 		} catch (error) {
-			this.error = error.message;
+			next.error.push(error.message);
 		}
-		return this;
+		return next;
 	}
 
-	rollback(savepoint) {
+	rollback(savepoint, next) {
 		try {
-			this.stack.push(`${this.builder.language.rollback(savepoint)};`);
+			next.stack.push(`${this.builder.language.rollback(savepoint)};`);
 		} catch (error) {
-			this.error = error.message;
+			next.error.push(error.message);
 		}
-		return this;
+		return next;
 	}
 
-	toString() {
-		return this.commandStack.join("\n");
+	async toString() {
+		const resolve = await this.promise;
+		const text = resolve.commandStack
+			.join("\n")
+			.concat("\n", resolve.stack.filter((item) => item !== null).join("\n"));
+		return text;
 	}
 	queryJoin() {
 		return this.toString();

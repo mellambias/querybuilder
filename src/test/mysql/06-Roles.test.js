@@ -15,7 +15,7 @@ const queryBuilder = new QueryBuilder(MySQL, {
 });
 let qb = queryBuilder.driver(MySql8.driver, MySql8.params);
 
-suite("Roles", () => {
+suite("Roles", { concurrency: false }, async () => {
 	beforeEach(async () => {
 		qb = qb.use("INVENTARIO");
 	});

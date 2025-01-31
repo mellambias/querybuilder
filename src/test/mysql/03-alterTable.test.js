@@ -21,18 +21,18 @@ const queryBuilder = new QueryBuilder(MySQL, {
 });
 let qb = queryBuilder.driver(MySql8.driver, MySql8.params);
 
-suite("Modifica la estructura de la tabla 'alterTable'", async () => {
-	beforeEach(async () => {
-		qb = qb.use("INVENTARIO");
-	});
-	afterEach(async () => {
-		qb.dropQuery();
-	});
-	test(
-		"Añadir una columna a la tabla DISCOS_COMPACTOS",
-		{ only: false },
-		async () => {
-			const result = await qb
+suite(
+	"Modifica la estructura de la tabla 'alterTable'",
+	{ concurrency: false },
+	async () => {
+		beforeEach(async () => {
+			qb = qb.use("INVENTARIO");
+		});
+		afterEach(async () => {
+			qb.dropQuery();
+		});
+		test("Añadir una columna a la tabla DISCOS_COMPACTOS", async () => {
+			await qb
 				.alterTable("DISCOS_COMPACTOS")
 				.addColumn("EN_EXISTENCIA", { type: "INT", values: ["not null"] })
 				.execute();
@@ -44,22 +44,17 @@ suite("Modifica la estructura de la tabla 'alterTable'", async () => {
 			);
 			assert.ok(
 				cols.some((item) => item.Field.toUpperCase() === "EN_EXISTENCIA"),
-				"El campo no existe",
+				"El campo 'EN_EXISTENCIA' no existe",
 			);
-		},
-	);
+		});
 
-	test(
-		"añade una constraint de tipo 'CHECK' al campo 'EN_EXISTENCIA'",
-		{ only: false },
-		async () => {
-			const debug = false;
-			const result = await qb
+		test("añade una constraint de tipo 'CHECK' al campo 'EN_EXISTENCIA'", async () => {
+			await qb
 				.alterTable("DISCOS_COMPACTOS")
 				.addConstraint("CK_EN_EXISTENCIA", {
 					check: qb.and(qb.gt("EN_EXISTENCIA", 0), qb.lt("EN_EXISTENCIA", 50)),
 				})
-				.execute(debug);
+				.execute();
 			const { check } = await restriccionesTable(
 				databaseTest,
 				"inventario",
@@ -73,6 +68,6 @@ suite("Modifica la estructura de la tabla 'alterTable'", async () => {
 				"((`EN_EXISTENCIA` > 0) and (`EN_EXISTENCIA` < 50))",
 				"La constraint no existe o no coincide",
 			);
-		},
-	);
-});
+		});
+	},
+);

@@ -53,9 +53,11 @@ export const createView = {
 	name: (name) => `VIEW ${name}`,
 	cols: (cols) => `( ${cols.join(", ")} )`,
 	as: function (vista, self) {
-		return vista instanceof QueryBuilder
-			? `AS ${this.getSubselect(self._values.next).join("\n")}`
-			: `AS ${vista}`;
+		if (vista instanceof QueryBuilder) {
+			const resolve = this.getSubselect(self._values.next, true);
+			return `AS ${Array.isArray(resolve) ? resolve.join("\n") : resolve}`;
+		}
+		return `AS ${vista}`;
 	},
 	check: (check) => (check === true ? "WITH CHECK OPTION" : undefined),
 	orden: ["name", "cols", "as", "check"],

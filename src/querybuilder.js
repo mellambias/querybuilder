@@ -56,8 +56,10 @@ class QueryBuilder {
 			"exp",
 			"col",
 			"coltn",
+			"lastStatementIn",
+			"setTransaction",
 		];
-		this.returnPromise = ["createCursor", "closeCursor", "setTransaction"];
+		this.returnPromise = ["createCursor", "closeCursor"];
 		this.handler = {
 			get(target, prop, receiver) {
 				if (prop === "catch") {
@@ -197,7 +199,8 @@ class QueryBuilder {
 					log("toNext", "Devuelve un cursor");
 					return { q: [valor] };
 				} else if (valor instanceof Expresion) {
-					log("toNext", "Es una expresion");
+					log("toNext", "Es una expresion %s", valor);
+					next.q.push(valor);
 					return next;
 				} else {
 					valor = Object.keys(valor).reduce((obj, key) => {
@@ -257,6 +260,14 @@ class QueryBuilder {
 			return {};
 		}
 		return data;
+	}
+
+	lastStatementIn(command, list) {
+		return list.findLastIndex(
+			(item) =>
+				item.toUpperCase().startsWith(command.toUpperCase()) ||
+				item.toUpperCase().includes(command.toUpperCase()),
+		);
 	}
 	async hello(texto, next) {
 		next.isQB = texto instanceof QueryBuilder;
@@ -654,6 +665,7 @@ class QueryBuilder {
 		return this.toNext([response, next]);
 	}
 	unionAll(...selects) {
+		//this causes duplicates to be included in the result
 		const next = selects.pop();
 		log(["QB", "unionAll"], "recibe next", next);
 		if (selects.length < 2) {
@@ -661,6 +673,49 @@ class QueryBuilder {
 			return this.toNext([null, next]);
 		}
 		const response = this.language.union(selects, next, { all: true });
+		return this.toNext([response, next]);
+	}
+
+	intersect(...selects) {
+		const next = selects.pop();
+		log(["QB", "intersect"], "recibe next", next);
+		if (selects.length < 2) {
+			next.error = "INTERSECT necesita mínimo dos instrucciones SELECT";
+			return this.toNext([null, next]);
+		}
+		const response = this.language.intersect(selects, next, { all: false });
+		return this.toNext([response, next]);
+	}
+	intersectAll(...selects) {
+		//this causes duplicates to be included in the result
+		const next = selects.pop();
+		log(["QB", "intersectAll"], "recibe next", next);
+		if (selects.length < 2) {
+			next.error = "INTERSECT necesita mínimo dos instrucciones SELECT";
+			return this.toNext([null, next]);
+		}
+		const response = this.language.intersect(selects, next, { all: true });
+		return this.toNext([response, next]);
+	}
+	except(...selects) {
+		const next = selects.pop();
+		log(["QB", "except"], "recibe next", next);
+		if (selects.length < 2) {
+			next.error = "INTERSECT necesita mínimo dos instrucciones SELECT";
+			return this.toNext([null, next]);
+		}
+		const response = this.language.except(selects, next, { all: false });
+		return this.toNext([response, next]);
+	}
+	exceptAll(...selects) {
+		//this causes duplicates to be included in the result
+		const next = selects.pop();
+		log(["QB", "exceptAll"], "recibe next", next);
+		if (selects.length < 2) {
+			next.error = "EXCEPT necesita mínimo dos instrucciones SELECT";
+			return this.toNext([null, next]);
+		}
+		const response = this.language.except(selects, next, { all: true });
 		return this.toNext([response, next]);
 	}
 	where(predicados, next) {
@@ -852,8 +907,7 @@ class QueryBuilder {
 		return next;
 	}
 	orderBy(columns, next) {
-		const select = this.promiseStack.find((item) => item.prop === "select");
-		if (select !== undefined) {
+		if (this.lastStatementIn("select", next.q)) {
 			const command = this.language.orderBy(columns);
 			return this.toNext([command, next]);
 		}
@@ -861,26 +915,25 @@ class QueryBuilder {
 		return next;
 	}
 	//MySQL, PostgreSQL, y SQLite
-	limit(limit) {
-		this.commandStack.push("limit");
-		if (this.selectCommand?.length > 0) {
-			this.selectStack.push(this.language.limit(limit));
-		} else {
-			this.error = "No es posible aplicar, falta el comando 'select'";
+	limit(limit, next) {
+		if (this.lastStatementIn("select", next.q)) {
+			const command = this.language.limit(limit);
+			return this.toNext([command, next]);
 		}
-		return this;
+		next.error = new Error("limit necesita un SELECT", {
+			cause: "falta un SELECT",
+		});
+		return this.toNext([null, next]);
 	}
-	offset(offset) {
-		if (!this.commandStack.lastIndexOf("limit")) {
-			this.error = "offset se utiliza con limit";
+	offset(offset, next) {
+		if (this.lastStatementIn("limit", next.q)) {
+			const command = this.language.offset(offset);
+			return this.toNext([command, next]);
 		}
-		this.commandStack.push("offset");
-		if (this.selectCommand?.length > 0) {
-			this.selectStack.push(this.language.offset(offset));
-		} else {
-			this.error = "No es posible aplicar, falta el comando 'select'";
-		}
-		return this;
+		this.error = new Error("QueryBuilder 'offset'", {
+			cause: "'offset' se utiliza con 'limit'",
+		});
+		return this.toNext([null, next]);
 	}
 	//SQL Server y Oracle
 	// FETCH FIRST n ROWS ONLY
@@ -1030,6 +1083,7 @@ class QueryBuilder {
 
 	setTransaction(options) {
 		const transaction = new Transaction(this, options);
+		transaction.setUpTransaction();
 		return transaction;
 	}
 

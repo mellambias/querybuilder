@@ -33,18 +33,25 @@ export const select = {
 			if (typeof column === "string") {
 				colStack[index] = `${column}`;
 			}
-			if (column instanceof Column || column instanceof Expresion) {
+			if (column instanceof Expresion) {
 				log(
-					["sql2006", "select", "QueryBuilder"],
-					"col isColumn: %o, isExpresion: %o valor:%s indice:%o",
-					column instanceof Column,
+					["sql2006", "select"],
+					"isExpresion: %o",
 					column instanceof Expresion,
-					column,
-					index,
 				);
-
 				colStack[index] = `${column}`;
-				log("despues QB", "colStack", colStack);
+			}
+			if (column instanceof Column) {
+				log(
+					["sql2006", "select"],
+					"col isColumn: %o",
+					column instanceof Column,
+				);
+				if (column.name instanceof QueryBuilder) {
+					const resolve = this.getSubselect(next, true);
+					column.name = Array.isArray(resolve) ? resolve.join("\n") : resolve;
+				}
+				colStack[index] = `${column}`;
 			}
 			if (column instanceof QueryBuilder) {
 				const colValue = next.q.pop();

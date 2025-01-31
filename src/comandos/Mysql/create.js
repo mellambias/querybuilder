@@ -14,7 +14,7 @@ export const createView = {
 	cols: (cols) => `( ${cols.join(", ")} )`,
 	as: function (vista, self) {
 		if (vista instanceof QueryBuilder) {
-			const resolve = this.getSubselect(self._values.next);
+			const resolve = this.getSubselect(self._values.next, true);
 			return `AS ${Array.isArray(resolve) ? resolve.join("\n") : resolve}`;
 		}
 		return `AS ${vista}`;
