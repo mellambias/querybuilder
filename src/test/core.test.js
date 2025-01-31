@@ -1750,7 +1750,7 @@ ISOLATION LEVEL SERIALIZABLE,
 DIAGNOSTICS SIZE 8;`,
 			);
 		});
-		test("aplicar restricciones diferidas", { only: true }, async () => {
+		test("aplicar restricciones diferidas", { only: false }, async () => {
 			const result = await qb
 				.setConstraints(["RESTRICCION_1", "RESTRICCION_2"], "deferred")
 				.toString();

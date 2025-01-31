@@ -19,31 +19,21 @@ class QueryBuilder {
 		this.languageClass = language;
 		this.options = options;
 		this.language = new language(this);
-		this.query = options?.value || [];
 		if (this.options?.typeIdentificator) {
 			Types.identificador.set(this.options.typeIdentificator);
 		} else {
 			Types.identificador.set("regular");
 		}
-		this.commandStack = [];
 		this.queryResult = undefined;
 		this.queryResultError = undefined;
-		this.alterTableCommand = undefined;
-		this.alterTableStack = [];
-		this.selectCommand = undefined;
-		this.selectStack = [];
 		this.cursores = {};
+		this.driverDB = undefined;
 		this.predicados();
 		this.functionOneParam();
 		this.functionDate();
 		this.joins();
 		this.alterTableComands();
-		this.prevInstance = null;
-		this.queue = [];
-		this.driverDB = undefined;
 		this.promise = Promise.resolve({});
-		this.promiseStack = [];
-		this.promiseResult = null;
 		this.returnOriginal = [
 			"getAll",
 			"execute",
@@ -71,33 +61,6 @@ class QueryBuilder {
 				}
 				const original = Reflect.get(target, prop, receiver);
 
-				if (prop === "promise2") {
-					/**
-					 * Cuando se llama a promise se encadenan las llamadas
-					 * en una sola promesa secuencia
-					 */
-
-					for (const index in target.promiseStack) {
-						const { prop, original, args, numeroArgumentos } =
-							target.promiseStack[index];
-						target.promise = target.promise.then((next) => {
-							log(["Proxy", "promise", "then", "%o"], "recibe:%o", prop, next);
-							next.last = next?.prop || null;
-
-							// iguala el numero de argumentos que recibe la función
-							while (args.length < numeroArgumentos - 1) {
-								args.push(undefined);
-							}
-							// añade el argumento a la función
-							args.push({ ...next, prop });
-							const response = original.apply(receiver, args); // ejecución del comando
-							return response;
-						});
-					}
-					//Devuelve la promesa final
-					return target.promise;
-				}
-
 				/**
 				 * Cuando se llama a una funcion
 				 */
@@ -108,12 +71,6 @@ class QueryBuilder {
 
 					return (...args) => {
 						log("Proxy", "Se ha llamado a la funcion %o", prop);
-						target.promiseStack.push({
-							prop,
-							original,
-							args,
-							numeroArgumentos: original.length,
-						});
 						target.promise = target.promise.then((next) => {
 							let nextValue = next;
 							let isOfType = "una instancia de ";
@@ -134,6 +91,11 @@ class QueryBuilder {
 							}
 							log(["Proxy", "get", "then", "%o"], "recibe:%o", prop, isOfType);
 							nextValue.last = nextValue?.prop || null;
+							if (nextValue?.callStack) {
+								nextValue.callStack.push(prop);
+							} else {
+								nextValue.callStack = [prop];
+							}
 
 							// iguala el numero de argumentos que recibe la función
 							while (args.length < original.length - 1) {
@@ -158,26 +120,7 @@ class QueryBuilder {
 		// biome-ignore lint/correctness/noConstructorReturn: <explanation>
 		return new Proxy(this, this.handler);
 	}
-	cola(operation) {
-		this.count++;
-		this.queue.push(operation);
-		return this; // Permite encadenamiento
-	}
-	async addTo(valor) {
-		await new Promise((resolve) => setTimeout(resolve, 1000));
-		console.log("Async addTo executed", valor);
-		return this;
-	}
-	getAll() {
-		const promise = this.queue.reduce((previusPromise, currentFunction) => {
-			const { original, target, args } = currentFunction;
-			const nextPromise = previusPromise.then((previusResponse) =>
-				original.apply(target, args),
-			);
-			return nextPromise;
-		}, Promise.resolve());
-		return promise;
-	}
+
 	toNext(data, stringJoin = "", firstCommand = false) {
 		if (Array.isArray(data)) {
 			let [valor, next] = data;
@@ -394,13 +337,15 @@ class QueryBuilder {
 		const comands = ["addColumn", "alterColumn", "dropColumn", "addConstraint"];
 		for (const comand of comands) {
 			this[comand] = (name, options, next) => {
-				log(comand, "recibe", next);
-				const alterTablePos = this.promiseStack.find(
-					(item) => item.prop === "alterTable",
+				const alterTableIndex = this.lastStatementIn(
+					"alterTable",
+					next.callStack,
 				);
-				if (alterTablePos !== undefined) {
+				if (alterTableIndex) {
 					const response = this.language[comand](name, options, next);
-					log(comand, "response", response);
+					if (alterTableIndex !== next.q.length - 1) {
+						next.q.push(next.q[alterTableIndex]);
+					}
 					return this.toNext([response, next], ";");
 				}
 				next.error = `No se pueden añadir columnas sin un 'ALTER TABLE'`;
@@ -410,13 +355,17 @@ class QueryBuilder {
 		const alterColums = ["setDefault", "dropDefault"];
 		for (const comand of alterColums) {
 			this[comand] = (value, next) => {
-				console.log("[alterColums][%s] value:%o next: %o", comand, value, next);
-				const alterColumnPos = this.promiseStack.find(
-					(item) => item.prop === "alterColumn",
-				);
-				if (alterColumnPos !== undefined) {
-					const command = this.language[comand](value, alterColumnPos.args[0]);
-					return this.toNext([command, next]);
+				if (this.lastStatementIn("alterColumn", next.callStack)) {
+					const columnIndex = next.q.length - 1;
+					const columName = next.q[columnIndex]
+						.split(" ")
+						.splice(2)[0]
+						.split(";")[0];
+					const command = this.language[comand](value, columName);
+					next.q[columnIndex] = next.q[columnIndex]
+						.replaceAll(";", "")
+						.concat(" ", command, ";");
+					return next;
 				}
 				this.error = "No es posible aplicar, falta el comando 'alterColumn'";
 				return next;
@@ -741,10 +690,8 @@ class QueryBuilder {
 	on(predicados, next) {
 		log(["QB", "on"], "Recibe next", next);
 		if (
-			this.promiseStack.some((item) =>
-				["innerJoin", "join", "leftJoin", "rightJoin", "fullJoin"].includes(
-					item.prop,
-				),
+			["innerJoin", "join", "leftJoin", "rightJoin", "fullJoin"].some((item) =>
+				next.callStack.includes(item),
 			)
 		) {
 			const response = this.language.on(predicados, next);
@@ -889,8 +836,7 @@ class QueryBuilder {
 	}
 
 	groupBy(columns, options, next) {
-		const select = this.promiseStack.find((item) => item.prop === "select");
-		if (select !== undefined) {
+		if (this.lastStatementIn("select", next.callStack)) {
 			const command = this.language.groupBy(columns, options);
 			return this.toNext([command, next]);
 		}
@@ -898,8 +844,7 @@ class QueryBuilder {
 		return next;
 	}
 	having(predicado, options, next) {
-		const select = this.promiseStack.find((item) => item.prop === "select");
-		if (select !== undefined) {
+		if (this.lastStatementIn("select", next.callStack)) {
 			const command = this.language.having(predicado, options);
 			return this.toNext([command, next]);
 		}
@@ -1116,14 +1061,8 @@ class QueryBuilder {
 		return joinQuery;
 	}
 
-	dropQuery(next) {
-		this.query = [];
-		this.selectCommand = undefined;
-		this.selectStack = [];
-		this.alterTableCommand = undefined;
-		this.alterTableStack = [];
+	dropQuery() {
 		this.promise = Promise.resolve({});
-		this.promiseStack = [];
 		return this.toNext([this.promise, {}]);
 	}
 	//toString function on Object QueryBuilder
@@ -1176,12 +1115,7 @@ class QueryBuilder {
 	set error(error) {
 		this.queryResultError = error;
 		if (!/^(TEST)$/i.test(this.options?.mode)) {
-			throw new Error(this.queryResultError, {
-				cause: {
-					command: `${this.commandStack[this.commandStack.length - 1]}(...)`,
-					stack: `${this.commandStack.join("(...) -> ")}(...)`,
-				},
-			});
+			throw new Error(this.queryResultError);
 		}
 	}
 }

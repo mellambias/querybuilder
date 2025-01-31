@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import QueryBuilder from "../../querybuilder.js";
 import MySQL from "../../sql/MySQL.js";
 import { config } from "../../../config.js";
+import { getResultFromTest } from "../utilsForTest/resultUtils.js";
 //SEPUP
 const MySql8 = config.databases.MySql8;
 const Driver = MySql8.driver;

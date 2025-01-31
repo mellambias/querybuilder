@@ -1,28 +1,29 @@
 {
 	"name": "querybuilder",
 	"version": "1.0.0",
-	"description": "Constructor de consultas estilo SQL",
+	"description": "Crea consultas sql usando javascript",
 	"main": "index.js",
 	"type": "module",
 	"scripts": {
 		"start": "node index.js",
-		"test": "node --test",
-		"test:only": "node --test --test-only",
 		"test:core": "node --test **/core.test.js",
 		"test:core:only": "node --test --test-only **/core.test.js",
+		"test:mysql": "node --test --test-isolation=none **/mysql/*.test.js",
+		"test:mysql:only": "node --test --test-isolation=none --test-only **/mysql/*.test.js",
 		"test:pg": "node --test **/postgres.test.js",
 		"test:pg:only": "node --test --test-only **/postgres.test.js",
-		"test:mysql": "node --test --test-isolation=none **/mysql/*.test.js",
-		"test:mysql:uno": "node --test --test-isolation=none **/mysql/*.only.test.js",
-		"test:mysql:only": "node --test --test-only **/mysql/*.test.js",
-		"test:driver:pg": "node --test **/postgresDriver.test.js",
-		"test:driver:pg:only": "node --test --test-only **/postgresDriver.test.js",
-		"test:inventario": "node --test **/inventario.test.js",
-		"test:inventario:only": "node --test --test-only **/inventario.test.js",
-		"test:mongo": "node --test **/mongodbDriver.test.js",
-		"test:mongo:only": "node --test --test-only **/mongodbDriver.test.js"
+		"test:mongo": "node --test --test-isolation=none **/mongodbDriver.test.js",
+		"test:mongo:only": "node --test --test-isolation=none --test-only **/mongodbDriver.test.js"
 	},
-	"keywords": [],
+	"keywords": [
+		"javascript",
+		"node",
+		"sql",
+		"mysql",
+		"postgres",
+		"mongodb",
+		"querybuilder"
+	],
 	"author": "mellambias",
 	"license": "ISC",
 	"devDependencies": {

@@ -127,12 +127,16 @@ function isJSObject(target) {
 	return Object.prototype.toString(target) === "[object Object]";
 }
 
+const showLogs = false;
 function log(command, text = "", ...data) {
-	// if (Array.isArray(command)) {
-	// 	const commandList = command.map((item) => `[${item}]`).join("");
-	// 	return console.log(`${commandList} ${text}`, ...data);
-	// }
-	// return console.log(`[${command}] ${text}`, ...data);
+	if (!showLogs) {
+		return;
+	}
+	if (Array.isArray(command)) {
+		const commandList = command.map((item) => `[${item}]`).join("");
+		return console.log(`${commandList} ${text}`, ...data);
+	}
+	return console.log(`[${command}] ${text}`, ...data);
 }
 
 function formatDate(date, format) {

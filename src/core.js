@@ -240,11 +240,11 @@ class Core {
 		return this.getStatement("DROP", sql2006.dropColumn, { name, option }, " ");
 	}
 	setDefault(value) {
-		return ` SET DEFAULT ${typeof value === "string" ? `'${value}'` : value}`;
+		return `SET DEFAULT ${typeof value === "string" ? `'${value}'` : value}`;
 	}
 
 	dropDefault() {
-		return " DROP DEFAULT";
+		return "DROP DEFAULT";
 	}
 
 	addConstraint(name, option, next) {
