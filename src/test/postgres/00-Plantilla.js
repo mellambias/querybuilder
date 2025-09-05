@@ -2,6 +2,7 @@ import { test, suite, afterEach, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import QueryBuilder from "../../querybuilder.js";
 import MySQL from "../../sql/MySQL.js";
+import PostgreSQL from "../../sql/PostgresSQL.js";
 import { config } from "../../../config.js";
 import {
 	showResults,
@@ -25,15 +26,15 @@ import {
 	TITULOS_CD,
 } from "../models/inventario.js";
 //SEPUP
-const MySql8 = config.databases.MySql8;
-const Driver = MySql8.driver;
-const databaseTest = new Driver(MySql8.params);
-const queryBuilder = new QueryBuilder(MySQL, {
+const postgreSQL = config.databases.PostgreSQL;
+const Driver = postgreSQL.driver;
+const databaseTest = new Driver(postgreSQL.params);
+const queryBuilder = new QueryBuilder(PostgreSQL, {
 	typeIdentificator: "regular",
 	mode: "test",
 });
-let qb = queryBuilder.driver(MySql8.driver, MySql8.params);
-const current = { databaseTest, dataBase: "inventario" };
+let qb = queryBuilder.driver(postgreSQL.driver, postgreSQL.params);
+const current = { databaseTest, database: "inventario" };
 // crea funciones que al ser llamadas usa como 'this' el valor pasado a 'bind'
 const tableExist = checktable.bind(current);
 const rowsInTableExist = checkRows.bind(current);

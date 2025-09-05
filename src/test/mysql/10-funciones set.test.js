@@ -7,7 +7,7 @@ import {
 	getColValuesFrom,
 	checktable,
 	checkRows,
-} from "../utilsForTest/resultUtils.js";
+} from "../utilsForTest/mysqlUtils.js";
 import { cdsVendidos } from "../models/inventario.js";
 //SEPUP
 const MySql8 = config.databases.MySql8;

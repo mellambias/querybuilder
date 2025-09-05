@@ -49,12 +49,29 @@ class PostgreSQLDriver extends Driver {
 		return this;
 	}
 	async execute(query, options) {
+		this.queyResult = [];
+		this.queryFields = [];
 		try {
 			if (this.connection === null) {
 				await this.connect();
 			}
 			const querys = query.split(";").filter((q) => q.length > 0);
 			for (const query of querys) {
+				if (query.toLowerCase().startsWith("use")) {
+					const [_, database] = query.replaceAll(";", "").split(" ");
+					if (this.database !== database) {
+						await this.use(database);
+						await this.connect();
+					}
+					this.queyResult.push({
+						command: "USE",
+						rowCount: 0,
+						rows: [],
+						fields: [],
+						RowCtor: 0,
+					});
+					continue;
+				}
 				const result = await this.connection.query(query);
 				this.queyResult.push(result);
 			}
@@ -70,16 +87,6 @@ class PostgreSQLDriver extends Driver {
 			throw new Error(`❌ [PostgreSQLDriver execute] ${error.message}`);
 		}
 	}
-
-	/**
-	 * queryResult.rows:Array<any> - filas devueltas
-	 * queryResult.fields: Array<FieldInfo> - name, dataTypeID de los campos
-	 * queryResult.command: string - el último comando ejecutado INSER, UPDATE, CREATE, SELECT, ...
-	 * queryResult.rowCount: int | null - numero de filas procesadas por el servidor
-	 *  https://www.postgresql.org/docs/current/protocol-message-formats.html CommandComplete
-	 *
-	 * @returns
-	 */
 
 	response() {
 		try {
@@ -103,9 +110,18 @@ class PostgreSQLDriver extends Driver {
 			return new Error(`❌[PostgreSQLDriver][response] ${error}`);
 		}
 	}
-
+	/**
+	 * queryResult.rows:Array<any> - filas devueltas
+	 * queryResult.fields: Array<FieldInfo> - name, dataTypeID de los campos
+	 * queryResult.command: string - el último comando ejecutado INSER, UPDATE, CREATE, SELECT, ...
+	 * queryResult.rowCount: int | null - numero de filas procesadas por el servidor
+	 * https://github.com/brianc/node-postgres/blob/master/docs/pages/apis/result.mdx
+	 *
+	 * @returns
+	 */
 	filterResult(queryResult) {
-		const keys = ["command", "rowCount", "oid", "rows", "fields", "RowCtor"];
+		const keys = ["command", "rowCount", "rows", "fields", "RowCtor"];
+		console.log("queryResult", queryResult);
 		return Object.keys(queryResult)
 			.filter(
 				(key) =>

@@ -155,7 +155,26 @@ class Core {
 			.join(", ");
 	}
 
-	// DDL
+	/************************************************************************
+	 * utility
+	 * Comandos auxiliares para gestión y mantenimiento de la base de datos.
+	 ************************************************************************/
+
+	use(database) {
+		this.useDatabase = database;
+		return `USE ${database}`;
+	}
+	set useDatabase(value) {
+		this.currentDatabase = value;
+	}
+	get useDatabase() {
+		return this.currentDatabase;
+	}
+
+	/***************************************************************
+	 * DDL
+	 * Definen y modifican la estructura de la base de datos.
+	 ***************************************************************/
 	createDatabase(name, options) {
 		let query = `CREATE DATABASE ${name}`;
 		for (const option in options) {
@@ -173,16 +192,6 @@ class Core {
 		return query;
 	}
 
-	use(database) {
-		this.useDatabase = database;
-		return `USE ${database}`;
-	}
-	set useDatabase(value) {
-		this.currentDatabase = value;
-	}
-	get useDatabase() {
-		return this.currentDatabase;
-	}
 	createSchema(name, options) {
 		return this.getStatement("CREATE SCHEMA", sql2006.createSchema, {
 			name,
@@ -294,7 +303,11 @@ class Core {
 	dropView(name) {
 		return `DROP VIEW ${name}`;
 	}
-	// Seguridad
+
+	/********************************************************
+	 * DCL
+	 * Controlan el acceso y permisos en la base de datos.
+	 ********************************************************/
 
 	createRoles(names, options) {
 		return this.getStatement(
@@ -356,7 +369,11 @@ class Core {
 		return sqlStack.join(";\n");
 	}
 
-	//Comandos DQL
+	/**************************************************************************
+	 * DQL
+	 * Consultan y recuperan datos de una o varias tablas.
+	 **************************************************************************/
+
 	// SELECT [ DISTINCT | ALL ] { * | < selección de lista > }
 	select(columns, options, next) {
 		log(["Core", "select"], "next", next);
@@ -395,6 +412,29 @@ class Core {
 		}
 		return `FROM ${tables.join(", ")}`;
 	}
+	where(predicados, next) {
+		const sql = "WHERE";
+		if (predicados instanceof QueryBuilder) {
+			const values = next.q.pop();
+			return `${sql} ${values}`;
+		}
+		if (Array.isArray(predicados)) {
+			return `${sql} ${predicados
+				.map((item) => {
+					if (item instanceof QueryBuilder) {
+						return next.q.pop();
+					}
+					return item;
+				})
+				.join(", ")}`;
+		}
+		return `${sql} ${predicados}`;
+	}
+
+	whereCursor(cursorName) {
+		return `WHERE CURRENT OF ${cursorName}`;
+	}
+
 	joins() {
 		const joinTypes = {
 			crossJoin: "CROSS JOIN",
@@ -422,7 +462,7 @@ class Core {
 					return `FROM ${tables.join(` ${joinTypes[join]} `)}`;
 				}
 				throw new Error(
-					`[core:287] la funcion ${join}(tables,alias,using) => ${join}(${tables}, ${alias}, ${using})`,
+					`[core:442] la funcion ${join}(tables,alias,using) => ${join}(${tables}, ${alias}, ${using})`,
 				);
 			};
 		}
@@ -434,7 +474,14 @@ class Core {
 		}
 		return `USING (${columnsInCommon})`;
 	}
-
+	/**
+	 * Recibe una lista de select y los encadena usando el valor de optios.command
+	 * @param {Array<string|QueryBuilder>} selects - lista de selects
+	 * @param {string} options.command - comando de union
+	 * @param {boolean} options.all - true añade ALL al comando de union
+	 * @param {*} next
+	 * @returns
+	 */
 	multiTabla(selects, next, options) {
 		let command = `\n${options.command}\n`;
 		const sql = [];
@@ -473,39 +520,16 @@ class Core {
 		return this.multiTabla(selects, next, options);
 	}
 
-	where(predicados, next) {
-		const sql = "WHERE";
-		if (predicados instanceof QueryBuilder) {
-			const values = next.q.pop();
-			return `${sql} ${values}`;
-		}
-		if (Array.isArray(predicados)) {
-			return `${sql} ${predicados
-				.map((item) => {
-					if (item instanceof QueryBuilder) {
-						return next.q.pop();
-					}
-					return item;
-				})
-				.join(", ")}`;
-		}
-		return `${sql} ${predicados}`;
-	}
-
-	whereCursor(cursorName) {
-		return `WHERE CURRENT OF ${cursorName}`;
-	}
-
-	on(predicados, next) {
+	on(predicado, next) {
 		const sql = "ON";
-		if (typeof predicados === "string") {
-			return `${sql} ${predicados}`;
+		if (typeof predicado === "string") {
+			return `${sql} ${predicado}`;
 		}
-		if (predicados instanceof QueryBuilder) {
+		if (predicado instanceof QueryBuilder) {
 			const valor = next.q.pop();
 			return `${sql} ${valor}`;
 		}
-		return `${sql} ${predicados.join("\n")}`;
+		return `${sql} ${predicado.join("\n")}`;
 	}
 
 	// Predicados
@@ -714,7 +738,10 @@ class Core {
 		}
 	}
 
-	// Mofificacion de Datos
+	/*******************************************************************************
+	 * DML
+	 * Manipulan los datos almacenados en las tablas.
+	 ******************************************************************************/
 	insert(table, cols, values, next) {
 		let sql = "INSERT INTO";
 		if (table !== undefined) {

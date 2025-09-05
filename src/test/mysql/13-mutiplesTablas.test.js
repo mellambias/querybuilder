@@ -7,7 +7,7 @@ import {
 	getColValuesFrom,
 	checktable,
 	checkRows,
-} from "../utilsForTest/resultUtils.js";
+} from "../utilsForTest/mysqlUtils.js";
 import {
 	inventarioCD,
 	interpretes,

@@ -2,7 +2,7 @@ import { test, suite, afterEach, beforeEach } from "node:test";
 import QueryBuilder from "../../querybuilder.js";
 import MySQL from "../../sql/MySQL.js";
 import { config } from "../../../config.js";
-import { checkRows } from "../utilsForTest/resultUtils.js";
+import { checkRows } from "../utilsForTest/mysqlUtils.js";
 
 //SEPUP
 const MySql8 = config.databases.MySql8;

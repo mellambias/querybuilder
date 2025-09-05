@@ -6,7 +6,7 @@ import { config } from "../../../config.js";
 import {
 	getResultFromTest,
 	getColValuesFrom,
-} from "../utilsForTest/resultUtils.js";
+} from "../utilsForTest/mysqlUtils.js";
 
 //SEPUP
 const MySql8 = config.databases.MySql8;

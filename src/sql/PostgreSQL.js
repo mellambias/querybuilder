@@ -19,10 +19,6 @@ class PostgreSQL extends Core {
 		return `${query} ${name}`;
 	}
 
-	use(database) {
-		// PostgreSQL no implementa esta instrucción
-		return null;
-	}
 	createType(name, options) {
 		return this.getStatement(
 			"CREATE",

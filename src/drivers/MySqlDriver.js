@@ -1,11 +1,13 @@
 import Driver from "./Driver.js";
+import MysqlResult from "../results/MysqlResult.js";
 import mysql from "mysql2/promise";
 class MySqlDriver extends Driver {
 	constructor(params) {
 		super(mysql, params);
 		this.connection = null;
 		this.queyResult = [];
-		this.queryFields = [];
+		this.query = null;
+		this.serverResponse = null;
 	}
 	async connect() {
 		this.connection = await this.library.createConnection({
@@ -21,6 +23,9 @@ class MySqlDriver extends Driver {
 	}
 
 	async execute(query, options) {
+		this.queyResult = [];
+		this.queryFields = [];
+		this.results = [];
 		try {
 			if (this.connection === null) {
 				await this.connect();
@@ -31,11 +36,13 @@ class MySqlDriver extends Driver {
 			 * - SELECT -> contains rows returned by server
 			 * this.queryFields contains extra meta data about the operation, if available
 			 */
-			const querys = query.split(";").filter((q) => q.length > 2);
-			for (const query of querys) {
-				const [result, fields] = await this.connection.query(`${query};`);
-				this.queyResult.push(result);
-				this.fields(fields);
+			const querys = query
+				.split(";")
+				.filter((q) => q.length > 2)
+				.map((item) => item.trim().concat(";"));
+			for (this.query of querys) {
+				this.serverResponse = await this.connection.query(this.query);
+				this.queyResult.push(new MysqlResult(this.query, this.serverResponse));
 			}
 			if (
 				options?.transaction === undefined ||
@@ -46,50 +53,16 @@ class MySqlDriver extends Driver {
 			return this;
 		} catch (error) {
 			await this.close();
-			throw new Error(`[Driver execute] ${error.message}`);
+			const result = new MysqlResult(this.query, this.serverResponse);
+			[result.info, result.error] = error.sqlMessage.split("; ");
+			result.errorStatus = 1;
+			this.queyResult.push(result);
+			return this;
 		}
-	}
-	isResultSetHeader(data) {
-		if (!data || typeof data !== "object") return false;
-		const keys = [
-			"fieldCount",
-			"affectedRows",
-			"insertId",
-			"info",
-			"serverStatus",
-			"warningStatus",
-			"changedRows",
-		];
-
-		return keys.every((key) => key in data);
 	}
 
 	response() {
-		const response = [];
-		const rows = [];
-		for (const element of this.queyResult) {
-			response.push(element);
-			if (!this.isResultSetHeader(element)) {
-				rows.push(element);
-			} else {
-				rows.push([]);
-			}
-		}
-		return { response, rows, columns: this.queryFields };
-	}
-	fields(queryFields) {
-		let campos = [];
-		if (Array.isArray(queryFields)) {
-			campos = queryFields
-				.filter((item) => item !== undefined)
-				.reduce((prev, item) => {
-					prev.push(item.name);
-					return prev;
-				}, []);
-		}
-		this.queryFields.push(campos);
-
-		return this.queryFields;
+		return { res: this.queyResult, count: this.queyResult.length };
 	}
 
 	async close() {

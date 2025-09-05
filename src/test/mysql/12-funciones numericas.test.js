@@ -7,7 +7,7 @@ import {
 	getColValuesFrom,
 	checktable,
 	checkRows,
-} from "../utilsForTest/resultUtils.js";
+} from "../utilsForTest/mysqlUtils.js";
 import { formatDate } from "../../utils/utils.js";
 import { rastreoCd } from "../models/inventario.js";
 //SEPUP

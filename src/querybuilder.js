@@ -33,6 +33,8 @@ class QueryBuilder {
 		this.functionDate();
 		this.joins();
 		this.alterTableComands();
+		this.threads = new Map();
+		this.currentId;
 		this.promise = Promise.resolve({});
 		this.returnOriginal = [
 			"getAll",
@@ -48,6 +50,8 @@ class QueryBuilder {
 			"coltn",
 			"lastStatementIn",
 			"setTransaction",
+			"thread",
+			"initThread",
 		];
 		this.returnPromise = ["createCursor", "closeCursor"];
 		this.handler = {
@@ -121,6 +125,41 @@ class QueryBuilder {
 		return new Proxy(this, this.handler);
 	}
 
+	/**
+	 * Permite crear distintos hilos usando una instancia de QueryBuilder
+	 * Evita tener que crear instancias multiples
+	 * @param {number|string} id - identificador del hilo puede ser numerico o string
+	 * @example
+	 *  pg.thread("A1").select("*");
+	 *	pg.thread("A2").select("B").from("tablaB");
+	 *	pg.thread("A1").from("TABLA A");   // añade from al hilo A1
+	 *	pg.thread("A2").where("predicado");// añade from al hilo A2
+	 *	console.log("Resuelve A1\n", await pg.thread("A1").toString());
+	 *	console.log("Resuelve A2\n", await pg.thread("A2").toString());
+	 * Resuelve A1
+	 * 	SELECT *
+	 * 	FROM TABLA A;
+	 * Resuelve A2
+	 * 	SELECT B
+	 * 	FROM tablaB
+	 * 	WHERE predicado;
+	 */
+	thread(id) {
+		if (this.currentId !== undefined) {
+			// console.log("[setThread] actualiza ", this.id, this.promise);
+			this.threads.set(this.currentId, this.promise);
+		}
+		if (this.threads.has(id)) {
+			this.promise = this.threads.get(id);
+			this.currentId = id;
+			// console.log("[setThread] Cambiando de hilo", this.id, this.promise);
+		} else {
+			this.promise = Promise.resolve({});
+			this.threads.set(id, this.promise);
+			this.currentId = id;
+		}
+		return this;
+	}
 	toNext(data, stringJoin = "", firstCommand = false) {
 		if (Array.isArray(data)) {
 			let [valor, next] = data;
@@ -227,9 +266,9 @@ class QueryBuilder {
 		return next;
 	}
 
-	/**
-	 * Selecciona la base de datos
-	 */
+	/************************************************************************
+	 * Comandos auxiliares para gestión y mantenimiento de la base de datos.
+	 **************************************************************************/
 	use(database, next) {
 		const command = this.language.use(database);
 		if (command === null) {
@@ -241,9 +280,16 @@ class QueryBuilder {
 		}
 		return this.toNext([command, next], ";");
 	}
-	/** 
-	@param {string} name - Nombre de la base de datos
- */
+	/*************************************************************
+		Definen y modifican la estructura de la base de datos.
+	**************************************************************/
+	/**
+	 *	Crea una base de datos
+	 *	@param {string} name - Nombre de la base de datos
+	 *	@param {Object} options - Opciones para la creacion de datos
+	 *	@param {Object} next - Objeto recibido por el comando anterior
+	 *  @returns {Object} - Objeto pasado al siguiente comando
+	 */
 	createDatabase(name, options, next) {
 		try {
 			const command = this.language.createDatabase(name.validSqlId(), options);
@@ -253,6 +299,14 @@ class QueryBuilder {
 			return this.toNext([null, next]);
 		}
 	}
+
+	/**
+	 * Elimina una base de datos
+	 * @param {string} name - nombre de la base de datos
+	 * @param {Object} options - Opciones
+	 * @param {Object} next - Objeto recibido por el comando anterior
+	 * @returns {Object} - Objeto pasado al siguiente comando
+	 */
 	dropDatabase(name, options, next) {
 		try {
 			const command = this.language.dropDatabase(name, options);
@@ -262,6 +316,13 @@ class QueryBuilder {
 			return this.toNext([null, next]);
 		}
 	}
+	/**
+	 * Crea un esquema
+	 * @param {string} name - nombre del esquema
+	 * @param {Object} options - Opciones
+	 * @param {Object} next - Objeto recibido por el comando anterior
+	 * @returns {Object} - Objeto pasado al siguiente comando
+	 */
 	createSchema(name, options, next) {
 		try {
 			const command = this.language.createSchema(name.validSqlId(), options);
@@ -272,6 +333,13 @@ class QueryBuilder {
 		}
 	}
 
+	/**
+	 * Elimina un esquema
+	 * @param {string} name - nombre del esquema
+	 * @param {Object} options - Opciones
+	 * @param {Object} next - Objeto recibido por el comando anterior
+	 * @returns {Object} - Objeto pasado al siguiente comando
+	 */
 	dropSchema(name, options, next) {
 		const command = this.language.dropSchema(name, options);
 		return this.toNext([command, next]);
@@ -286,27 +354,49 @@ class QueryBuilder {
 	 * @param {type|column} options.cols[].column - columna name:<string|column>
 	 * @param {GLOBAL|LOCAL} [options.temporary] - GLOBAL|LOCAL.
 	 * @param {PRESERVE|DELETE} [options.onCommit] - ON COMMIT PRESERVE|DELETE
-	 *
-	 * @returns {QueryBuilder}
+	 * @param {Object} next - Objeto recibido por el comando anterior
+	 * @returns {Object} - Objeto pasado al siguiente comando
 	 */
 	createTable(name, options, next) {
 		try {
 			if (options?.cols === undefined) {
-				this.error = "Tiene que especificar como mínimo una columna";
+				throw new Error(`createTable ${name}`, {
+					reason: "Tiene que especificar como mínimo una columna",
+				});
 			}
 			const command = this.language.createTable(name.validSqlId(), options);
 			return this.toNext([command, next], ";", true);
 		} catch (error) {
-			next.error = error.message;
+			next.error = error;
+			return this.toNext([null, next]);
 		}
-		return this.toNext([null, next]);
 	}
+	/**
+	 *
+	 * @param {string} name - Nombre de la tabla
+	 * @param {Object} next - Objeto recibido por el comando anterior
+	 * @returns {Object} - Objeto pasado al siguiente comando
+	 */
 	alterTable(name, next) {
 		const command = this.language.alterTable(name);
 		log("alterTable", "responde con %o", command);
 		return this.toNext([command, next]);
 	}
-
+	/**
+	 * Define los comandos:
+	 * "addColumn", "alterColumn", "dropColumn" y "addConstraint"
+	 * cada uno recibe tres parametros:
+	 * @param {string} name - nombre de la columna
+	 * @param {Object} options - opciones aplicables
+	 * @param {Object} next - Objeto recibido por el comando anterior
+	 * @returns {Object} - Objeto pasado al siguiente comando
+	 *
+	 * "setDefault" y "dropDefault"
+	 * @param {string} value - valor por defecto
+	 * @param {Object} next - Objeto recibido por el comando anterior
+	 * @returns {Object} - Objeto pasado al siguiente comando
+	 *
+	 */
 	alterTableComands() {
 		const comands = ["addColumn", "alterColumn", "dropColumn", "addConstraint"];
 		for (const comand of comands) {
@@ -342,15 +432,28 @@ class QueryBuilder {
 					return next;
 				}
 				this.error = "No es posible aplicar, falta el comando 'alterColumn'";
-				return next;
+				return this.toNext([null, next]);
 			};
 		}
 	}
-
+	/**
+	 * Elimina una tabla
+	 * @param {string} name - nombre de la tabla
+	 * @param {object} option - opciones aplicables
+	 * @param {Object} next - Objeto recibido por el comando anterior
+	 * @returns {Object} - Objeto pasado al siguiente comando
+	 */
 	dropTable(name, option, next) {
 		const command = this.language.dropTable(name, option);
 		return this.toNext([command, next], ";");
 	}
+	/**
+	 * Crea un tipo definido por el usuario
+	 * @param {string} name - nombre del tipo
+	 * @param {object} option - opciones aplicables
+	 * @param {Object} next - Objeto recibido por el comando anterior
+	 * @returns {Object} - Objeto pasado al siguiente comando
+	 */
 	createType(name, options, next) {
 		try {
 			const command = this.language.createType(name.validSqlId(), options);
@@ -360,6 +463,13 @@ class QueryBuilder {
 			return this.toNext([null, next]);
 		}
 	}
+	/**
+	 * Elimina un tipo definido por el usuario
+	 * @param {string} name - nombre del tipo
+	 * @param {object} option - opciones aplicables
+	 * @param {Object} next - Objeto recibido por el comando anterior
+	 * @returns {Object} - Objeto pasado al siguiente comando
+	 */
 	dropType(name, options, next) {
 		try {
 			const command = this.language.dropType(name, options);
@@ -369,7 +479,19 @@ class QueryBuilder {
 			return this.toNext([null, next]);
 		}
 	}
-
+	/**
+	 * SQL estándar (SQL-92 y SQL:2006) que permite definir restricciones a nivel de base de datos.
+	 * Sirve para imponer condiciones que no pueden expresarse fácilmente con restricciones en columnas (CHECK) o en tablas (FOREIGN KEY).
+	 * No está implementado en MySQL ni en PostgreSQL.
+	 * - SQL estándar	✅
+	 * - PostgreSQL		❌
+	 * - MySQL				❌
+	 * En su lugar, se pueden usar triggers (BEFORE INSERT/UPDATE/DELETE) o funciones con restricciones CHECK a nivel de tabla.
+	 * @param {string} name - nombre
+	 * @param {object} assertion - opciones aplicables
+	 * @param {Object} next - Objeto recibido por el comando anterior
+	 * @returns {Object} - Objeto pasado al siguiente comando
+	 */
 	createAssertion(name, assertion, next) {
 		try {
 			const command = this.language.createAssertion(
@@ -382,7 +504,17 @@ class QueryBuilder {
 			return this.toNext([null, next]);
 		}
 	}
-
+	/**
+	 * Permite definir tipos de datos personalizados con restricciones.
+	 * Es útil para reutilizar reglas de validación en múltiples tablas sin repetir código.
+	 * - SQL estándar	✅
+	 * - PostgreSQL		✅
+	 * - MySQL				❌
+	 * @param {string} name - Nombre del dominio
+	 * @param {Object} options - Opciones aplicables
+	 * @param {Object} next - Objeto recibido por el comando anterior
+	 * @returns {Object} - Objeto pasado al siguiente comando
+	 */
 	createDomain(name, options, next) {
 		try {
 			const command = this.language.createDomain(name.validSqlId(), options);
@@ -392,7 +524,20 @@ class QueryBuilder {
 			return this.toNext([null, next]);
 		}
 	}
-
+	/**
+	 * Permite definir una consulta almacenada como un objeto de la base de datos.
+	 * Se comporta como una 'tabla virtual', mostrando datos obtenidos de una o varias tablas sin duplicarlos.
+	 *
+	 * - PostgreSQL	✅ Sí	Soporta vistas materializadas con REFRESH MATERIALIZED VIEW
+	 * - MySQL			✅ Sí	Soporta vistas pero no vistas materializadas
+	 * - SQL Server	✅ Sí	Soporta vistas indexadas para mejorar rendimiento
+	 * - SQLite			✅ Sí	No permite vistas materializadas ni indexadas
+	 * - Oracle			✅ Sí	Soporta vistas normales y materializadas
+	 * @param {string} name - nombre de la vista
+	 * @param {object} options - opciones aplicables {cols:Array<string>, as:Select, check:boolean}
+	 * @param {Object} next - Objeto recibido por el comando anterior
+	 * @returns {Object} - Objeto pasado al siguiente comando
+	 */
 	createView(name, options, next) {
 		try {
 			const command = this.language.createView(
@@ -406,6 +551,12 @@ class QueryBuilder {
 			return this.toNext([null, next]);
 		}
 	}
+	/**
+	 * Elimina una vista
+	 * @param {string} name - Nombre de la vista
+	 * @param {Object} next - Objeto recibido por el comando anterior
+	 * @returns {Object} - Objeto pasado al siguiente comando
+	 */
 	dropView(name, next) {
 		try {
 			const command = this.language.dropView(name);
@@ -414,10 +565,26 @@ class QueryBuilder {
 			next.error = error.message;
 			return this.toNext([null, next]);
 		}
-	}
+	} /********************************************************
+	 * DCL
+	 * Controlan el acceso y permisos en la base de datos.
+	 ********************************************************/
 
-	// Seguridad
-
+	/**
+	 * Crear un nuevo rol en la base de datos.
+	 * Un rol es una entidad que puede representar a un usuario o un grupo de usuarios y
+	 * puede recibir permisos para acceder a ciertos recursos.
+	 *- PostgreSQL	✅ Maneja roles en lugar de usuarios individuales
+	 *- MySQL				✅ (Desde 8.0)	Se complementa con GRANT para asignar permisos
+	 *- SQL Server	✅ Se usa CREATE ROLE pero los usuarios son entidades separadas
+	 *- SQLite			❌ No soporta roles ni usuarios
+	 *- Oracle			✅ Soporta roles con permisos avanzados
+	 *- MongoDB			✅	Usando createRole y db.createUser
+	 * @param {string|Array<string>} names - nombre o nombres de roles a crear
+	 * @param {"CURRENT_USER"|"CURRENT_ROLE"} options.admin - WITH ADMIN
+	 * @param {*} next
+	 * @returns
+	 */
 	createRoles(names, options, next) {
 		try {
 			const command = this.language.createRoles(names, options);
@@ -427,6 +594,13 @@ class QueryBuilder {
 			return this.toNext([null, next]);
 		}
 	}
+	/**
+	 * Elimina el rol o roles
+	 * @param {string|Array<string>} names - uno o varios roles a eliminar
+	 * @param {?object} options - opciones aplicables
+	 * @param {*} next
+	 * @returns
+	 */
 	dropRoles(names, options, next) {
 		try {
 			const command = this.language.dropRoles(names, options);
@@ -436,7 +610,23 @@ class QueryBuilder {
 			return this.toNext([null, next]);
 		}
 	}
-
+	/**
+	 * Permite asignar permisos a usuarios.
+	 *- PostgreSQL	✅ Sí	Permite permisos detallados a nivel de columna, tabla y esquema.
+	 *- MySQL				✅ Sí	Usa GRANT junto con WITH GRANT OPTION para permitir reasignar permisos.
+	 *- SQL Server	✅ Sí	También usa DENY y REVOKE para revocar permisos.
+	 *- Oracle			✅ Sí	Soporta permisos sobre tablas, roles, procedimientos y secuencias.
+	 *- SQLite			❌ No	No maneja usuarios ni permisos a nivel SQL.
+	 *- MongoDB			✅	grantRolesToUser()	Permite asignar roles con permisos específicos.
+	 * @param {string|Array<string>} privilegios - Permisos a conceder
+	 * @param {string|object} on - Objeto sobre el que se otorga
+	 * @param {objectTypes} on.objectType - Especifica el tipo sobre el que se aplica 'types/privilevios.js'
+	 * @param {"PUBLIC"|"ALL"|string|Array<string>} to - usuarios o roles a los que se otorga
+	 * @param {boolean} options.withGrant - WITH GRANT OPTION
+	 * @param {"CURRENT_USER"|"CURRENT_ROLE"} options.grantBy - GRANTED BY
+	 * @param {*} next
+	 * @returns
+	 */
 	grant(privilegios, on, to, options, next) {
 		try {
 			const command = this.language.grant(privilegios, on, to, options);
@@ -446,6 +636,27 @@ class QueryBuilder {
 			return this.toNext([null, next]);
 		}
 	}
+	/**
+	 * Se utiliza para eliminar permisos previamente otorgados a usuarios,
+	 * restringiendo el acceso a objetos como tablas, vistas y esquemas.
+	 *- PostgreSQL	✅ Sí	Permite revocar permisos de usuarios y roles sobre tablas, esquemas y columnas.
+	 *- MySQL				✅ Sí	Se usa junto con GRANT para administrar permisos.
+	 *- SQL Server	✅ Sí	Además, permite DENY para bloquear permisos específicos.
+	 *- Oracle			✅ Sí	Puede revocar permisos de usuarios y roles sobre objetos de la base de datos.
+	 *- SQLite			❌ No	No maneja usuarios ni permisos a nivel SQL.
+	 *- MongoDB			✅	revokeRolesFromUser()	Permite eliminar roles previamente asignados a un usuario.
+	 * @param {string|Array<string>} privilegios - Permisos a conceder
+	 * @param {string|object} on - Objeto sobre el que se otorga
+	 * @param {objectTypes} on.objectType - Especifica el tipo sobre el que se aplica 'types/privilevios.js'
+	 * @param {"PUBLIC"|"ALL"|Array<string>} from - A quien se le retira
+	 * @param {boolean} options.withGrant - WITH GRANT OPTION
+	 * @param {"CURRENT_USER"|"CURRENT_ROLE"} options.grantBy - GRANTED BY
+	 * @param {boolean} options.cascade - "CASCADE"/"RESTRICT"
+	 * @param {boolean} options.restrict - "RESTRICT"/"CASCADE"
+	 * @param {*} next
+	 * @returns
+	 * @example REVOKE permiso(s) ON objeto FROM usuario_rol;
+	 */
 
 	revoke(privilegios, on, from, options, next) {
 		try {
@@ -457,6 +668,15 @@ class QueryBuilder {
 		}
 	}
 
+	/**
+	 * Como grant pero solo para roles
+	 * @param {string|Array<string>} roles - rol o roles para asignar
+	 * @param {string|Array<string>} users - usuario o usuarios a los que se conceden
+	 * @param {boolean} options.admin- true (WITH ADMIN OPTION)
+	 * @param {"CURRENT_USER"|"CURRENT_ROLE"} options.granted - GRANTED BY
+	 * @param {*} next
+	 * @returns
+	 */
 	grantRoles(roles, users, options, next) {
 		try {
 			const command = this.language.grantRoles(roles, users, options);
@@ -466,6 +686,16 @@ class QueryBuilder {
 			return this.toNext([null, next]);
 		}
 	}
+	/**
+	 * Como revoke, pero para roles
+	 * @param {string|Array<string>} roles - roles a eliminar
+	 * @param {"PUBLIC"|"ALL"|Array<string>} from - A quien se le retira
+	 * @param {"CURRENT_USER"|"CURRENT_ROLE"} options.grantBy - GRANTED BY
+	 * @param {boolean} options.cascade - "CASCADE"/"RESTRICT"
+	 * @param {boolean} options.restrict - "RESTRICT"/"CASCADE"
+	 * @param {*} next
+	 * @returns
+	 */
 	revokeRoles(roles, from, options, next) {
 		try {
 			const command = this.language.revokeRoles(roles, from, options);
@@ -476,7 +706,11 @@ class QueryBuilder {
 		}
 	}
 
-	//Consulta de datos SQL
+	/**************************************************************************
+	 * DQL
+	 * Consultan y recuperan datos de una o varias tablas.
+	 **************************************************************************/
+
 	/**
 	 * SELECT [ DISTINCT | ALL ] { * | < selección de lista > }
 	 * @param {string|Column|Array<string>|Array<Column>} columns - Columnas seleccionadas
@@ -492,6 +726,11 @@ class QueryBuilder {
 		}
 		return this.toNext([null, next]);
 	}
+	/**
+	 * Comprueba que los tipos de tables y alias sean del mismo tipo y longitud
+	 * @param {string|Array<string>} tables - tabla o lista de tablas
+	 * @param {string|Array<string>} alias - alias o lista de alias
+	 */
 	checkFrom(tables, alias) {
 		// biome-ignore lint/style/noArguments: <explanation>
 		const args = [...arguments];
@@ -502,33 +741,86 @@ class QueryBuilder {
 		if (error) {
 			throw new Error(error);
 		}
-		if (
-			alias !== undefined &&
-			Array.isArray(tables) &&
-			alias.length < tables.length
-		) {
-			throw new Error(
-				"la lista de 'Alias' deben tener como mínimo el mismo numero de elementos que 'tablas'",
-			);
+		if (alias !== undefined) {
+			if (typeof tables !== typeof alias) {
+				throw new Error("Deben de ser del mismo tipo", {
+					cause: `${typeof tables} !== ${typeof alias}`,
+				});
+			}
+			if (Array.isArray(tables) && alias.length < tables.length) {
+				throw new Error(
+					"la lista de 'Alias' deben tener como mínimo el mismo numero de elementos que 'tablas'",
+				);
+			}
 		}
 	}
-	from(tables, alias, next) {
+	/**
+	 * Especifica la tabla o vista de donde se van a obtener los datos.
+	 * @param {string|Array<string>} tables - tabla o tablas de donde obtener los datos
+	 * @param {string|Array<string>} alias - alias o lista de alias correspondiente a las tablas
+	 * @param {*} next
+	 * @returns
+	 * @example SELECT columna1, columna2 FROM tabla;
+	 */
+	from(tablas, alias, next) {
 		try {
-			log(["QB", "from(tables, alias, next)"], "Recibe: next", next);
+			log(["QB", "from(tablas, alias, next)"], "Recibe: next", next);
 			if (next.last !== "select") {
-				this.error =
-					"[from] No es posible usar 'FROM', falta el comando 'select'";
-				return next;
+				throw new Error(
+					"[from] No es posible usar 'FROM', falta el comando 'select'",
+					{ cause: `${next.last} !== "select"` },
+				);
 			}
-			this.checkFrom(tables, alias);
-			const command = this.language.from(tables, alias);
+			this.checkFrom(tablas, alias);
+			const command = this.language.from(tablas, alias);
 			return this.toNext([command, next]);
 		} catch (error) {
-			next.error = error.message;
+			next.error = error;
+			return this.toNext([null, next]);
 		}
-		return this.toNext([null, next]);
+	}
+	/**
+	 * Filtrar registros en una consulta, seleccionando solo aquellos que cumplen con una condición específica.
+	 * Es una parte esencial en las sentencias SELECT, UPDATE, DELETE, etc., ya que permite limitar los resultados
+	 * o modificar solo las filas que cumplen con ciertos criterios.
+	 *
+	 * @param {QueryBuilder|Array<string|QueryBuilder>} predicados - Elementos admitidos en el where
+	 * @param {*} next
+	 * @returns
+	 */
+	where(predicados, next) {
+		next.isQB = predicados instanceof QueryBuilder;
+		const command = this.language.where(predicados, next);
+		log("where", "command %o", command);
+		return this.toNext([command, next]);
+	}
+	/**
+	 * Establece el valor para WHERE CURRENT OF cursorName
+	 * @param {string} cursorName - Nombre del cursor
+	 * @param {*} next
+	 * @returns
+	 */
+	whereCursor(cursorName, next) {
+		if (this.cursores?.[cursorName] === undefined) {
+			next.error = `El cursor '${cursorName}' no ha sido definido`;
+			return this.toNext([null, next]);
+		}
+		const response = this.language.whereCursor(cursorName);
+		log(
+			["QB", "whereCursor"],
+			"next %o cursor",
+			next,
+			this.cursores?.[cursorName].cursor,
+		);
+		return this.toNext([response, next]);
 	}
 
+	/**
+	 * Define las funciones de JOIN entre tablas
+	 * cada funcion recibe tres parametros
+	 * @param {string|Array<string>} tables - tabla o lista de tablas a unir
+	 * @param {string|Array<string>} alias - tabla o lista de alias aplicables a las tablas en el mismo orden
+	 */
 	joins() {
 		const joinTypes = [
 			"crossJoin",
@@ -556,7 +848,7 @@ class QueryBuilder {
 				return this.toNext([null, next]);
 			};
 		}
-		//Sinonimos
+		//Añade comandos con distinto nombre e identica funcion
 		const sinonimos = {
 			leftOuterJoin: this.leftJoin,
 			rightOuterJoin: this.rightJoin,
@@ -566,7 +858,20 @@ class QueryBuilder {
 			this[otros] = sinonimos[otros];
 		}
 	}
-
+	/**
+	 * El comando USING se usa principalmente en consultas SQL para especificar columnas en operaciones de JOIN.
+	 * Es especialmente útil cuando las columnas que se van a combinar tienen el mismo nombre en ambas tablas.
+	 * PostgreSQL	✅ Sí	Utilizado en JOINs, especialmente cuando las columnas tienen el mismo nombre en ambas tablas.
+	 * MySQL			✅ Sí	También soporta USING en JOINs para columnas con el mismo nombre.
+	 * SQL Server	❌ No	SQL Server utiliza la cláusula ON para especificar las condiciones de los JOINs.
+	 * Oracle			✅ Sí	Soporta USING para simplificar las combinaciones de columnas con el mismo nombre en tablas diferentes.
+	 * SQLite			✅ Sí	Permite USING en operaciones JOIN cuando las columnas tienen nombres iguales.
+	 * MongoDB	$lookup	Usado en agregaciones para combinar documentos de diferentes colecciones.
+	 * @param {string} columnsInCommon - Columna en comun
+	 * @param {*} next
+	 * @returns
+	 * @example SELECT columna1, columna2 FROM tabla1 JOIN tabla2 USING (columna_común);
+	 */
 	using(columnsInCommon, next) {
 		// solo se puede aplicar si el ultimo comando es un join del tipo incluido en el array
 		if (["innerJoin", "join", "leftJoin", "rightJoin"].includes(next.last)) {
@@ -576,9 +881,22 @@ class QueryBuilder {
 		next.error = `No es posible aplicar 'USING' a un join de tipo: "${next.last}"`;
 		return this.toNext([null, next]);
 	}
+	/**
+	 * Combinar los resultados de dos o más consultas SELECT.
+	 * El UNION elimina los duplicados de los resultados por defecto.
+	 * Si se quiere incluir duplicados, se puede usar UNION ALL.
+	 * PostgreSQL	✅ Sí	Soporta UNION y UNION ALL para combinar resultados.
+	 * MySQL			✅ Sí	Similar a SQL estándar, soporta tanto UNION como UNION ALL.
+	 * SQL Server	✅ Sí	Soporta ambas opciones UNION y UNION ALL.
+	 * Oracle			✅ Sí	Permite UNION y UNION ALL para combinar resultados de varias consultas.
+	 * SQLite			✅ Sí	Soporta UNION y UNION ALL en consultas SELECT.
+	 * MongoDB	$unionWith	Permite combinar los resultados de dos colecciones en una agregación.
 
+	 * @param  {...string|QueryBuilder} selects - Selects a unir
+	 * @returns
+	 */
 	union(...selects) {
-		const next = selects.pop();
+		const next = selects.pop(); // recupera el ultimo valor introducido en los argumentos
 		if (selects.length < 2) {
 			next.error = "UNION ALL necesita mínimo dos instrucciones SELECT";
 			return this.toNext([null, next]);
@@ -586,8 +904,13 @@ class QueryBuilder {
 		const response = this.language.union(selects, next, { all: false });
 		return this.toNext([response, next]);
 	}
+	/**
+	 * Combinar los resultados de dos o más consultas SELECT.
+	 * Incluyendo duplicados.
+	 * @param  {...string|QueryBuilder} selects - Selects a unir
+	 * @returns
+	 */
 	unionAll(...selects) {
-		//this causes duplicates to be included in the result
 		const next = selects.pop();
 		log(["QB", "unionAll"], "recibe next", next);
 		if (selects.length < 2) {
@@ -597,7 +920,18 @@ class QueryBuilder {
 		const response = this.language.union(selects, next, { all: true });
 		return this.toNext([response, next]);
 	}
-
+	/**
+	 * El comando INTERSECT se utiliza en SQL para obtener los registros comunes entre dos consultas SELECT.
+	 * Retorna solo las filas que existen en ambas consultas, eliminando duplicados.
+	 * PostgreSQL	✅ 	Soporta INTERSECT para obtener los registros comunes entre dos consultas.
+	 * MySQL			❌ 	No soporta INTERSECT, pero puede emularse con JOIN o IN.
+	 * SQL Server	❌ 	No soporta INTERSECT ALL, pero se puede simular con GROUP BY y HAVING.
+	 * Oracle			✅ 	Soporta INTERSECT en consultas SQL.
+	 * SQLite			❌ 	No tiene soporte nativo para INTERSECT, pero puede simularse con JOIN.
+	 * MongoDB	$lookup con $match	Se puede utilizar una combinación de lookup para unir colecciones y luego filtrar los resultados comunes con $match.
+	 * @param  {...string|QueryBuilder} selects - Selects
+	 * @returns
+	 */
 	intersect(...selects) {
 		const next = selects.pop();
 		log(["QB", "intersect"], "recibe next", next);
@@ -608,8 +942,21 @@ class QueryBuilder {
 		const response = this.language.intersect(selects, next, { all: false });
 		return this.toNext([response, next]);
 	}
+	/**
+	 * El comando INTERSECT ALL es similar a INTERSECT, pero mantiene los duplicados en el resultado.
+	 * A diferencia de INTERSECT, que elimina los duplicados,
+	 * INTERSECT ALL retiene las filas comunes que aparecen en ambas consultas, incluyendo todas las repeticiones de esas filas.
+	 *
+	 * PostgreSQL	✅ 	Soporta INTERSECT para obtener los registros comunes entre dos consultas.
+	 * MySQL			❌ 	No soporta INTERSECT, pero puede emularse con JOIN o IN.
+	 * SQL Server	✅ 	Soporta INTERSECT para encontrar intersecciones entre dos conjuntos de resultados.
+	 * Oracle			✅ 	Soporta INTERSECT en consultas SQL.
+	 * SQLite			❌ 	No tiene soporte nativo para INTERSECT, pero puede simularse con JOIN.
+	 * MongoDB	$lookup con $group	Se pueden combinar colecciones y luego agrupar los resultados para mantener duplicados.
+	 * @param  {...string|QueryBuilder} selects - Selects
+	 * @returns
+	 */
 	intersectAll(...selects) {
-		//this causes duplicates to be included in the result
 		const next = selects.pop();
 		log(["QB", "intersectAll"], "recibe next", next);
 		if (selects.length < 2) {
@@ -619,62 +966,96 @@ class QueryBuilder {
 		const response = this.language.intersect(selects, next, { all: true });
 		return this.toNext([response, next]);
 	}
+	/**
+	 *El comando EXCEPT se utiliza para obtener los registros que están en la primera consulta, pero no en la segunda.
+	 *Este comando elimina los duplicados por defecto, retornando solo los registros únicos que existen
+	 *en la primera consulta y no en la segunda.
+	 * PostgreSQL	✅ Soporta EXCEPT para obtener registros de la primera consulta que no estén en la segunda.
+	 * MySQL			❌ No soporta EXCEPT, pero se puede emular utilizando LEFT JOIN o NOT EXISTS.
+	 * SQL Server	✅ Soporta EXCEPT para obtener diferencias entre dos conjuntos de resultados.
+	 * Oracle			✅ Soporta EXCEPT para encontrar registros que están en la primera consulta pero no en la segunda.
+	 * SQLite			❌ No tiene soporte nativo para EXCEPT, pero se puede simular con LEFT JOIN o NOT EXISTS.
+	 * MongoDB	$lookup con $match y $project	Se puede emular EXCEPT mediante un lookup para combinar colecciones y luego excluir los registros coincidentes.
+	 * @param  {...string|QueryBuilder} selects - Selects
+	 * @returns
+	 */
 	except(...selects) {
 		const next = selects.pop();
 		log(["QB", "except"], "recibe next", next);
 		if (selects.length < 2) {
-			next.error = "INTERSECT necesita mínimo dos instrucciones SELECT";
+			next.error = "EXCEPT necesita mínimo dos instrucciones SELECT";
 			return this.toNext([null, next]);
 		}
 		const response = this.language.except(selects, next, { all: false });
 		return this.toNext([response, next]);
 	}
+	/**
+	 * El comando EXCEPT ALL es una variante de EXCEPT que, a diferencia de EXCEPT,
+	 * mantiene los duplicados en el resultado.
+	 * Es decir, devuelve todas las filas que están en la primera consulta, pero no en la segunda, y mantiene las repeticiones de esas filas.
+	 * PostgreSQL	✅ Soporta EXCEPT ALL para obtener las filas que están en la primera consulta, pero no en la segunda, manteniendo duplicados.
+	 * MySQL			❌ No soporta EXCEPT ALL, pero puede emularse utilizando LEFT JOIN o NOT EXISTS.
+	 * SQL Server	❌ No soporta EXCEPT ALL, aunque se puede simular con GROUP BY y HAVING.
+	 * Oracle			❌ No tiene soporte nativo para EXCEPT ALL.
+	 * SQLite			❌ No soporta EXCEPT ALL, pero puede emularse con LEFT JOIN o NOT EXISTS.
+	 * MongoDB	$lookup con $group y $match	Se pueden combinar colecciones y luego filtrar los resultados para mantener duplicados.
+	 * @param  {...string|QueryBuilder} selects
+	 * @returns
+	 */
 	exceptAll(...selects) {
-		//this causes duplicates to be included in the result
 		const next = selects.pop();
 		log(["QB", "exceptAll"], "recibe next", next);
 		if (selects.length < 2) {
-			next.error = "EXCEPT necesita mínimo dos instrucciones SELECT";
+			next.error = "EXCEPT ALL necesita mínimo dos instrucciones SELECT";
 			return this.toNext([null, next]);
 		}
 		const response = this.language.except(selects, next, { all: true });
 		return this.toNext([response, next]);
 	}
-	where(predicados, next) {
-		next.isQB = predicados instanceof QueryBuilder;
-		const command = this.language.where(predicados, next);
-		log("where", "command %o", command);
-		return this.toNext([command, next]);
-	}
-	whereCursor(cursorName, next) {
-		if (this.cursores?.[cursorName] === undefined) {
-			next.error = `El cursor '${cursorName}' no ha sido definido`;
-			return this.toNext([null, next]);
-		}
-		const response = this.language.whereCursor(cursorName);
-		log(
-			["QB", "whereCursor"],
-			"next %o cursor",
-			next,
-			this.cursores?.[cursorName].cursor,
-		);
-		return this.toNext([response, next]);
-	}
-	on(predicados, next) {
+	/**
+	 * Operaciones de JOIN para especificar las condiciones de cómo se deben combinar las tablas.
+	 * Define las columnas o condiciones que se deben cumplir para que filas de diferentes tablas sean combinadas.
+	 * @param {string|QueryBuilder} predicado
+	 * @param {*} next
+	 * @returns
+	 * @example
+	 * SELECT columna1, columna2
+	 * FROM tabla1
+	 * JOIN tabla2
+	 * ON tabla1.columna = tabla2.columna;
+	 */
+	on(predicado, next) {
 		log(["QB", "on"], "Recibe next", next);
 		if (
 			["innerJoin", "join", "leftJoin", "rightJoin", "fullJoin"].some((item) =>
 				next.callStack.includes(item),
 			)
 		) {
-			const response = this.language.on(predicados, next);
+			const response = this.language.on(predicado, next);
 			return this.toNext([response, next]);
 		}
 		next.error = "No es posible aplicar 'on', falta un comando tipo 'join'";
 		return this.toNext([null, next]);
 	}
-
-	// Predicados
+	/*****************************************************************************
+	 * operadores unarios
+	 * @param {any|QueryBuilder} a
+	 * operadores binarios
+	 * @param {any|QueryBuilder} a
+	 * @param {any|QueryBuilder} b
+	 * operadores ternarios
+	 * @param {any|QueryBuilder} a
+	 * @param {any|QueryBuilder} b
+	 * @param {any|QueryBuilder} c
+	 * logicos
+	 * @param {...any|QueryBuilder} - predicados
+	 *
+	 * @example
+	 * isNull("columna") // columna IS NULL
+	 * eq("columna",20) // columna = 20
+	 * between("columna",10,15) // columna BETWEEN 10 AND 15
+	 * and("columna1","columna2","columna3") // columna1 AND columna2 AND columna3
+	 ******************************************************************************/
 
 	predicados() {
 		const operOneCol = [
@@ -700,6 +1081,13 @@ class QueryBuilder {
 		const operThreeArg = ["between", "notBetween"];
 		const logicos = ["and", "or", "not", "distinct"];
 
+		for (const operOne of operOneCol) {
+			this[operOne] = (a, next) => {
+				const response = this.language[operOne](a, next);
+				log(["QB", "predicados", "%o"], "respuesta", operOne, response);
+				return this.toNext([response, next]);
+			};
+		}
 		for (const operTwo of operTwoCols) {
 			this[operTwo] = (a, b, next) => {
 				log(
@@ -715,13 +1103,7 @@ class QueryBuilder {
 				return nextObj;
 			};
 		}
-		for (const operOne of operOneCol) {
-			this[operOne] = (a, next) => {
-				const response = this.language[operOne](a, next);
-				log(["QB", "predicados", "%o"], "respuesta", operOne, response);
-				return this.toNext([response, next]);
-			};
-		}
+
 		//"between", "notBetween"
 		for (const operThree of operThreeArg) {
 			this[operThree] = (a, b, c, next) =>
@@ -746,20 +1128,28 @@ class QueryBuilder {
 				return this.toNext([command, next]);
 			};
 		}
-	}
-	/**
-	 *
+	} /**
+	 * El operador IN en SQL se utiliza para comprobar si un valor está presente dentro de un conjunto de valores.
+	 * Es útil cuando se necesita realizar comparaciones múltiples sin tener que escribir múltiples condiciones OR.
 	 * @param {string|column} columna - nombre de la columna cuyo valor esta contenido el los valores
 	 * @param  {Array<string|QueryBuilder>|...values} values - Puede ser un array o una lista de strings u objetos QueryBuilder
-	 * @returns
+	 * @returns next
+	 * @example
+	 * where(in("columna1",valor1, valor2, valor3)) // WHERE columna1 IN (valor1, valor2, valor3);
 	 */
-
 	in(columna, ...values) {
 		const next = values.pop();
 		const result = this.language.in(columna, values, next);
 		log(["QB", "in"], "valor resultado %o", result);
 		return this.toNext([result, next]);
 	}
+	/**
+	 * Filtrar registros cuyo valor NO está en una lista de valores o en el resultado de una subconsulta.
+	 * Es la negación de IN y permite excluir múltiples valores en una sola condición.
+	 * @param {string|column} columna
+	 * @param  {Array<string|QueryBuilder>|...values} values
+	 * @returns
+	 */
 	notIn(columna, ...values) {
 		const next = values.pop();
 		const result = this.language.notIn(columna, values, next);
@@ -767,7 +1157,7 @@ class QueryBuilder {
 	}
 
 	/**
-	 *
+	 * Crea una columna 'name' para la tabla 'table'
 	 * @param {string} name - nombre de la columna
 	 * @param {string} table - nombre de la tabla
 	 * @returns {Column}
@@ -802,12 +1192,33 @@ class QueryBuilder {
 			throw new Error(error);
 		}
 		return new Column(name, table, this.language.dataType);
-	}
-
+	} /**
+	 * Crea una instancia de expresion, que permite añadirle un alias AS al campo
+	 * @param {any} expresion
+	 * @returns {Expresion} expresion.value = expresion
+	 * @example
+	 * exp("sum(*)").as("Total") // sum(*) AS Total
+	 *
+	 */
 	exp(expresion) {
 		return new Expresion(expresion);
 	}
-
+	/**
+	 * El comando GROUP BY en SQL se utiliza para agrupar filas que tienen el mismo valor en una o más columnas,
+	 * permitiendo realizar cálculos agregados (COUNT, SUM, AVG, MAX, MIN, etc.) sobre cada grupo.
+	 * PostgreSQL	✅ Sí	Soporta GROUP BY con múltiples columnas y funciones agregadas.
+	 * MySQL			✅ Sí	Compatible con GROUP BY, pero en versiones antiguas permitía resultados ambiguos sin ONLY_FULL_GROUP_BY.
+	 * SQL Server	✅ Sí	Funciona con agregaciones y permite GROUPING SETS.
+	 * Oracle			✅ Sí	Compatible y soporta extensiones como ROLLUP y CUBE.
+	 * SQLite			✅ Sí	Soporta GROUP BY, pero con ciertas limitaciones en comparación con otras bases de datos.
+	 * MongoDB	$group	En el pipeline de agregación, $group permite agrupar documentos y aplicar operaciones agregadas.
+	 * @param {string|Array<string>|Object} columns - Una columna o varias
+	 * @param {Array<Column>} columns.rollup ROLLUP ( ...column )
+	 * @param {Array<Column>} columns.cube CUBE (...column )
+	 * @param {*} options
+	 * @param {*} next
+	 * @returns
+	 */
 	groupBy(columns, options, next) {
 		if (this.lastStatementIn("select", next.callStack)) {
 			const command = this.language.groupBy(columns, options);
@@ -815,7 +1226,26 @@ class QueryBuilder {
 		}
 		this.error = "No es posible aplicar, falta el comando 'select'";
 		return next;
-	}
+	} /**
+	 * El comando HAVING en SQL se usa para filtrar los resultados después de aplicar GROUP BY,
+	 * permitiendo restringir los grupos basados en condiciones sobre funciones agregadas
+	 * (COUNT, SUM, AVG, MAX, MIN, etc.).
+	 * PostgreSQL	✅ Sí	Funciona con GROUP BY para filtrar resultados agrupados.
+	 * MySQL			✅ Sí	Compatible con todas las versiones, usado para restricciones en funciones agregadas.
+	 * SQL Server	✅ Sí	Soporta HAVING con agregaciones y expresiones condicionales.
+	 * Oracle			✅ Sí	Funciona de la misma manera que en SQL estándar.
+	 * SQLite			✅ Sí	Compatible con HAVING, pero con algunas limitaciones en expresiones más avanzadas.
+	 * MongoDB	$group seguido de $match.	Primero se agrupan los documentos con $group, luego se filtran los resultados con $match.
+	 * @param {strict|QueryBuilder} predicado - expresion que utiliza el having
+	 * @param {object} options - opciones
+	 * @param {*} next
+	 * @returns
+	 * @example
+	 *
+	 * let qb = new QueryBuilder()
+	 * qb.having(qb.and(qb.gt(qb.sum("Columna3"),100)),qb.gt(qb.count("*"),2))
+	 * HAVING SUM(columna3) > 100 AND COUNT(*) > 2;
+	 */
 	having(predicado, options, next) {
 		if (this.lastStatementIn("select", next.callStack)) {
 			const command = this.language.having(predicado, options);
@@ -824,6 +1254,22 @@ class QueryBuilder {
 		this.error = "No es posible aplicar, falta el comando 'select'";
 		return next;
 	}
+	/**
+	 * Se usa para ordenar los resultados de una consulta según una o más columnas,
+	 * en orden ascendente (ASC) o descendente (DESC).
+	 * PostgreSQL	✅ Sí	Soporta ORDER BY con múltiples columnas y direcciones de ordenamiento.
+	 * MySQL			✅ Sí	Permite ordenar por columnas, expresiones y alias definidos en SELECT.
+	 * SQL Server	✅ Sí	Compatible con funciones como TOP y OFFSET FETCH.
+	 * Oracle			✅ Sí	Soporta ORDER BY junto con ROWNUM y FETCH FIRST.
+	 * SQLite			✅ Sí	Compatible, pero puede tener restricciones en combinaciones avanzadas.
+	 * MongoDB	sort() o $sort	sort() se usa en consultas, y $sort en pipelines de agregación.
+
+	 * @param {Column|Array<string>|object} columns - columna, lista de columnas o un objeto sobre la que ordenar
+	 * @param {string} columns.col - columna sobre la que ordenar
+	 * @param {"ASC"|"DESC"} columns.order - tipo de orden
+	 * @param {*} next
+	 * @returns
+	 */
 	orderBy(columns, next) {
 		if (this.lastStatementIn("select", next.q)) {
 			const command = this.language.orderBy(columns);
@@ -832,34 +1278,94 @@ class QueryBuilder {
 		this.error = "No es posible aplicar, falta el comando 'select'";
 		return next;
 	}
-	//MySQL, PostgreSQL, y SQLite
+	/**
+	 * Se usa para restringir la cantidad de filas devueltas por una consulta.
+	 * Es útil para paginación y optimización de rendimiento cuando solo se necesitan un número específico de registros.
+	 * PostgreSQL	✅ Sí	LIMIT y OFFSET funcionan para paginación.
+	 * MySQL			✅ Sí	Soporta LIMIT con OFFSET para paginación.
+	 * SQL Server	❌ No	Se usa TOP n o OFFSET FETCH NEXT en su lugar.
+	 * Oracle			❌ No	Usa FETCH FIRST n ROWS ONLY para limitar resultados.
+	 * SQLite			✅ Sí	Compatible con LIMIT y OFFSET.
+	 * MongoDB	limit(n)	Se usa junto con skip(n) para paginación, similar a LIMIT ... OFFSET.
+	 * @param {number} limit - numero de elementos a mostrar
+	 * @param {*} next
+	 * @returns
+	 */
 	limit(limit, next) {
-		if (this.lastStatementIn("select", next.q)) {
+		try {
+			switch (false) {
+				case Number.isInteger(limit):
+					throw new Error("valor de no valido", {
+						cause: "limit debe ser entero",
+					});
+				case limit > 0:
+					throw new Error("valor de no valido", {
+						cause: "limit debe ser positivo",
+					});
+				case this.lastStatementIn("select", next.q):
+					throw new Error("limit necesita un SELECT", {
+						cause: "falta un SELECT",
+					});
+			}
+
 			const command = this.language.limit(limit);
 			return this.toNext([command, next]);
+		} catch (error) {
+			next.error = error;
+			return this.toNext([null, next]);
 		}
-		next.error = new Error("limit necesita un SELECT", {
-			cause: "falta un SELECT",
-		});
-		return this.toNext([null, next]);
 	}
+	/**
+	 * Se usa para omitir un número específico de filas antes de comenzar a devolver resultados.
+	 * Se suele combinar con LIMIT para implementar paginación.
+	 * PostgreSQL	✅ Sí	OFFSET y LIMIT permiten paginación eficiente.
+	 * MySQL			✅ Sí	Se usa LIMIT ... OFFSET.
+	 * SQL Server	✅ Sí	Usa OFFSET ... FETCH NEXT para paginación.
+	 * Oracle			✅ Sí	Usa OFFSET ... FETCH NEXT en lugar de LIMIT.
+	 * SQLite			✅ Sí	Compatible con LIMIT y OFFSET.
+	 * MongoDB	skip(n)	Se usa junto con limit(n) para paginación, similar a OFFSET ... LIMIT.
+	 * @param {number} offset - numero de filas que se deben omitir
+	 * @param {*} next
+	 * @returns
+	 */
 	offset(offset, next) {
-		if (this.lastStatementIn("limit", next.q)) {
+		try {
+			switch (false) {
+				case Number.isInteger(offset):
+					throw new Error("valor de no valido", {
+						cause: "offset debe ser entero",
+					});
+				case offset > 0:
+					throw new Error("valor de no valido", {
+						cause: "offset debe ser positivo",
+					});
+				case this.lastStatementIn("select", next.q):
+					throw new Error("offset necesita un SELECT", {
+						cause: "falta un SELECT",
+					});
+			}
 			const command = this.language.offset(offset);
 			return this.toNext([command, next]);
+		} catch (error) {
+			next.error = error;
+			return this.toNext([null, next]);
 		}
-		this.error = new Error("QueryBuilder 'offset'", {
-			cause: "'offset' se utiliza con 'limit'",
-		});
-		return this.toNext([null, next]);
 	}
-	//SQL Server y Oracle
-	// FETCH FIRST n ROWS ONLY
-	//ROWNUM
 
-	// Mofificacion de Datos
+	/*******************************************************************************
+	 * DML
+	 * Manipulan los datos almacenados en las tablas.
+	 ******************************************************************************/
+
 	/**
-	 *
+	 * Se usa para agregar nuevas filas en una tabla.
+	 * Puede insertar valores manualmente o desde el resultado de otra consulta.
+	 * PostgreSQL	✅ Sí	Soporta INSERT ... RETURNING para obtener valores insertados.
+	 * MySQL			✅ Sí	Permite INSERT IGNORE y ON DUPLICATE KEY UPDATE para manejar duplicados.
+	 * SQL Server	✅ Sí	Compatible con INSERT INTO ... OUTPUT.
+	 * Oracle			✅ Sí	Usa INSERT ... RETURNING INTO para recuperar valores insertados.
+	 * SQLite			✅ Sí	Admite INSERT OR REPLACE y INSERT OR IGNORE.
+	 * MongoDB	insertOne(), insertMany()	insertOne() agrega un solo documento, insertMany() varios a la vez.
 	 * @param {string} table - nombre de la tabla
 	 * @param {array<array<Value>>} values - Array de Arrays con los valores
 	 * @param {array<Column>} cols - columnas correspondientes al orden de los valores o vacio para el orden por defecto
@@ -874,14 +1380,13 @@ class QueryBuilder {
 				args,
 			);
 			if (error) {
-				this.error = error;
-				throw new Error(error);
+				throw new Error(error, { cause: "check" });
 			}
 			next.isQB = values instanceof QueryBuilder;
 			const command = this.language.insert(table, cols, values, next);
 			return this.toNext([command, next], ";");
 		} catch (error) {
-			next.error = error.message;
+			next.error = error;
 			return this.toNext([null, next]);
 		}
 	}

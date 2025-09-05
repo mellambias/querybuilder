@@ -7,7 +7,7 @@ import {
 	describeTable,
 	restriccionesTable,
 	checktable,
-} from "../utilsForTest/resultUtils.js";
+} from "../utilsForTest/mysqlUtils.js";
 //SEPUP
 const MySql8 = config.databases.MySql8;
 const Driver = MySql8.driver;
