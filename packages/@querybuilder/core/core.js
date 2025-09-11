@@ -618,7 +618,12 @@ class Core {
 			this[oper] = (a, b, next) => {
 				let valorDeA = a;
 				let valorDeB = b;
-				if (b instanceof QueryBuilder) {
+
+				// Manejo especial para predicados ANY/SOME/ALL
+				if (b instanceof QueryBuilder && next && /^(any|some|all)$/.test(next.last)) {
+					// El valor b ya contiene el predicado formateado (ej: "ANY ( SELECT ... )")
+					valorDeB = next.q.pop(); // Obtener el último valor que contiene el predicado
+				} else if (b instanceof QueryBuilder) {
 					valorDeB = this.getSubselect(next);
 					if (Array.isArray(valorDeB)) {
 						valorDeB = valorDeB.join("\n");
@@ -633,10 +638,11 @@ class Core {
 				}
 				if (b !== undefined) {
 					if (typeof b === "string") {
-						if (/^(ANY|SOME|ALL)$/.test(b.match(/^\w+/)[0])) {
+						if (/^(ANY|SOME|ALL)/.test(b)) {
 							valorDeB = b;
+						} else {
+							valorDeB = `'${b}'`;
 						}
-						valorDeB = `'${b}'`;
 					}
 				}
 				if (valorDeB !== undefined) {
