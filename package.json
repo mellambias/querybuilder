@@ -1,36 +1,17 @@
 {
-	"name": "querybuilder",
-	"version": "1.0.0",
-	"description": "Crea consultas sql usando javascript",
-	"main": "index.js",
-	"type": "module",
-	"scripts": {
-		"start": "node index.js",
-		"test:core": "node --test **/core.test.js",
-		"test:core:only": "node --test --test-only **/core.test.js",
-		"test:mysql": "node --test --test-isolation=none **/mysql/*.test-only.js",
-		"test:mysql:only": "node --test --test-isolation=none --test-only **/mysql/*.test.js",
-		"test:pg": "node --test **/postgres/*.test.js",
-		"test:pg:only": "node --test --test-isolation=none --test-only **/postgres/*.test.js",
-		"test:mongo": "node --test --test-isolation=none **/mongodbDriver.test.js",
-		"test:mongo:only": "node --test --test-isolation=none --test-only **/mongodbDriver.test.js",
-		"test:drivers": "node --test --test-isolation=none **/drivers/*.test.js",
-		"test:drivers:only": "node --test --test-isolation=none --test-only **/drivers/*.test.js"
-	},
-	"keywords": [
-		"javascript",
-		"node",
-		"sql",
-		"mysql",
-		"postgresql",
-		"mongodb",
-		"querybuilder"
-	],
-	"author": "mellambias",
-	"license": "ISC",
-	"devDependencies": {
-		"mongodb": "6.10.0",
-		"mysql2": "3.11.3",
-		"pg": "8.13.0"
-	}
+  "name": "querybuilder-workspace",
+  "version": "2.0.0", 
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/@querybuilder/*"
+  ],
+  "scripts": {
+    "test": "node --test test/**/*.test.js",
+    "build": "npm run build --workspaces",
+    "demo": "node examples/package-separation-demo.js"
+  },
+  "devDependencies": {
+    "rollup": "4.0.0"
+  }
 }
