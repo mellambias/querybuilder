@@ -5,7 +5,7 @@ import PostgreSQL from "../../sql/PostgreSQL.js";
 import { config } from "../../../config.js";
 import { commandToGroup } from "../../comandos/subconjuntos.js";
 
-//SEPUP
+//SETUP postgreSQL
 const postgreSQL = config.databases.PostgreSQL;
 const pgDriver = postgreSQL.driver;
 const pgdatabaseTest = new pgDriver(postgreSQL.params);
@@ -17,7 +17,7 @@ const pg = pgqueryBuilder.driver(postgreSQL.driver, postgreSQL.params);
 
 import MySQL from "../../sql/MySQL.js";
 
-// SETUP
+// SETUP mySQL
 const MySql8 = config.databases.MySql8;
 const myDriver = MySql8.driver;
 
@@ -81,7 +81,7 @@ WHERE table_schema = 'public';`,
 		// console.log("============ Respuesta Postgres ============");
 		// console.dir(pgSQLResponse.response(), { depth: null });
 	});
-	test("select", { only: true }, async () => {
+	test("select", async () => {
 		const mySQLResponse = await mydatabaseTest.execute(
 			"use testing; select * from table_test;",
 		);
