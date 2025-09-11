@@ -33,6 +33,15 @@ export const select = {
 			if (typeof column === "string") {
 				colStack[index] = `${column}`;
 			}
+			// Manejar objetos planos como { col: "DISCOS", as: "ID_DISCO" }
+			if (typeof column === "object" && !Array.isArray(column) &&
+				!(column instanceof Column) && !(column instanceof Expresion) && !(column instanceof QueryBuilder)) {
+				if (column.col && column.as) {
+					colStack[index] = `${column.col} AS ${column.as}`;
+				} else if (column.col) {
+					colStack[index] = `${column.col}`;
+				}
+			}
 			if (column instanceof Expresion) {
 				log(
 					["sql2006", "select"],

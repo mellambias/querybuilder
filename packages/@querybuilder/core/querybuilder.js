@@ -720,6 +720,7 @@ class QueryBuilder {
 	select(columns, options, next) {
 		try {
 			const command = this.language.select(columns, options, next);
+			console.log("select", "command %o", command);
 			return this.toNext([command, next]);
 		} catch (error) {
 			next.error = error.message;
@@ -790,6 +791,26 @@ class QueryBuilder {
 	 */
 	where(predicados, next) {
 		next.isQB = predicados instanceof QueryBuilder;
+
+		// Special handling only for specific cases like DELETE subconsulta pattern
+		// Only apply when we have a QueryBuilder predicate in a DELETE/UPDATE context
+		if (predicados instanceof QueryBuilder && (!next.q || next.q.length === 0)) {
+			// Check if this is really a DELETE/UPDATE scenario that needs special handling
+			const hasDeleteUpdateContext = next.q && next.q.some(item =>
+				typeof item === 'string' &&
+				(item.trim().toLowerCase().startsWith('delete') || item.trim().toLowerCase().startsWith('update'))
+			);
+
+			if (hasDeleteUpdateContext) {
+				// This handles the DELETE subconsulta case we fixed before
+				return predicados.toString().then(predicadoSQL => {
+					const cleanSQL = predicadoSQL.replace(/;$/, '');
+					const whereSQL = `WHERE ${cleanSQL}`;
+					return this.toNext([whereSQL, next]);
+				});
+			}
+		}
+
 		const command = this.language.where(predicados, next);
 		log("where", "command %o", command);
 		return this.toNext([command, next]);
@@ -1138,6 +1159,7 @@ class QueryBuilder {
 	 * where(in("columna1",valor1, valor2, valor3)) // WHERE columna1 IN (valor1, valor2, valor3);
 	 */
 	in(columna, ...values) {
+		log(["QB", "in"], "columna %o values %o", columna, values);
 		const next = values.pop();
 		const result = this.language.in(columna, values, next);
 		log(["QB", "in"], "valor resultado %o", result);
@@ -1220,7 +1242,7 @@ class QueryBuilder {
 	 * @returns
 	 */
 	groupBy(columns, options, next) {
-		if (this.lastStatementIn("select", next.callStack)) {
+		if (this.lastStatementIn("select", next.q) !== -1) {
 			const command = this.language.groupBy(columns, options);
 			return this.toNext([command, next]);
 		}
@@ -1247,7 +1269,7 @@ class QueryBuilder {
 	 * HAVING SUM(columna3) > 100 AND COUNT(*) > 2;
 	 */
 	having(predicado, options, next) {
-		if (this.lastStatementIn("select", next.callStack)) {
+		if (this.lastStatementIn("select", next.q) !== -1) {
 			const command = this.language.having(predicado, options);
 			return this.toNext([command, next]);
 		}
@@ -1271,7 +1293,7 @@ class QueryBuilder {
 	 * @returns
 	 */
 	orderBy(columns, next) {
-		if (this.lastStatementIn("select", next.q)) {
+		if (this.lastStatementIn("select", next.q) !== -1) {
 			const command = this.language.orderBy(columns);
 			return this.toNext([command, next]);
 		}
@@ -1468,7 +1490,7 @@ class QueryBuilder {
 			"localTimestamp",
 		];
 		for (const name of names) {
-			this[name] = (next) => this.toNext([this.language[name]()], next);
+			this[name] = (next) => this.toNext([this.language[name](), next], ";");
 		}
 	}
 

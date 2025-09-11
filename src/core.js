@@ -10,6 +10,8 @@ import { log } from "./utils/utils.js";
 class Core {
 	constructor() {
 		this.dataType = "sql2006";
+		this.q = []; // Initialize the query array
+		this.id = Math.random(); // Debug: unique id for each instance
 		this.predicados();
 		this.functionOneParam();
 		this.functionDate();
@@ -130,6 +132,29 @@ class Core {
 			arrayValues = values.map((value) => {
 				if (value instanceof QueryBuilder) {
 					log(["Core", "getListValues(values, next)"], "next %o", next);
+
+					// Check if we have a DELETE/UPDATE command that needs special handling
+					const hasDeleteUpdateCommand = next.q.some(item =>
+						typeof item === 'string' &&
+						(item.trim().toLowerCase().startsWith('delete') || item.trim().toLowerCase().startsWith('update'))
+					);
+
+					if (hasDeleteUpdateCommand) {
+						// Find SELECT and take everything from there for DELETE/UPDATE subconsulta context
+						const selectIndex = next.q.findIndex(item =>
+							typeof item === 'string' &&
+							(item.toUpperCase().startsWith('SELECT') || item.toUpperCase().includes('SELECT'))
+						);
+
+						if (selectIndex !== -1) {
+							// Get all elements from SELECT onwards
+							const subquery = next.q.slice(selectIndex);
+							// Remove the subquery parts from next.q to prevent contamination
+							next.q.splice(selectIndex);
+							return subquery.join('\n');
+						}
+					}
+
 					return this.getSubselect(next);
 				}
 				return value;
@@ -145,7 +170,14 @@ class Core {
 		return arrayValues
 			.map((item) => {
 				if (typeof item === "string") {
-					return `'${item}'`;
+					// Check if this string looks like a SQL subquery
+					if (item.toUpperCase().includes('SELECT') && item.includes('\n')) {
+						// This is a SQL subquery, don't add quotes
+						return item;
+					} else {
+						// This is a regular string value, add quotes
+						return `'${item}'`;
+					}
 				}
 				if (Array.isArray(item)) {
 					return item.join("\n");
