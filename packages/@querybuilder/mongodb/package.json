@@ -1,0 +1,55 @@
+{
+  "name": "@querybuilder/mongodb",
+  "version": "1.0.0",
+  "description": "MongoDB adapter for QueryBuilder with aggregation pipeline support",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": {
+      "import": "./src/index.js"
+    },
+    "./mongodb": "./MongoDB.js",
+    "./command": "./Command.js",
+    "./utils": "./mongoUtils.js"
+  },
+  "files": [
+    "src/",
+    "MongoDB.js",
+    "Command.js",
+    "mongoUtils.js",
+    "comandos/",
+    "drivers/"
+  ],
+  "keywords": [
+    "mongodb",
+    "querybuilder",
+    "database",
+    "nosql",
+    "aggregation",
+    "pipeline"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/querybuilder.git",
+    "directory": "packages/@querybuilder/mongodb"
+  },
+  "dependencies": {
+    "@querybuilder/core": "^1.0.0"
+  },
+  "peerDependencies": {
+    "mongodb": ">=5.0.0"
+  },
+  "scripts": {
+    "test": "node --test test/**/*.test.js",
+    "build": "echo 'No build step required for ES modules'"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "mongodb": "^6.0.0"
+  }
+}

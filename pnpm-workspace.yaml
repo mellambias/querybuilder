@@ -1,0 +1,5 @@
+packages:
+  - 'packages/@querybuilder/*'
+
+auto-install-peers: true
+shamefully-hoist: false

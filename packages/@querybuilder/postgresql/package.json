@@ -1,0 +1,52 @@
+{
+  "name": "@querybuilder/postgresql",
+  "version": "1.0.0",
+  "description": "PostgreSQL adapter for QueryBuilder with PostgreSQL-specific features",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": {
+      "import": "./src/index.js"
+    },
+    "./postgresql": "./PostgreSQL.js"
+  },
+  "files": [
+    "src/",
+    "PostgreSQL.js",
+    "comandos/",
+    "drivers/"
+  ],
+  "keywords": [
+    "postgresql",
+    "postgres",
+    "querybuilder",
+    "database",
+    "sql",
+    "rdbms"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/querybuilder.git",
+    "directory": "packages/@querybuilder/postgresql"
+  },
+  "dependencies": {
+    "@querybuilder/core": "^1.0.0"
+  },
+  "peerDependencies": {
+    "pg": ">=8.0.0"
+  },
+  "scripts": {
+    "test": "node --test test/**/*.test.js",
+    "build": "echo 'No build step required for ES modules'"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "pg": "^8.0.0",
+    "@types/pg": "^8.0.0"
+  }
+}

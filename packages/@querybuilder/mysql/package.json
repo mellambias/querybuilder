@@ -1,0 +1,52 @@
+{
+  "name": "@querybuilder/mysql",
+  "version": "1.0.0",
+  "description": "MySQL adapter for QueryBuilder with MySQL-specific features",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": {
+      "import": "./src/index.js"
+    },
+    "./mysql": "./MySQL.js"
+  },
+  "files": [
+    "src/",
+    "MySQL.js",
+    "comandos/",
+    "drivers/",
+    "results/"
+  ],
+  "keywords": [
+    "mysql",
+    "querybuilder",
+    "database",
+    "sql",
+    "mariadb",
+    "rdbms"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/querybuilder.git",
+    "directory": "packages/@querybuilder/mysql"
+  },
+  "dependencies": {
+    "@querybuilder/core": "^1.0.0"
+  },
+  "peerDependencies": {
+    "mysql2": ">=3.0.0"
+  },
+  "scripts": {
+    "test": "node --test test/**/*.test.js",
+    "build": "echo 'No build step required for ES modules'"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "mysql2": "^3.0.0"
+  }
+}

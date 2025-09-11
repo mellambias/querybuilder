@@ -1,0 +1,67 @@
+{
+  "name": "@querybuilder/core",
+  "version": "1.0.0",
+  "description": "Core QueryBuilder library with SQL2006 standard support",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": {
+      "import": "./src/index.js"
+    },
+    "./querybuilder": "./querybuilder.js",
+    "./core": "./core.js",
+    "./column": "./column.js",
+    "./expresion": "./expresion.js",
+    "./cursor": "./cursor.js",
+    "./transaction": "./transaction.js",
+    "./value": "./value.js",
+    "./proxy": "./proxy.js",
+    "./utils": "./utils/utils.js",
+    "./types": "./types/dataTypes.js",
+    "./commands/sql2006": "./comandos/sql2006.js",
+    "./drivers": "./drivers/Driver.js",
+    "./results": "./results/Result.js"
+  },
+  "files": [
+    "src/",
+    "querybuilder.js",
+    "core.js",
+    "column.js",
+    "expresion.js",
+    "cursor.js",
+    "transaction.js",
+    "value.js",
+    "proxy.js",
+    "comandos/",
+    "utils/",
+    "types/",
+    "results/",
+    "drivers/"
+  ],
+  "keywords": [
+    "sql",
+    "querybuilder",
+    "database",
+    "sql2006",
+    "query",
+    "builder",
+    "orm"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/querybuilder.git",
+    "directory": "packages/@querybuilder/core"
+  },
+  "scripts": {
+    "test": "node --test test/**/*.test.js",
+    "build": "echo 'No build step required for ES modules'"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0"
+  }
+}
