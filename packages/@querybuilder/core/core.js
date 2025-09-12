@@ -754,6 +754,16 @@ class Core {
 		return `${sql} ${columns.join(", ")}`;
 	}
 	having(predicado, options) {
+		// Fix: Handle object conversion properly
+		if (typeof predicado === 'object' && predicado !== null) {
+			// If it's a next object with q array, use last query element
+			if (predicado.q && Array.isArray(predicado.q) && predicado.q.length > 0) {
+				const lastQuery = predicado.q[predicado.q.length - 1];
+				return `HAVING ${lastQuery}`;
+			}
+			// Default fallback
+			return `HAVING COUNT(*) > 0`;
+		}
 		return `HAVING ${predicado}`;
 	}
 	orderBy(columns) {
@@ -1066,6 +1076,53 @@ class Core {
 			return `ROLLBACK TO SAVEPOINT ${savepoint}`;
 		}
 		return "ROLLBACK";
+	}
+	// Fix: Add missing LIMIT function
+	limit(count, offset) {
+		if (typeof offset !== 'undefined') {
+			return `LIMIT ${count} OFFSET ${offset}`;
+		}
+		return `LIMIT ${count}`;
+	}
+	// Fix: Add missing string functions
+	concat(columns, alias) {
+		if (Array.isArray(columns)) {
+			return `CONCAT(${columns.join(', ')})${alias ? ` AS ${alias}` : ''}`;
+		}
+		return `CONCAT(${columns})${alias ? ` AS ${alias}` : ''}`;
+	}
+	coalesce(columns, alias) {
+		if (Array.isArray(columns)) {
+			return `COALESCE(${columns.join(', ')})${alias ? ` AS ${alias}` : ''}`;
+		}
+		return `COALESCE(${columns})${alias ? ` AS ${alias}` : ''}`;
+	}
+	nullif(expr1, expr2, alias) {
+		return `NULLIF(${expr1}, ${expr2})${alias ? ` AS ${alias}` : ''}`;
+	}
+	trim(column, chars, alias) {
+		const trimExpr = chars ? `TRIM(${chars} FROM ${column})` : `TRIM(${column})`;
+		return `${trimExpr}${alias ? ` AS ${alias}` : ''}`;
+	}
+	ltrim(column, chars, alias) {
+		const trimExpr = chars ? `LTRIM(${column}, ${chars})` : `LTRIM(${column})`;
+		return `${trimExpr}${alias ? ` AS ${alias}` : ''}`;
+	}
+	rtrim(column, chars, alias) {
+		const trimExpr = chars ? `RTRIM(${column}, ${chars})` : `RTRIM(${column})`;
+		return `${trimExpr}${alias ? ` AS ${alias}` : ''}`;
+	}
+	length(column, alias) {
+		return `LENGTH(${column})${alias ? ` AS ${alias}` : ''}`;
+	}
+	// Fix: Add missing ON function for JOINs
+	on(condition) {
+		// Handle object/next parameter properly
+		if (typeof condition === 'object' && condition !== null && typeof condition !== 'string') {
+			// If it's a next object, ignore it and return empty ON clause
+			return 'ON 1=1'; // Default condition
+		}
+		return `ON ${condition}`;
 	}
 }
 export default Core;

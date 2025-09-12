@@ -11,7 +11,7 @@ describe("Advanced Features and Edge Cases", () => {
     });
   });
 
-  
+
   describe("String Functions", () => {
     test("substr - extraer subcadena con inicio y longitud", { only: false }, async () => {
       assert.equal(
@@ -58,7 +58,7 @@ describe("Advanced Features and Edge Cases", () => {
         ],
         "'DESCONOCIDO'"
       );
-      
+
       assert.equal(
         result.expresion,
         `CASE
@@ -77,7 +77,7 @@ END AS STATUS`
         ],
         "'BARATO'"
       );
-      
+
       assert.equal(
         result.expresion,
         `CASE
@@ -271,9 +271,9 @@ ON TABLA_A.ID = TABLA_B.ID;`
     test("getStatement con función inexistente", { only: false }, async () => {
       assert.throws(
         () => {
-          qb.getStatement("TEST", { 
-            orden: ["invalid"], 
-            invalid: "not a function" 
+          qb.getStatement("TEST", {
+            orden: ["invalid"],
+            invalid: "not a function"
           }, { invalid: "value" });
         },
         /tiene que ser una funcion/
@@ -284,7 +284,7 @@ ON TABLA_A.ID = TABLA_B.ID;`
   describe("Multi-table operations with aliases", () => {
     test("FROM con múltiples tablas y aliases", { only: false }, async () => {
       const result = qb.from(
-        ["CLIENTES", "ORDENES", "PRODUCTOS"], 
+        ["CLIENTES", "ORDENES", "PRODUCTOS"],
         ["C", "O", "P"]
       );
       assert.equal(result, "FROM CLIENTES AS C, ORDENES AS O, PRODUCTOS AS P");
@@ -322,7 +322,7 @@ ON TABLA_A.ID = TABLA_B.ID;`
 
     test("crear cursor básico", { only: false }, async () => {
       const result = qb.createCursor(
-        "productos_cursor", 
+        "productos_cursor",
         "SELECT * FROM PRODUCTOS WHERE PRECIO > 100"
       );
       assert.ok(result.includes("DECLARE"));

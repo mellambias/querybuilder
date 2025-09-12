@@ -15,7 +15,7 @@ describe("Core Coverage Analysis Tests", () => {
     test("verificar funciones básicas están disponibles", { only: false }, async () => {
       // Estas deberían estar disponibles
       assert.equal(typeof qb.select, "function");
-      assert.equal(typeof qb.from, "function"); 
+      assert.equal(typeof qb.from, "function");
       assert.equal(typeof qb.where, "function");
       assert.equal(typeof qb.gt, "function");
       assert.equal(typeof qb.lt, "function");
@@ -311,13 +311,13 @@ describe("Core Coverage Analysis Tests", () => {
     test("dropQuery limpia el estado", { only: false }, async () => {
       // Configurar un query
       qb.select("*").from("TEST");
-      
+
       // Verificar que hay contenido
       assert.ok(qb.language.q.length > 0);
-      
+
       // Limpiar
       qb.dropQuery();
-      
+
       // Verificar que está limpio
       assert.equal(qb.language.q.length, 0);
     });

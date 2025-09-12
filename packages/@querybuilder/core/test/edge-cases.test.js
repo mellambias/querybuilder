@@ -11,7 +11,7 @@ describe("Edge Cases and Error Conditions", () => {
     });
   });
 
-  
+
   describe("Insert Operations Edge Cases", () => {
     test("insert con valores simples", { only: false }, async () => {
       const result = await qb
@@ -73,7 +73,7 @@ FROM CLIENTES;`
       const result = await qb
         .update("PRODUCTOS", {
           PRECIO: 1200,
-          NOMBRE: "Laptop Actualizada", 
+          NOMBRE: "Laptop Actualizada",
           STOCK: ":nuevo_stock",
           CATEGORIA_ID: qb.select("ID").from("CATEGORIAS").where(qb.eq("NOMBRE", "Electrónicos"))
         })
@@ -125,7 +125,7 @@ ESTADO = 'ACTIVO';`
 
     test("leftJoin con alias", { only: false }, async () => {
       const result = qb.leftJoin(
-        ["CLIENTES", "ORDENES"], 
+        ["CLIENTES", "ORDENES"],
         ["C", "O"]
       );
       assert.equal(result, "FROM CLIENTES C LEFT OUTER JOIN ORDENES O");
@@ -206,7 +206,7 @@ ESTADO = 'ACTIVO';`
     test("añadir constraint", { only: false }, async () => {
       const result = qb.addConstraint("FK_PRODUCTO", {
         type: "FOREIGN KEY",
-        column: "CATEGORIA_ID", 
+        column: "CATEGORIA_ID",
         references: "CATEGORIAS(ID)"
       });
       assert.ok(result.includes("ADD CONSTRAINT"));
@@ -229,7 +229,7 @@ ESTADO = 'ACTIVO';`
     test("between con valores", { only: false }, async () => {
       const result = await qb
         .select("*")
-        .from("PRODUCTOS")  
+        .from("PRODUCTOS")
         .where(qb.between("PRECIO", 100, 500))
         .toString();
 
@@ -260,7 +260,7 @@ ESTADO = 'ACTIVO';`
         qb.gt("PRECIO", 100),
         qb.eq("CATEGORIA", "Electrónicos")
       ];
-      
+
       const result = await qb
         .select("*")
         .from("PRODUCTOS")
@@ -273,7 +273,7 @@ ESTADO = 'ACTIVO';`
 
     test("predicado NOT", { only: false }, async () => {
       const result = await qb
-        .select("*") 
+        .select("*")
         .from("EMPLEADOS")
         .where(qb.not(qb.eq("ESTADO", "INACTIVO")))
         .toString();
@@ -324,11 +324,11 @@ ESTADO = 'ACTIVO';`
         qb.select("ID").from("TABLA1"),
         qb.select("ID").from("TABLA2")
       ];
-      
+
       // Este test verifica que getListValues maneje correctamente arrays de QB
       const result = await qb
         .select("*")
-        .from("MAIN_TABLE") 
+        .from("MAIN_TABLE")
         .where(qb.inOp("ID", subqueries))
         .toString();
 
