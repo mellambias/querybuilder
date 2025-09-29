@@ -857,7 +857,8 @@ class QueryBuilder {
 			this[join] = (tables, alias, next) => {
 				this.checkFrom(tables, alias);
 				log(["QB", "joins", "%o"], " Recibe el objeto next", join, next);
-				if (["select", "on"].includes(next?.last)) {
+				// Fix: Allow JOIN after FROM, not just SELECT or ON
+				if (["select", "on", "from"].includes(next?.last)) {
 					const result = this.language[join](tables, alias);
 					if (result instanceof Error) {
 						next.error = result;
@@ -866,7 +867,7 @@ class QueryBuilder {
 					return this.toNext([result, next]);
 				}
 				next.error =
-					"No es posible aplicar, falta un comando previo 'select' u 'on'";
+					"No es posible aplicar, falta un comando previo 'select', 'from' u 'on'";
 				return this.toNext([null, next]);
 			};
 		}
@@ -919,8 +920,9 @@ class QueryBuilder {
 	 */
 	union(...selects) {
 		const next = selects.pop(); // recupera el ultimo valor introducido en los argumentos
-		if (selects.length < 2) {
-			next.error = "UNION ALL necesita mínimo dos instrucciones SELECT";
+		// Fix: Current QueryBuilder already has one SELECT, so we need at least 1 more
+		if (selects.length < 1) {
+			next.error = "UNION necesita al menos una instrucción SELECT adicional";
 			return this.toNext([null, next]);
 		}
 		const response = this.language.union(selects, next, { all: false });
@@ -935,8 +937,9 @@ class QueryBuilder {
 	unionAll(...selects) {
 		const next = selects.pop();
 		log(["QB", "unionAll"], "recibe next", next);
-		if (selects.length < 2) {
-			next.error = "UNION ALL necesita mínimo dos instrucciones SELECT";
+		// Fix: Current QueryBuilder already has one SELECT, so we need at least 1 more
+		if (selects.length < 1) {
+			next.error = "UNION ALL necesita al menos una instrucción SELECT adicional";
 			return this.toNext([null, next]);
 		}
 		const response = this.language.union(selects, next, { all: true });
