@@ -1,6 +1,6 @@
 @echo off
 REM 🌳 QueryBuilder Module Switcher (Windows Batch)
-REM Script para facilitar el cambio entre ramas de módulos
+REM Script para facilitar el cambio entre ramas de módulos con verificación
 
 if "%1"=="" (
     echo 🚀 QueryBuilder Module Switcher
@@ -15,6 +15,7 @@ if "%1"=="" (
     echo   main        - Rama principal
     echo   list        - Mostrar estado de ramas
     echo.
+    echo 💡 Tip: Usa verify-branch.bat [módulo] para verificar rama actual
     goto :end
 )
 
@@ -31,16 +32,30 @@ if "%1"=="list" (
 if "%1"=="core" (
     echo 🔧 Cambiando a módulo Core...
     git checkout module/core
-    echo ✅ Ahora en rama: module/core
-    echo 📁 Directorio: packages/@querybuilder/core/
+    if %errorlevel%==0 (
+        echo ✅ Ahora en rama: module/core
+        echo 📁 Directorio: packages/@querybuilder/core/
+        echo.
+        echo 🔍 Verificando rama...
+        call verify-branch.bat core
+    ) else (
+        echo ❌ Error al cambiar a module/core
+    )
     goto :end
 )
 
 if "%1"=="postgresql" (
     echo 🐘 Cambiando a módulo PostgreSQL...
     git checkout module/postgresql
-    echo ✅ Ahora en rama: module/postgresql
-    echo 📁 Directorio: packages/@querybuilder/postgresql/
+    if %errorlevel%==0 (
+        echo ✅ Ahora en rama: module/postgresql
+        echo 📁 Directorio: packages/@querybuilder/postgresql/
+        echo.
+        echo 🔍 Verificando rama...
+        call verify-branch.bat postgresql
+    ) else (
+        echo ❌ Error al cambiar a module/postgresql
+    )
     goto :end
 )
 
