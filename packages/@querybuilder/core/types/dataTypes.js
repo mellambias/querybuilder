@@ -196,6 +196,140 @@ const dataTypes = {
 		postgresql: "BOOLEAN",
 		mongobd: "boolean",
 	},
+	// Tipos específicos de PostgreSQL
+	UUID: {
+		postgresql: "UUID",
+	},
+	TIMESTAMPTZ: {
+		postgresql: "TIMESTAMPTZ",
+	},
+	INET: {
+		postgresql: "INET",
+	},
+	MACADDR: {
+		postgresql: "MACADDR",
+	},
+	CIDR: {
+		postgresql: "CIDR",
+	},
+	NUMRANGE: {
+		postgresql: "NUMRANGE",
+	},
+	DATERANGE: {
+		postgresql: "DATERANGE",
+	},
+	TSRANGE: {
+		postgresql: "TSRANGE",
+	},
+	TSTZRANGE: {
+		postgresql: "TSTZRANGE",
+	},
+	JSON: {
+		postgresql: "JSON",
+	},
+	JSONB: {
+		postgresql: "JSONB",
+	},
+	XML: {
+		postgresql: "XML",
+	},
+	TSVECTOR: {
+		postgresql: "TSVECTOR",
+	},
+	TSQUERY: {
+		postgresql: "TSQUERY",
+	},
+	BYTEA: {
+		postgresql: "BYTEA",
+	},
+	OID: {
+		postgresql: "OID",
+	},
+	REGPROC: {
+		postgresql: "REGPROC",
+	},
+	REGPROCEDURE: {
+		postgresql: "REGPROCEDURE",
+	},
+	REGOPER: {
+		postgresql: "REGOPER",
+	},
+	REGOPERATOR: {
+		postgresql: "REGOPERATOR",
+	},
+	REGCLASS: {
+		postgresql: "REGCLASS",
+	},
+	REGTYPE: {
+		postgresql: "REGTYPE",
+	},
+	REGROLE: {
+		postgresql: "REGROLE",
+	},
+	REGNAMESPACE: {
+		postgresql: "REGNAMESPACE",
+	},
+	REGCONFIG: {
+		postgresql: "REGCONFIG",
+	},
+	REGDICTIONARY: {
+		postgresql: "REGDICTIONARY",
+	},
+	MONEY: {
+		postgresql: "MONEY",
+	},
+	POINT: {
+		postgresql: "POINT",
+	},
+	LINE: {
+		postgresql: "LINE",
+	},
+	LSEG: {
+		postgresql: "LSEG",
+	},
+	BOX: {
+		postgresql: "BOX",
+	},
+	PATH: {
+		postgresql: "PATH",
+	},
+	POLYGON: {
+		postgresql: "POLYGON",
+	},
+	CIRCLE: {
+		postgresql: "CIRCLE",
+	},
+	// Arrays de tipos específicos de PostgreSQL
+	"UUID[]": {
+		postgresql: "UUID[]",
+	},
+	"TIMESTAMPTZ[]": {
+		postgresql: "TIMESTAMPTZ[]",
+	},
+	"INET[]": {
+		postgresql: "INET[]",
+	},
+	"TEXT[]": {
+		postgresql: "TEXT[]",
+	},
+	"INTEGER[]": {
+		postgresql: "INTEGER[]",
+	},
+	"VARCHAR[]": {
+		postgresql: "VARCHAR[]",
+	},
+	"JSONB[]": {
+		postgresql: "JSONB[]",
+	},
+	"TIMESTAMP[]": {
+		postgresql: "TIMESTAMP[]",
+	},
+	"BOOLEAN[]": {
+		postgresql: "BOOLEAN[]",
+	},
+	"NUMERIC[]": {
+		postgresql: "NUMERIC[]",
+	},
 };
 
 export { dataTypes };

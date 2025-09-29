@@ -157,18 +157,6 @@ class PostgreSQLExtended extends QueryBuilder {
     };
   }
 
-  /**
-   * Método helper para agregar condiciones WHERE usando SQL directo
-   * Corrige el problema con QueryBuilder.where() que no maneja operadores múltiples
-   * @private
-   * @param {string} condition - Condición SQL completa
-   * @returns {PostgreSQLExtended}
-   */
-  addWhereCondition(condition) {
-    // Solución con array: pasar la condición como array de un elemento
-    return this.where([condition], this);
-  }
-
   // ===== JSON OPERATIONS =====
 
   /**
@@ -179,7 +167,8 @@ class PostgreSQLExtended extends QueryBuilder {
    */
   jsonContains(column, value) {
     const jsonValue = typeof value === 'string' ? value : JSON.stringify(value);
-    return this.addWhereCondition(`${column} @> '${jsonValue}'`);
+    const condition = `${column} @> '${jsonValue}'`;
+    return this.where(condition);
   }
 
   /**
@@ -190,7 +179,7 @@ class PostgreSQLExtended extends QueryBuilder {
    */
   jsonContainedBy(column, value) {
     const jsonValue = typeof value === 'string' ? value : JSON.stringify(value);
-    return this.where([`${column}`, '<@', `'${jsonValue}'`]);
+    return this.where(`${column} <@ '${jsonValue}'`);
   }
 
   /**
@@ -389,9 +378,10 @@ class PostgreSQLExtended extends QueryBuilder {
    * @private
    * @param {array} partitionBy - Columnas de partición
    * @param {array} orderBy - Columnas de ordenamiento
+   * @param {string} frameClause - Cláusula de frame opcional
    * @returns {string}
    */
-  buildWindowClause(partitionBy = [], orderBy = []) {
+  buildWindowClause(partitionBy = [], orderBy = [], frameClause = '') {
     let clause = 'OVER (';
     const parts = [];
 
@@ -403,10 +393,70 @@ class PostgreSQLExtended extends QueryBuilder {
       parts.push(`ORDER BY ${orderBy.join(', ')}`);
     }
 
+    if (frameClause) {
+      parts.push(frameClause);
+    }
+
     clause += parts.join(' ');
     clause += ')';
 
     return clause;
+  }
+
+  /**
+   * Crea una función de ventana con frame específico de filas
+   * @param {string} func - Función de agregación
+   * @param {string} column - Columna (opcional)
+   * @returns {WindowFunction}
+   */
+  windowFunction(func, column = '') {
+    return new WindowFunction(func, column);
+  }
+
+  /**
+   * Funciones de agregación con soporte para window frames
+   */
+  sum(column) {
+    return this.windowFunction('SUM', column);
+  }
+
+  avg(column) {
+    return this.windowFunction('AVG', column);
+  }
+
+  count(column = '*') {
+    return this.windowFunction('COUNT', column);
+  }
+
+  max(column) {
+    return this.windowFunction('MAX', column);
+  }
+
+  min(column) {
+    return this.windowFunction('MIN', column);
+  }
+
+  /**
+   * Window functions específicas
+   */
+  lag(column, offset = 1, defaultValue = null) {
+    return new WindowFunction('LAG', column, [offset, defaultValue].filter(v => v !== null));
+  }
+
+  lead(column, offset = 1, defaultValue = null) {
+    return new WindowFunction('LEAD', column, [offset, defaultValue].filter(v => v !== null));
+  }
+
+  rowNumber() {
+    return new WindowFunction('ROW_NUMBER');
+  }
+
+  rank() {
+    return new WindowFunction('RANK');
+  }
+
+  denseRank() {
+    return new WindowFunction('DENSE_RANK');
   }
 
   // ===== CTE SUPPORT =====
@@ -447,7 +497,7 @@ class PostgreSQLExtended extends QueryBuilder {
    */
   arrayContains(column, values) {
     const arrayStr = Array.isArray(values) ? values : [values];
-    return this.addWhereCondition(`${column} @> ARRAY[${arrayStr.map(v => `'${v}'`).join(', ')}]`);
+    return this.where(`${column} @> ARRAY[${arrayStr.map(v => `'${v}'`).join(', ')}]`);
   }
 
   /**
@@ -458,7 +508,7 @@ class PostgreSQLExtended extends QueryBuilder {
    */
   arrayContainedBy(column, values) {
     const arrayStr = Array.isArray(values) ? values : [values];
-    return this.addWhereCondition(`${column} <@ ARRAY[${arrayStr.map(v => `'${v}'`).join(', ')}]`);
+    return this.where(`${column} <@ ARRAY[${arrayStr.map(v => `'${v}'`).join(', ')}]`);
   }
 
   /**
@@ -469,7 +519,7 @@ class PostgreSQLExtended extends QueryBuilder {
    */
   arrayOverlaps(column, values) {
     const arrayStr = Array.isArray(values) ? values : [values];
-    return this.addWhereCondition(`${column} && ARRAY[${arrayStr.map(v => `'${v}'`).join(', ')}]`);
+    return this.where(`${column} && ARRAY[${arrayStr.map(v => `'${v}'`).join(', ')}]`);
   }
 
   /**
@@ -560,7 +610,7 @@ class PostgreSQLExtended extends QueryBuilder {
    * @returns {PostgreSQLExtended}
    */
   regexMatch(column, pattern) {
-    return this.whereRaw(`${column} ~ '${pattern}'`);
+    return this.where(`${column} ~ '${pattern}'`);
   }
 
   /**
@@ -570,7 +620,7 @@ class PostgreSQLExtended extends QueryBuilder {
    * @returns {PostgreSQLExtended}
    */
   regexMatchCI(column, pattern) {
-    return this.whereRaw(`${column} ~* '${pattern}'`);
+    return this.where(`${column} ~* '${pattern}'`);
   }
 
   // ===== UTILITY FUNCTIONS =====
@@ -677,6 +727,126 @@ class PostgreSQLExtended extends QueryBuilder {
     clone.isRecursive = this.isRecursive;
     clone.connection = this.connection;
     return clone;
+  }
+}
+
+/**
+ * Clase para construir window functions con frames
+ */
+class WindowFunction {
+  constructor(func, column = '', params = []) {
+    this.func = func;
+    this.column = column;
+    this.params = params;
+    this.partitionColumns = [];
+    this.orderColumns = [];
+    this.frameClause = '';
+  }
+
+  /**
+   * Cláusula OVER
+   * @returns {WindowFunction}
+   */
+  over() {
+    return this;
+  }
+
+  /**
+   * PARTITION BY
+   * @param {...string} columns - Columnas de partición
+   * @returns {WindowFunction}
+   */
+  partitionBy(...columns) {
+    this.partitionColumns = columns;
+    return this;
+  }
+
+  /**
+   * ORDER BY
+   * @param {string} column - Columna de ordenamiento
+   * @param {string} direction - ASC o DESC
+   * @returns {WindowFunction}
+   */
+  orderBy(column, direction = 'ASC') {
+    this.orderColumns.push(`${column} ${direction}`);
+    return this;
+  }
+
+  /**
+   * ROWS frame
+   * @param {string} start - Inicio del frame
+   * @param {string} end - Fin del frame (opcional)
+   * @returns {WindowFunction}
+   */
+  rows(start, end = null) {
+    if (end) {
+      this.frameClause = `ROWS BETWEEN ${start} AND ${end}`;
+    } else {
+      this.frameClause = `ROWS ${start}`;
+    }
+    return this;
+  }
+
+  /**
+   * RANGE frame
+   * @param {string} start - Inicio del frame
+   * @param {string} end - Fin del frame (opcional)
+   * @returns {WindowFunction}
+   */
+  range(start, end = null) {
+    if (end) {
+      this.frameClause = `RANGE BETWEEN ${start} AND ${end}`;
+    } else {
+      this.frameClause = `RANGE ${start}`;
+    }
+    return this;
+  }
+
+  /**
+   * Alias para el resultado
+   * @param {string} alias - Nombre del alias
+   * @returns {string}
+   */
+  as(alias) {
+    return `${this.toString()} AS ${alias}`;
+  }
+
+  /**
+   * Convierte a string SQL
+   * @returns {string}
+   */
+  toString() {
+    let sql = this.func;
+
+    if (this.column || this.params.length > 0) {
+      const allParams = [this.column, ...this.params].filter(p => p !== '');
+      sql += `(${allParams.join(', ')})`;
+    } else if (this.func !== 'ROW_NUMBER' && this.func !== 'RANK' && this.func !== 'DENSE_RANK') {
+      sql += '()';
+    } else {
+      sql += '()';
+    }
+
+    // Construir cláusula OVER
+    let overClause = 'OVER (';
+    const parts = [];
+
+    if (this.partitionColumns.length > 0) {
+      parts.push(`PARTITION BY ${this.partitionColumns.join(', ')}`);
+    }
+
+    if (this.orderColumns.length > 0) {
+      parts.push(`ORDER BY ${this.orderColumns.join(', ')}`);
+    }
+
+    if (this.frameClause) {
+      parts.push(this.frameClause);
+    }
+
+    overClause += parts.join(' ');
+    overClause += ')';
+
+    return `${sql} ${overClause}`;
   }
 }
 

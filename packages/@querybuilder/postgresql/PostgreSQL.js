@@ -89,6 +89,21 @@ class PostgreSQL extends Core {
 	}
 
 	/**
+	 * Crea un dominio personalizado
+	 * @param {string} name - Nombre del dominio
+	 * @param {object} options - Opciones del dominio
+	 * @returns {string}
+	 */
+	createDomain(name, options) {
+		return this.getStatement(
+			"CREATE",
+			postgreSQL.createDomain,
+			{ name, options },
+			" ",
+		);
+	}
+
+	/**
 	 * Elimina un tipo personalizado
 	 * @param {string} name - Nombre del tipo
 	 * @param {object} options - Opciones
@@ -248,6 +263,20 @@ class PostgreSQL extends Core {
 	 */
 	offset(offset) {
 		return `OFFSET ${offset}`;
+	}
+
+	/**
+	 * Modifica una tabla existente
+	 * @param {string} name - Nombre de la tabla
+	 * @returns {string}
+	 */
+	alterTable(name) {
+		return this.getStatement(
+			"ALTER TABLE",
+			postgreSQL.alterTable,
+			{ name },
+			" ",
+		);
 	}
 }
 

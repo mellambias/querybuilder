@@ -3,18 +3,57 @@
  * @paramn { Array<strings>} enum - crea tipos enumerados
  */
 import { column } from "./column.js";
+
 export const createType = {
 	name: (name) => `TYPE ${name}`,
-	as: function (cols, self) {
-		const columns = Object.keys(cols).map((key) => {
-			const newColumn = this.column(key, cols[key]);
-			return newColumn;
-		});
-		if (self._options?.constraints) {
-			columns.push(this.tableConstraints(self._options.constraints));
+	as: function (value, self) {
+		// Si es un string simple, es un tipo base
+		if (typeof value === 'string') {
+			if (value === 'ENUM') {
+				// Si hay valores para el ENUM, los incluimos
+				if (self._options?.values && Array.isArray(self._options.values)) {
+					return `AS ENUM ('${self._options.values.join("', '")}')`;
+				}
+				return 'AS ENUM';
+			}
+
+			if (value === 'COMPOSITE') {
+				// Para tipos compuestos, buscar los atributos
+				if (self._options?.attributes && typeof self._options.attributes === 'object') {
+					const columns = Object.keys(self._options.attributes).map((key) => {
+						const columnDef = self._options.attributes[key];
+						if (typeof columnDef === 'string') {
+							return `${key} ${columnDef}`;
+						} else if (typeof columnDef === 'object') {
+							return `${key} ${columnDef.type || 'TEXT'}`;
+						}
+						return `${key} TEXT`;
+					});
+
+					return `AS (\n  ${columns.join(',\n  ')}\n)`;
+				}
+			}
+
+			// Otros tipos como NUMERIC(8,2), VARCHAR(255), etc.
+			return `AS ${value}`;
 		}
 
-		return `AS\n( ${columns.join(",\n ")} )`;
+		// Si es un objeto, es un tipo compuesto directo
+		if (typeof value === 'object' && value !== null) {
+			const columns = Object.keys(value).map((key) => {
+				const columnDef = value[key];
+				if (typeof columnDef === 'string') {
+					return `${key} ${columnDef}`;
+				} else if (typeof columnDef === 'object') {
+					return `${key} ${columnDef.type || 'TEXT'}`;
+				}
+				return `${key} TEXT`;
+			});
+
+			return `AS (\n  ${columns.join(',\n  ')}\n)`;
+		}
+
+		return `AS ${value}`;
 	},
 	enum: (labels) => {
 		if (Array.isArray(labels)) {
@@ -22,6 +61,23 @@ export const createType = {
 		}
 	},
 	orden: ["name", "as", "enum"],
+};
+
+/**
+ * CREATE DOMAIN - Crear un dominio de datos personalizado
+ * @param {object} params - Parámetros del comando
+ * @param {string} params.name - Nombre del dominio
+ * @param {object} params.options - Opciones del dominio
+ * @returns {string} SQL para crear dominio
+ */
+export const createDomain = {
+	name: (name) => `DOMAIN ${name}`,
+	dataType: (dataType) => `AS ${dataType}`,
+	default: (defaultValue) => `DEFAULT ${defaultValue}`,
+	constraint: (constraint) => constraint,
+	notNull: (notNull) => notNull ? 'NOT NULL' : '',
+	collate: (collate) => `COLLATE ${collate}`,
+	orden: ["name", "dataType", "default", "constraint", "notNull", "collate"],
 };
 
 /**

@@ -1,53 +1,51 @@
-# 🧪 PostgreSQL Test Suite
+# 🧪 PostgreSQL Test Suite - Suite Final de Tests
 
-## 📋 Estructura Modular de Tests
+## 📋 Archivos de Test Principales
 
-Los tests de PostgreSQL han sido organizados en módulos específicos por funcionalidad, siguiendo el patrón del core QueryBuilder.
+### 🎯 Test de Integración Core
+- **`querybuilder-integration.test.js`** - ⭐ **PRINCIPAL** - Tests de integración QueryBuilder + PostgreSQL
+  - Valida que el usuario final puede usar todas las funcionalidades
+  - Tests de CREATE TABLE, CREATE TYPE, CREATE DOMAIN
+  - Operaciones CRUD completas
+  - Tipos PostgreSQL específicos
 
-### 📁 Archivos de Test
+### 🏗️ Tests de Funcionalidades Específicas
+- **`postgresql-extended.test.js`** - Tests del PostgreSQLExtended class
+  - Window Functions, CTEs, UPSERT
+  - JSON/JSONB operators (@>, <@, ?, etc.)
+  - Array operations (@>, &&, <@)
+  - Full-text search
 
-#### Tests Básicos (Compatibilidad con Core)
-- **`database-operations.test.js`** - Operaciones de base de datos
-  - Crear/eliminar bases de datos
-  - Crear/eliminar esquemas
-  - Opciones específicas de PostgreSQL (FORCE, CASCADE)
+- **`postgresql-basic.test.js`** - Tests básicos de PostgreSQL core
+  - CREATE/ALTER/DROP operations
+  - Tipos de datos básicos
+  - Funcionalidades DDL/DML
 
-- **`table-operations.test.js`** - Operaciones de tabla
-  - Crear/eliminar tablas
-  - Tablas temporales (GLOBAL/LOCAL)
-  - Tipos de columna específicos de PostgreSQL
-  - ALTER TABLE operations
+### 📊 Tests de Validación por Categoría
+- **`data-types.test.js`** - Validación de tipos PostgreSQL específicos
+- **`json-operations.test.js`** - Operaciones JSON/JSONB completas
+- **`array-operations.test.js`** - Operaciones con arrays PostgreSQL
+- **`table-operations.test.js`** - Operaciones de tabla avanzadas
+- **`advanced-features.test.js`** - CTEs, Window Functions, etc.
 
-- **`data-types.test.js`** - Tipos de datos personalizados
-  - CREATE TYPE (ENUM, COMPOSITE)
-  - CREATE DOMAIN
-  - Tipos específicos de PostgreSQL (UUID, INET, etc.)
-  - Arrays de tipos específicos
+### 🔍 Tests de Arquitectura y Métodos
+- **`architecture-final.test.js`** - Validación arquitectura QueryBuilder → PostgreSQL
+- **`extended-methods.test.js`** - Métodos extendidos específicos
+- **`specialized-methods.test.js`** - Métodos especializados PostgreSQL
 
-#### Tests Avanzados (Características PostgreSQL)
-- **`json-operations.test.js`** - Operaciones JSON/JSONB
-  - Operadores JSON (@>, <@, ?, ?|, ?&)
-  - Funciones JSON (json_agg, jsonb_set, etc.)
-  - Queries con paths JSON complejos
-  - Índices GIN para JSON
-
-- **`array-operations.test.js`** - Operaciones con arrays
-  - Operadores de arrays (@>, <@, &&)
-  - Funciones de arrays (array_agg, unnest, etc.)
-  - Acceso a elementos específicos
-  - Arrays multidimensionales
-
-- **`advanced-features.test.js`** - Características avanzadas
-  - CTEs (Common Table Expressions)
-  - CTEs recursivos
-  - Window Functions (ROW_NUMBER, RANK, LAG, LEAD)
-  - UPSERT (INSERT ... ON CONFLICT)
-  - Full-text Search (tsvector, tsquery)
-
-#### Test Principal
-- **`index.test.js`** - Suite completa que ejecuta todos los tests
+### 📈 Tests de Resumen y Validación
+- **`implementation-summary.test.js`** - Resumen de implementación completa
+- **`postgresql-types-validation.test.js`** - Validación exhaustiva de tipos
 
 ## 🚀 Ejecutar Tests
+
+### Test Principal (Recomendado)
+```bash
+# Ejecutar test de integración principal
+node --test test/querybuilder-integration.test.js
+
+# Ejecutar PostgreSQL Extended
+node --test test/postgresql-extended.test.js
 
 ### Ejecutar todos los tests
 ```bash

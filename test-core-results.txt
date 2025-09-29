@@ -1,0 +1,148 @@
+ÔûÂ Database Operations
+  Ô£ö Comando para crear una base de datos (2.5907ms)
+  Ô£ö Falla cuando se crea una base de datos con un nombre reservado (0.4584ms)
+  Ô£ö Comando para eliminar una base de datos (0.5567ms)
+  Ô£ö Crear un tipo definido por el usuario (0.7791ms)
+Ô£ö Database Operations (5.4729ms)
+ÔûÂ Table Operations
+  Ô£ö Crear tabla (1.074ms)
+  Ô£ö Crear una tabla temporal global (0.5181ms)
+  Ô£ö Crear una tabla temporal local (0.4033ms)
+  Ô£ö Crear una tabla con varias columnas (0.5042ms)
+  Ô£ö No puede Crear una tabla si una columna no es valida (0.4262ms)
+  Ô£ö Crea la base de datos inventario (0.5459ms)
+  ÔûÂ Alter TABLE
+    Ô£ö A├▒ade una columna a la tabla (0.505ms)
+    Ô£ö Modifica una columna a la tabla (0.3653ms)
+    Ô£ö Elimina una columna a la tabla (0.8916ms)
+  Ô£ö Alter TABLE (1.899ms)
+  Ô£ö Elimina una tabla (0.2843ms)
+Ô£ö Table Operations (6.1602ms)
+ÔûÂ Constraints and Data Types
+  ÔûÂ Restricciones de columna
+    Ô£ö Aplicaci├│n de not null (0.385ms)
+    Ô£ö Aplicaci├│n de UNIQUE (0.2755ms)
+    Ô£ö Aplicacion de PRIMARY KEY (0.2829ms)
+    Ô£ö Aplicacion de FOREIGN KEY (0.3637ms)
+    Ô£ö Restriccion de CHECK (0.2879ms)
+  Ô£ö Restricciones de columna (1.7428ms)
+  ÔûÂ Restriccion de Tabla
+    Ô£ö Aplicacion de UNIQUE y NOT NULL (0.4544ms)
+    Ô£ö Aplicacion de PRIMARY KEY (0.2866ms)
+    Ô£ö Aplicacion de constraing FOREIGN KEY (0.4583ms)
+    Ô£ö Aplicacion de FOREIGN KEY ON UPDATE Y ON DELETE (0.3859ms)
+    Ô£ö Restriccion de CHECK con constraing (0.2838ms)
+    Ô£ö Crear un DOMINIO (0.3044ms)
+  Ô£ö Restriccion de Tabla (2.3632ms)
+  ÔûÂ Opciones poco o nada soportadas
+    Ô£ö CREATE ASSERTION (0.2412ms)
+  Ô£ö Opciones poco o nada soportadas (0.3062ms)
+Ô£ö Constraints and Data Types (4.5852ms)
+ÔûÂ Views
+  Ô£ö crear una vista de una sola tabla (0.3503ms)
+  Ô£ö eliminar una vista (0.2003ms)
+Ô£ö Views (0.6266ms)
+ÔûÂ Security and Permissions
+  Ô£ö crear un ROL de usuario (0.3873ms)
+  Ô£ö elimina un ROL de usuario (0.335ms)
+  Ô£ö autorizar privilegios (0.4472ms)
+  Ô£ö revocar privilegios (0.9747ms)
+  Ô£ö asignar rol a un identificador de usuario (0.2539ms)
+  Ô£ö conceder m├║ltiples roles a m├║ltiples identificadores de usuario (0.1966ms)
+  Ô£ö revocar un rol (0.3038ms)
+  Ô£ö revocar varios roles a varios identificadores (0.2599ms)
+Ô£ö Security and Permissions (3.368ms)
+ÔûÂ Select Queries
+  Ô£ö SELECT todas las filas distintas y todas las columnas  (0.7728ms)
+  Ô£ö SELECT todas las filas distintas y algunas columnas (0.2675ms)
+  Ô£ö Filtrado de datos con WHERE (0.5636ms)
+  Ô£ö agrupar filas cuyos valores de columna son iguales (0.3436ms)
+  Ô£ö GROUP BY ROLLUP (0.2908ms)
+  Ô£ö HAVING (0.3363ms)
+  Ô£ö ORDER BY (0.3367ms)
+Ô£ö Select Queries (3.1109ms)
+ÔûÂ Data Modification
+  Ô£ö Insertar datos en una tabla sin especificar las columnas (0.4489ms)
+  Ô£ö Insertar datos en una tabla especificando columnas (0.2082ms)
+  Ô£ö Insertar datos en una tabla usando SELECT (0.3544ms)
+  Ô£ö Insertar varias filas de datos (0.2515ms)
+  Ô£ö Actualizar el valor de una columna (0.3378ms)
+  Ô£ö Actualizar el valor de varias columnas (0.2133ms)
+  Ô£ö Actualizar el valor de una columna solo de algunas filas usando where (0.2203ms)
+  Ô£ö Actualizar el valor de una columna usando como valor el select (0.33ms)
+  Ô£ö Eliminar filas de una tabla con DELETE FROM (0.1968ms)
+  Ô£ö Eliminar algunas filas de una tabla con DELETE y where (0.1781ms)
+  Ô£ö eliminar datos usando una sub consulta (0.5658ms)
+Ô£ö Data Modification (3.5792ms)
+ÔûÂ Predicates and WHERE Clauses
+  Ô£ö operadores (0.403ms)
+  Ô£ö logicos (0.8147ms)
+  Ô£ö predicado NOT (0.2413ms)
+  Ô£ö Un valor entre un m├¡nimo y un m├íximo (0.1908ms)
+  Ô£ö Valores que pueden ser Null o no Null (0.3398ms)
+  Ô£ö Valor que coincide con una expresion usando comodines % y _ (0.2005ms)
+  Ô£ö valor dentro de una lista (0.3115ms)
+  Ô£ö El valor existe en la subconsulta (0.288ms)
+  Ô£ö el valor coincide con algun valor en la sub consulta (0.3918ms)
+  Ô£ö coincide con mas de un valor en la sub consulta (0.3423ms)
+  Ô£ö coincide con todos los valores de la sub consulta (0.2631ms)
+Ô£ö Predicates and WHERE Clauses (4.0601ms)
+ÔûÂ SQL Functions
+  ÔûÂ SET Functions
+    Ô£ö COUNT (0.2494ms)
+    Ô£ö SELECT con COUNT (0.1835ms)
+    Ô£ö MAX y MIN (0.2281ms)
+    Ô£ö SUM (0.1765ms)
+    Ô£ö AVG (0.1685ms)
+  Ô£ö SET Functions (1.1357ms)
+  ÔûÂ VALUE Functions
+    ÔûÂ funciones de valor de cadena
+      Ô£ö substring (0.2593ms)
+      Ô£ö UPPER y LOWER (0.2136ms)
+    Ô£ö funciones de valor de cadena (0.5366ms)
+    ÔûÂ funciones de tiempo
+      Ô£ö Current (0.223ms)
+      Ô£ö local time (0.192ms)
+    Ô£ö funciones de tiempo (0.4807ms)
+  Ô£ö VALUE Functions (1.0954ms)
+Ô£ö SQL Functions (2.3332ms)
+ÔûÂ Join Operations
+  Ô£ö tabla de producto cartesiano (0.3225ms)
+  Ô£ö Una tabla EQUI-JOIN (1.1034ms)
+  Ô£ö limitar las columnas arrojadas y agregar otro predicado a la cl├íusula WHERE y as├¡ limitar las filas arrojadas (0.307ms)
+  Ô£ö Uso de alias para tablas (0.3837ms)
+  Ô£ö CROSS JOIN (0.388ms)
+  Ô£ö NATURAL JOIN (0.2689ms)
+  Ô£ö Join de columna nombrada con using (0.3238ms)
+  Ô£ö INNER JOIN y la clausula ON (0.4158ms)
+  Ô£ö LEFT OUTER JOIN (0.2432ms)
+  Ô£ö RIGHT OUTER JOIN (0.2482ms)
+  Ô£ö FULL OUTER JOIN (0.2373ms)
+  Ô£ö UNION (0.4331ms)
+  Ô£ö UNION ALL (0.2812ms)
+Ô£ö Join Operations (5.3687ms)
+ÔûÂ Subqueries
+  Ô£ö subconsultas con varios resultados (0.2887ms)
+  Ô£ö sub consultas anidadas (0.3381ms)
+Ô£ö Subqueries (0.6916ms)
+ÔûÂ Cursors
+  Ô£ö declarar un cursor (0.6841ms)
+  Ô£ö instrucci├│n de cursor b├ísica con deplazamiento (0.268ms)
+  Ô£ö un cursor actualizable (0.2209ms)
+  Ô£ö Recuperar datos de un cursor (0.5925ms)
+  Ô£ö Actualizar datos usando el cursor (0.465ms)
+  Ô£ö DELETE POSICIONADO usando comandos de cursor (0.296ms)
+Ô£ö Cursors (2.6689ms)
+ÔûÂ Transactions
+  Ô£ö set transaction (0.5552ms)
+  Ô£ö set transaction READ WRITE (0.2745ms)
+  Ô£ö aplicar restricciones diferidas (0.2552ms)
+Ô£ö Transactions (1.1702ms)
+Ôä╣ tests 98
+Ôä╣ suites 21
+Ôä╣ pass 98
+Ôä╣ fail 0
+Ôä╣ cancelled 0
+Ôä╣ skipped 0
+Ôä╣ todo 0
+Ôä╣ duration_ms 187.6275
