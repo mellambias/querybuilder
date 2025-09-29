@@ -50,3 +50,5 @@ function createFluentProxy(instance) {
 		},
 	});
 }
+
+export default createFluentProxy;

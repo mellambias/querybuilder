@@ -33,7 +33,7 @@
     "directory": "packages/@querybuilder/mysql"
   },
   "dependencies": {
-    "@querybuilder/core": "^1.0.0"
+    "@querybuilder/core": "workspace:*"
   },
   "peerDependencies": {
     "mysql2": ">=3.0.0"

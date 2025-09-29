@@ -721,7 +721,6 @@ class QueryBuilder {
 	select(columns, options, next) {
 		try {
 			const command = this.language.select(columns, options, next);
-			console.log("select", "command %o", command);
 			return this.toNext([command, next]);
 		} catch (error) {
 			next.error = error.message;
@@ -919,12 +918,19 @@ class QueryBuilder {
 	 * @returns
 	 */
 	union(...selects) {
-		const next = selects.pop(); // recupera el ultimo valor introducido en los argumentos
-		// Fix: Current QueryBuilder already has one SELECT, so we need at least 1 more
-		if (selects.length < 1) {
-			next.error = "UNION necesita al menos una instrucción SELECT adicional";
-			return this.toNext([null, next]);
+		// When called on fresh QB instance, all parameters are queries to union
+		if (selects.length < 2) {
+			const error = "UNION necesita al menos dos instrucciones SELECT";
+			return this.toNext([null, { error }]);
 		}
+
+		// Create a new next object for this operation
+		const next = {
+			last: null,
+			callStack: ['union'],
+			prop: 'union'
+		};
+
 		const response = this.language.union(selects, next, { all: false });
 		return this.toNext([response, next]);
 	}
@@ -935,13 +941,20 @@ class QueryBuilder {
 	 * @returns
 	 */
 	unionAll(...selects) {
-		const next = selects.pop();
-		log(["QB", "unionAll"], "recibe next", next);
-		// Fix: Current QueryBuilder already has one SELECT, so we need at least 1 more
-		if (selects.length < 1) {
-			next.error = "UNION ALL necesita al menos una instrucción SELECT adicional";
-			return this.toNext([null, next]);
+		log(["QB", "unionAll"], "recibe selects", selects);
+		// When called on fresh QB instance, all parameters are queries to union
+		if (selects.length < 2) {
+			const error = "UNION ALL necesita al menos dos instrucciones SELECT";
+			return this.toNext([null, { error }]);
 		}
+
+		// Create a new next object for this operation
+		const next = {
+			last: null,
+			callStack: ['unionAll'],
+			prop: 'unionAll'
+		};
+
 		const response = this.language.union(selects, next, { all: true });
 		return this.toNext([response, next]);
 	}
@@ -1582,7 +1595,6 @@ class QueryBuilder {
 	 */
 	async execute(testOnly = false) {
 		if (testOnly) {
-			console.log(">[QueryBuilder] [execute] en modo 'solo-test'\n");
 			return await this.toString();
 		}
 		if (!this.driverDB) {

@@ -1,28 +1,46 @@
 {
   "name": "@querybuilder/postgresql",
   "version": "1.0.0",
-  "description": "PostgreSQL adapter for QueryBuilder with PostgreSQL-specific features",
+  "description": "PostgreSQL-specific extensions for QueryBuilder with JSON, Arrays, CTEs, UPSERT and advanced features",
   "type": "module",
-  "main": "./src/index.js",
+  "main": "./PostgreSQL.js",
   "exports": {
-    ".": {
-      "import": "./src/index.js"
-    },
-    "./postgresql": "./PostgreSQL.js"
+    ".": "./PostgreSQL.js",
+    "./extended": "./postgresql-extended.js",
+    "./types": "./types.js",
+    "./operators": "./operators.js", 
+    "./functions": "./functions.js",
+    "./features": "./features.js",
+    "./PostgreSQL": "./PostgreSQL.js",
+    "./PostgreSQLExtended": "./postgresql-extended.js"
   },
   "files": [
-    "src/",
     "PostgreSQL.js",
+    "postgresql-extended.js", 
+    "types.js",
+    "operators.js",
+    "functions.js",
+    "features.js",
     "comandos/",
-    "drivers/"
+    "drivers/",
+    "examples/",
+    "test/"
   ],
   "keywords": [
     "postgresql",
-    "postgres",
+    "postgres", 
     "querybuilder",
-    "database",
     "sql",
-    "rdbms"
+    "database",
+    "json",
+    "jsonb",
+    "upsert",
+    "window-functions",
+    "cte",
+    "fulltext-search",
+    "arrays",
+    "inheritance",
+    "orm"
   ],
   "author": "Your Name",
   "license": "MIT",
@@ -32,14 +50,18 @@
     "directory": "packages/@querybuilder/postgresql"
   },
   "dependencies": {
-    "@querybuilder/core": "^1.0.0"
+    "@querybuilder/core": "workspace:*"
   },
   "peerDependencies": {
     "pg": ">=8.0.0"
   },
   "scripts": {
     "test": "node --test test/**/*.test.js",
-    "build": "echo 'No build step required for ES modules'"
+    "test:watch": "node --test --watch test/**/*.test.js",
+    "dev": "node --test --watch test/**/*.test.js",
+    "build": "echo 'No build step needed for ES modules'",
+    "lint": "echo 'Add eslint configuration'",
+    "format": "echo 'Add prettier configuration'"
   },
   "engines": {
     "node": ">=18.0.0"

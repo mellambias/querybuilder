@@ -8,8 +8,8 @@ export { default as Transaction } from '../transaction.js';
 export { default as Value } from '../value.js';
 export { default as Proxy } from '../proxy.js';
 
-// Commands exports
-export { default as SQL2006 } from '../comandos/sql2006.js';
+// Commands exports (SQL2006 implementation is provided by Core class)
+export { default as SQL2006 } from '../core.js';
 
 // Drivers exports
 export { default as Driver } from '../drivers/Driver.js';
@@ -18,8 +18,8 @@ export { default as Driver } from '../drivers/Driver.js';
 export { default as Result } from '../results/Result.js';
 
 // Types exports
-export { default as DataTypes } from '../types/dataTypes.js';
+export { dataTypes as DataTypes } from '../types/dataTypes.js';
 export { default as Type } from '../types/Type.js';
 
 // Utils exports
-export { default as Utils } from '../utils/utils.js';
+export * as Utils from '../utils/utils.js';

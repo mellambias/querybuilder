@@ -1,7 +1,8 @@
 /*
 @description Implementa el SQL 2006
 */
-import QueryBuilder from "./querybuilder.js";
+// Circular import removed to fix constructor issues
+// import QueryBuilder from "./querybuilder.js";
 import sql2006 from "./comandos/sql2006.js";
 import Expresion from "./expresion.js";
 import Column from "./column.js";
@@ -18,6 +19,19 @@ class Core {
 		this.joins();
 		this.fetches();
 		this.currentDatabase = null;
+	}
+
+	// Helper method to check if an object is a QueryBuilder without circular imports
+	isQueryBuilder(obj) {
+		// More robust detection - check for specific QueryBuilder properties
+		return obj &&
+			typeof obj === 'object' &&
+			obj.languageClass &&
+			obj.language &&
+			obj.options &&
+			typeof obj.toString === 'function' &&
+			obj.returnOriginal &&
+			Array.isArray(obj.returnOriginal);
 	}
 
 	getStatement(command, scheme, params, charJoin = "\n") {
@@ -121,7 +135,7 @@ class Core {
 		let arrayValues = [];
 		if (Array.isArray(values[0])) {
 			arrayValues = values[0].map((value) => {
-				if (value instanceof QueryBuilder) {
+				if (this.isQueryBuilder(value)) {
 					log(["Core", "getListValues(values, next)"], "next", next);
 					return this.getSubselect(next);
 				}
@@ -129,8 +143,33 @@ class Core {
 			});
 		} else if (Array.isArray(values)) {
 			arrayValues = values.map((value) => {
-				if (value instanceof QueryBuilder) {
+				if (this.isQueryBuilder(value)) {
 					log(["Core", "getListValues(values, next)"], "next %o", next);
+
+					// Try to get SQL from the QueryBuilder object first
+					if (value && typeof value === 'object') {
+						// Check if it has a .q array property and extract SQL directly
+						if (value.q && Array.isArray(value.q)) {
+							const sqlParts = value.q.filter(q => typeof q === "string" && q.trim() !== "");
+							if (sqlParts.length > 0) {
+								return sqlParts.join("\n");
+							}
+						}
+
+						// Try to call toString() if it exists and is a function
+						if (typeof value.toString === 'function') {
+							try {
+								const result = value.toString();
+								// Check if it's not just [object Object] and contains SQL-like content
+								if (result !== "[object Object]" && typeof result === "string" &&
+									(result.toUpperCase().includes('SELECT') || result.includes('FROM'))) {
+									return result;
+								}
+							} catch (error) {
+								// If toString() fails, fall back to original logic
+							}
+						}
+					}
 
 					// Check if we have a DELETE/UPDATE command that needs special handling
 					const hasDeleteUpdateCommand = next.q.some(item =>
@@ -159,8 +198,35 @@ class Core {
 				return value;
 			});
 		} else {
-			if (values instanceof QueryBuilder) {
+			if (this.isQueryBuilder(values)) {
 				log(["Core", "getListValues(values, next)"], "Es un QB next", next);
+
+				// Try to get SQL from the QueryBuilder object first
+				if (values && typeof values === 'object') {
+					// Check if it has a .q array property and extract SQL directly
+					if (values.q && Array.isArray(values.q)) {
+						const sqlParts = values.q.filter(q => typeof q === "string" && q.trim() !== "");
+						if (sqlParts.length > 0) {
+							return sqlParts.join("\n");
+						}
+					}
+
+					// Try to call toString() if it exists and is a function
+					if (typeof values.toString === 'function') {
+						try {
+							const result = values.toString();
+							// Check if it's not just [object Object] and contains SQL-like content
+							if (result !== "[object Object]" && typeof result === "string" &&
+								(result.toUpperCase().includes('SELECT') || result.includes('FROM'))) {
+								return result;
+							}
+						} catch (error) {
+							// If toString() fails, fall back to getSubselect
+						}
+					}
+				}
+
+				// Fallback to original method
 				const resolve = this.getSubselect(next);
 				return Array.isArray(resolve) ? resolve.join("\n") : resolve;
 			}
@@ -181,7 +247,26 @@ class Core {
 				if (Array.isArray(item)) {
 					return item.join("\n");
 				}
-				return item;
+
+				// Handle object cases (like QueryBuilder objects)
+				if (typeof item === "object" && item !== null) {
+					// Check if it has a .q array property (QueryBuilder-like object)
+					if (item.q && Array.isArray(item.q)) {
+						// Extract string conditions from the q array
+						const conditions = item.q.filter(q => typeof q === "string");
+						return conditions.join(" "); // Join with space for proper SQL
+					}
+
+					// If it's an object but doesn't have .q, try to convert safely
+					if (item.toString && typeof item.toString === "function") {
+						const str = item.toString();
+						// Only return if it's not [object Object]
+						return str !== "[object Object]" ? str : String(item);
+					}
+				}
+
+				// Fallback: convert to string safely
+				return String(item);
 			})
 			.join(", ");
 	}
@@ -445,21 +530,44 @@ class Core {
 	}
 	where(predicados, next) {
 		const sql = "WHERE";
-		if (predicados instanceof QueryBuilder) {
+
+		// Handle case where predicados comes from qb.eq() or similar - it's an object from querybuilder
+		if (predicados && typeof predicados === 'object' && !Array.isArray(predicados) && !this.isQueryBuilder(predicados) && next && next.q && Array.isArray(next.q) && next.q.length > 0) {
+			// Get the last element from the query array (which should be the condition)
+			const lastItem = next.q[next.q.length - 1];
+			if (typeof lastItem === 'string') {
+				// Remove the condition from query array as we'll use it in WHERE
+				next.q.splice(next.q.length - 1, 1);
+				return `${sql} ${lastItem}`;
+			}
+		}
+
+		if (this.isQueryBuilder(predicados)) {
 			const values = next.q.pop();
 			return `${sql} ${values}`;
 		}
 		if (Array.isArray(predicados)) {
 			return `${sql} ${predicados
 				.map((item) => {
-					if (item instanceof QueryBuilder) {
+					if (this.isQueryBuilder(item)) {
 						return next.q.pop();
 					}
 					return item;
 				})
 				.join(", ")}`;
 		}
-		return `${sql} ${predicados}`;
+
+		// Handle string predicados safely
+		if (typeof predicados === 'string') {
+			return `${sql} ${predicados}`;
+		}
+
+		// Fallback - try to convert to string safely
+		try {
+			return `${sql} ${String(predicados)}`;
+		} catch (e) {
+			return `${sql} 1=1`; // Safe fallback
+		}
 	}
 
 	whereCursor(cursorName) {
@@ -493,7 +601,7 @@ class Core {
 					return `FROM ${tables.join(` ${joinTypes[join]} `)}`;
 				}
 				throw new Error(
-					`[core:442] la funcion ${join}(tables,alias,using) => ${join}(${tables}, ${alias}, ${using})`,
+					`[core:442] la funcion ${join}(tables,alias,using) => ${join}(${tables}, ${alias}, using)`,
 				);
 			};
 		}
@@ -515,28 +623,68 @@ class Core {
 	 */
 	multiTabla(selects, next, options) {
 		let command = `\n${options.command}\n`;
-		const sql = [];
-		const qbSelect = [];
-		for (const select of selects) {
-			if (select instanceof QueryBuilder) {
-				const resolve = this.getSubselect(next);
-				qbSelect.push(Array.isArray(resolve) ? resolve.join("\n") : resolve);
-				sql.push("QB");
-			}
-			if (typeof select === "string") {
-				sql.push(select);
-			}
-		}
-		const result = sql.map((item) => {
-			if (item === "QB") {
-				return qbSelect.pop();
-			}
-			return item;
-		});
 		if (options?.all) {
 			command = `\n${options.command} ALL\n`;
 		}
-		return `${result.join(command)}`;
+
+		// Find the queriesObject that contains pre-built queries
+		let queriesObject = null;
+		for (const select of selects) {
+			if (typeof select === 'object' && select !== null &&
+				!this.isQueryBuilder(select) &&
+				'q' in select && 'callStack' in select && 'prop' in select &&
+				Array.isArray(select.q)) {
+				queriesObject = select;
+				break;
+			}
+		}
+
+		// Process all selects in order, but use queriesObject to get individual queries
+		let queries = [];
+		let qIndex = 0; // Index for accessing queries from queriesObject
+
+		// If we have a queriesObject, extract individual queries from it
+		let extractedQueries = [];
+		if (queriesObject && queriesObject.q && Array.isArray(queriesObject.q)) {
+			let currentQuery = [];
+			for (const item of queriesObject.q) {
+				if (item.trim().startsWith('SELECT')) {
+					// If we have a complete pair, save it
+					if (currentQuery.length === 2) {
+						extractedQueries.push(currentQuery.join('\n'));
+						currentQuery = [];
+					}
+					currentQuery.push(item);
+				} else if (item.trim().startsWith('FROM')) {
+					currentQuery.push(item);
+					// Complete pair
+					if (currentQuery.length === 2) {
+						extractedQueries.push(currentQuery.join('\n'));
+						currentQuery = [];
+					}
+				}
+			}
+			// Add any remaining query
+			if (currentQuery.length > 0) {
+				extractedQueries.push(currentQuery.join('\n'));
+			}
+		}
+
+		// Process selects in original order
+		for (const select of selects) {
+			if (typeof select === 'string') {
+				queries.push(select);
+			} else if (this.isQueryBuilder(select)) {
+				// Use the next query from extractedQueries
+				if (qIndex < extractedQueries.length) {
+					queries.push(extractedQueries[qIndex]);
+					qIndex++;
+				}
+			}
+			// Skip the queriesObject itself
+		}
+
+		return queries.join(command);
 	}
 	union(selects, next, options) {
 		options.command = "UNION";
@@ -556,7 +704,7 @@ class Core {
 		if (typeof predicado === "string") {
 			return `${sql} ${predicado}`;
 		}
-		if (predicado instanceof QueryBuilder) {
+		if (this.isQueryBuilder(predicado)) {
 			const valor = next.q.pop();
 			return `${sql} ${valor}`;
 		}
@@ -599,7 +747,7 @@ class Core {
 				continue;
 			}
 			this[operOne] = (a, next) => {
-				if (a instanceof QueryBuilder) {
+				if (this.isQueryBuilder(a)) {
 					return `${next.q.pop()} ${operOneCol[operOne]}`;
 				}
 				// Manejo especial para arrays en isNull y isNotNull
@@ -620,17 +768,17 @@ class Core {
 				let valorDeB = b;
 
 				// Manejo especial para predicados ANY/SOME/ALL
-				if (b instanceof QueryBuilder && next && /^(any|some|all)$/.test(next.last)) {
+				if (this.isQueryBuilder(b) && next && /^(any|some|all)$/.test(next.last)) {
 					// El valor b ya contiene el predicado formateado (ej: "ANY ( SELECT ... )")
 					valorDeB = next.q.pop(); // Obtener el último valor que contiene el predicado
-				} else if (b instanceof QueryBuilder) {
+				} else if (this.isQueryBuilder(b)) {
 					valorDeB = this.getSubselect(next);
 					if (Array.isArray(valorDeB)) {
 						valorDeB = valorDeB.join("\n");
 					}
 				}
 
-				if (a instanceof QueryBuilder) {
+				if (this.isQueryBuilder(a)) {
 					valorDeA = this.getSubselect(next);
 					if (Array.isArray(valorDeA)) {
 						valorDeA = valorDeA.join("\n");
@@ -683,10 +831,10 @@ class Core {
 				this[oper] = (...predicados) => {
 					const next = predicados.pop();
 					let [a, b] = predicados;
-					if (b instanceof QueryBuilder) {
+					if (this.isQueryBuilder(b)) {
 						b = next.q.pop();
 					}
-					if (a instanceof QueryBuilder) {
+					if (this.isQueryBuilder(a)) {
 						a = next.q.pop();
 					}
 					return `${a} ${logicos[oper].toUpperCase()} ('${b}')`;
@@ -815,7 +963,7 @@ class Core {
 									if (typeof item === "string") {
 										return `'${item}'`;
 									}
-									if (item instanceof QueryBuilder) {
+									if (this.isQueryBuilder(item)) {
 										log(
 											["Core", "insert"],
 											"El primer elemento es un Array Recibe next:",
@@ -837,7 +985,7 @@ class Core {
 					if (typeof value === "string") {
 						return `'${value}'`;
 					}
-					if (value instanceof QueryBuilder) {
+					if (this.isQueryBuilder(value)) {
 						log(
 							["Core", "insert"],
 							"El primer elemento no es un Array. Recibe next:",
@@ -852,7 +1000,7 @@ class Core {
 				})
 				.join(", ")} )`;
 		}
-		if (values instanceof QueryBuilder) {
+		if (this.isQueryBuilder(values)) {
 			const resolve = this.getSubselect(next);
 			sql = `${sql}\n${Array.isArray(resolve) ? resolve.join("\n") : resolve}`;
 		}
@@ -868,7 +1016,7 @@ class Core {
 			log(["Core", "update"], "Procesa columna", col);
 			if (typeof sets[col] === "string" && /(:)/.test(sets[col]) === false) {
 				setStack.push(`${col} = '${sets[col]}'`);
-			} else if (sets[col] instanceof QueryBuilder) {
+			} else if (this.isQueryBuilder(sets[col])) {
 				log(
 					["Core", "update"],
 					"El valor de la columna %o es un QB recibe: %o",
@@ -904,7 +1052,7 @@ class Core {
 			 */
 			this[name] = (column, alias, next) => {
 				let colName = column;
-				if (column instanceof QueryBuilder) {
+				if (this.isQueryBuilder(column)) {
 					colName = next.q.pop();
 				}
 
@@ -981,7 +1129,7 @@ class Core {
 			.reverse()
 			.map((item) => {
 				let [caso, resultado] = item;
-				if (caso instanceof QueryBuilder) {
+				if (this.isQueryBuilder(caso)) {
 					caso = next.q.shift();
 				}
 				return `WHEN ${caso} THEN ${resultado}`;
@@ -1115,14 +1263,43 @@ class Core {
 	length(column, alias) {
 		return `LENGTH(${column})${alias ? ` AS ${alias}` : ''}`;
 	}
-	// Fix: Add missing ON function for JOINs
-	on(condition) {
-		// Handle object/next parameter properly
-		if (typeof condition === 'object' && condition !== null && typeof condition !== 'string') {
-			// If it's a next object, ignore it and return empty ON clause
-			return 'ON 1=1'; // Default condition
+	// Fix: Add missing ON function for JOINs  
+	on(condition, next) {
+		// Handle case where condition comes from qb.eq() or similar - it's an object from querybuilder
+		if (condition && typeof condition === 'object' && next && next.q && Array.isArray(next.q) && next.q.length > 0) {
+			// Get the last element from the query array (which should be the condition like "i.ID_TIPO = t.ID_TIPO")
+			const lastItem = next.q[next.q.length - 1];
+			let lastCondition;
+
+			log(['Core', 'on'], 'lastItem type:', typeof lastItem, 'value:', lastItem);
+
+			// Handle different types of conditions
+			if (typeof lastItem === 'string') {
+				lastCondition = lastItem;
+			} else if (lastItem && typeof lastItem === 'object') {
+				// Try to extract string value safely
+				try {
+					lastCondition = JSON.stringify(lastItem);
+				} catch (e) {
+					log(['Core', 'on'], 'Cannot stringify lastItem, using fallback');
+					return 'ON 1=1';
+				}
+			} else {
+				// Skip conversion and return fallback
+				log(['Core', 'on'], 'Unknown lastItem type, using fallback');
+				return 'ON 1=1';
+			}
+
+			// Remove the condition from query array as we'll replace it with ON version
+			next.q.splice(next.q.length - 1, 1);
+			log(['Core', 'on'], 'returning ON condition:', lastCondition);
+			return `ON ${lastCondition}`;
 		}
-		return `ON ${condition}`;
+		if (condition !== undefined) {
+			return `ON ${condition}`;
+		}
+		return 'ON 1=1'; // fallback
 	}
 }
 export default Core;
+

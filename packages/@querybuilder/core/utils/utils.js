@@ -127,7 +127,7 @@ function isJSObject(target) {
 	return Object.prototype.toString(target) === "[object Object]";
 }
 
-const showLogs = true;
+const showLogs = false;
 function log(command, text = "", ...data) {
 	if (!showLogs) {
 		return;

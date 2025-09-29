@@ -116,7 +116,7 @@ describe('Final Coverage Analysis - QueryBuilder Comprehensive Tests', () => {
         });
 
         test('INSERT con método correcto', async () => {
-            const qb1 = new QueryBuilder();
+            const qb1 = new QueryBuilder(Core);
 
             // Usar el método insert directamente
             qb1.insert('USUARIOS', ['Juan', 25, 'juan@email.com'], ['nombre', 'edad', 'email']);
@@ -128,7 +128,7 @@ describe('Final Coverage Analysis - QueryBuilder Comprehensive Tests', () => {
         });
 
         test('UPDATE básico', async () => {
-            const qb1 = new QueryBuilder();
+            const qb1 = new QueryBuilder(Core);
 
             qb1.update('USUARIOS', { nombre: 'Juan Carlos', edad: 26 })
                 .where(qb1.eq('id', 1));
@@ -140,7 +140,7 @@ describe('Final Coverage Analysis - QueryBuilder Comprehensive Tests', () => {
         });
 
         test('DELETE básico', async () => {
-            const qb1 = new QueryBuilder();
+            const qb1 = new QueryBuilder(Core);
 
             qb1.delete('USUARIOS')
                 .where(qb1.eq('activo', false));
@@ -154,7 +154,7 @@ describe('Final Coverage Analysis - QueryBuilder Comprehensive Tests', () => {
 
     describe('3. Advanced Functions Tests', () => {
         test('funciones de string disponibles', async () => {
-            const qb1 = new QueryBuilder();
+            const qb1 = new QueryBuilder(Core);
 
             // Test funciones de string que sabemos que están disponibles
             if (typeof qb1.upper === 'function') {
@@ -167,7 +167,7 @@ describe('Final Coverage Analysis - QueryBuilder Comprehensive Tests', () => {
             }
 
             if (typeof qb1.concat === 'function') {
-                const qb2 = new QueryBuilder();
+                const qb2 = new QueryBuilder(Core);
                 qb2.select(qb2.concat(['nombre', 'apellido'], 'nombre_completo'))
                     .from('USUARIOS');
 
@@ -178,10 +178,10 @@ describe('Final Coverage Analysis - QueryBuilder Comprehensive Tests', () => {
         });
 
         test('subconsultas con EXISTS', async () => {
-            const qb1 = new QueryBuilder();
+            const qb1 = new QueryBuilder(Core);
 
             // Crear subconsulta
-            const subquery = new QueryBuilder();
+            const subquery = new QueryBuilder(Core);
             subquery.select('1')
                 .from('ORDENES')
                 .where(subquery.eq('CLIENTE_ID', 'C.ID'));
@@ -199,7 +199,7 @@ describe('Final Coverage Analysis - QueryBuilder Comprehensive Tests', () => {
         });
 
         test('funciones de agregación múltiples', async () => {
-            const qb1 = new QueryBuilder();
+            const qb1 = new QueryBuilder(Core);
 
             qb1.select([
                 qb1.count('*', 'total'),
@@ -222,7 +222,7 @@ describe('Final Coverage Analysis - QueryBuilder Comprehensive Tests', () => {
 
     describe('4. Edge Cases and Error Handling', () => {
         test('manejo de QueryBuilder vacío', async () => {
-            const qb1 = new QueryBuilder();
+            const qb1 = new QueryBuilder(Core);
 
             try {
                 const result = await qb1.toString();
@@ -236,7 +236,7 @@ describe('Final Coverage Analysis - QueryBuilder Comprehensive Tests', () => {
         });
 
         test('dropQuery funcionalidad', async () => {
-            const qb1 = new QueryBuilder();
+            const qb1 = new QueryBuilder(Core);
 
             // Crear query
             qb1.select('*').from('TEST');
@@ -257,7 +257,7 @@ describe('Final Coverage Analysis - QueryBuilder Comprehensive Tests', () => {
         });
 
         test('encadenamiento de métodos', async () => {
-            const qb1 = new QueryBuilder();
+            const qb1 = new QueryBuilder(Core);
 
             // Verificar que el encadenamiento funciona
             const chainedResult = qb1.select('id', 'nombre')
@@ -275,8 +275,8 @@ describe('Final Coverage Analysis - QueryBuilder Comprehensive Tests', () => {
 
     describe('5. Performance and Architecture Tests', () => {
         test('múltiples instancias independientes', async () => {
-            const qb1 = new QueryBuilder();
-            const qb2 = new QueryBuilder();
+            const qb1 = new QueryBuilder(Core);
+            const qb2 = new QueryBuilder(Core);
 
             qb1.select('*').from('TABLA1');
             qb2.select('id').from('TABLA2');
@@ -293,7 +293,7 @@ describe('Final Coverage Analysis - QueryBuilder Comprehensive Tests', () => {
         });
 
         test('reutilización de instancia', async () => {
-            const qb1 = new QueryBuilder();
+            const qb1 = new QueryBuilder(Core);
 
             // Primera query
             qb1.select('*').from('USUARIOS');
