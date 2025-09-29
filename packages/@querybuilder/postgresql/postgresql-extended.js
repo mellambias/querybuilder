@@ -2,42 +2,23 @@
 PostgreSQL QueryBuilder Extendido - Incluye todas las características avanzadas de PostgreSQL
 JSON/JSONB, UPSERT, Window Functions, CTEs, Arrays, Full-Text Search, etc.
 */
+import QueryBuilder from '../core/querybuilder.js';
 import PostgreSQL from './PostgreSQL.js';
 
 /**
  * PostgreSQL QueryBuilder Extendido con todas las características avanzadas
  * @class PostgreSQLExtended
- * @extends PostgreSQL
+ * @extends QueryBuilder
  */
-export class PostgreSQLExtended extends PostgreSQL {
-  constructor(connection = null) {
-    super();
-    this.dialect = 'postgresql';
-    this.version = '16.0'; // PostgreSQL version support
-    this.connection = connection;
+class PostgreSQLExtended extends QueryBuilder {
+  constructor() {
+    super(PostgreSQL);
 
-    // Características específicas de PostgreSQL
-    this.features = {
-      cte: true,                // Common Table Expressions
-      upsert: true,            // INSERT ... ON CONFLICT
-      jsonOperators: true,     // JSON/JSONB operators
-      windowFunctions: true,   // Window functions
-      arrays: true,            // Array support
-      fullTextSearch: true,    // Full-text search
-      recursive: true,         // Recursive queries
-      partitioning: true,      // Table partitioning
-      extensions: true         // PostgreSQL extensions
-    };
-
-    // Estado para características específicas
+    // Propiedades mínimas necesarias para las funcionalidades
     this.cteQueries = [];
     this.conflictTarget = null;
     this.conflictAction = null;
-    this.windowSpecs = {};
     this.isRecursive = false;
-
-    // Inicializar extensiones
-    this.initializePostgreSQLFeatures();
   }
 
   /**
@@ -45,14 +26,10 @@ export class PostgreSQLExtended extends PostgreSQL {
    * @private
    */
   initializePostgreSQLFeatures() {
-    // Registrar tipos de datos específicos
-    this.registerPostgreSQLTypes();
-
-    // Registrar operadores específicos
-    this.registerPostgreSQLOperators();
-
-    // Registrar funciones específicas  
-    this.registerPostgreSQLFunctions();
+    // Minimal initialization - solo lo necesario
+    this.pgTypes = {};
+    this.pgOperators = {};
+    this.pgFunctions = {};
   }
 
   /**
@@ -180,6 +157,18 @@ export class PostgreSQLExtended extends PostgreSQL {
     };
   }
 
+  /**
+   * Método helper para agregar condiciones WHERE usando SQL directo
+   * Corrige el problema con QueryBuilder.where() que no maneja operadores múltiples
+   * @private
+   * @param {string} condition - Condición SQL completa
+   * @returns {PostgreSQLExtended}
+   */
+  addWhereCondition(condition) {
+    // Solución con array: pasar la condición como array de un elemento
+    return this.where([condition], this);
+  }
+
   // ===== JSON OPERATIONS =====
 
   /**
@@ -190,7 +179,7 @@ export class PostgreSQLExtended extends PostgreSQL {
    */
   jsonContains(column, value) {
     const jsonValue = typeof value === 'string' ? value : JSON.stringify(value);
-    return this.where(`${column}`, '@>', `'${jsonValue}'`);
+    return this.addWhereCondition(`${column} @> '${jsonValue}'`);
   }
 
   /**
@@ -201,7 +190,7 @@ export class PostgreSQLExtended extends PostgreSQL {
    */
   jsonContainedBy(column, value) {
     const jsonValue = typeof value === 'string' ? value : JSON.stringify(value);
-    return this.where(`${column}`, '<@', `'${jsonValue}'`);
+    return this.where([`${column}`, '<@', `'${jsonValue}'`]);
   }
 
   /**
@@ -458,7 +447,7 @@ export class PostgreSQLExtended extends PostgreSQL {
    */
   arrayContains(column, values) {
     const arrayStr = Array.isArray(values) ? values : [values];
-    return this.where(`${column}`, '@>', `ARRAY[${arrayStr.map(v => `'${v}'`).join(', ')}]`);
+    return this.addWhereCondition(`${column} @> ARRAY[${arrayStr.map(v => `'${v}'`).join(', ')}]`);
   }
 
   /**
@@ -469,7 +458,7 @@ export class PostgreSQLExtended extends PostgreSQL {
    */
   arrayContainedBy(column, values) {
     const arrayStr = Array.isArray(values) ? values : [values];
-    return this.where(`${column}`, '<@', `ARRAY[${arrayStr.map(v => `'${v}'`).join(', ')}]`);
+    return this.addWhereCondition(`${column} <@ ARRAY[${arrayStr.map(v => `'${v}'`).join(', ')}]`);
   }
 
   /**
@@ -480,7 +469,17 @@ export class PostgreSQLExtended extends PostgreSQL {
    */
   arrayOverlaps(column, values) {
     const arrayStr = Array.isArray(values) ? values : [values];
-    return this.where(`${column}`, '&&', `ARRAY[${arrayStr.map(v => `'${v}'`).join(', ')}]`);
+    return this.addWhereCondition(`${column} && ARRAY[${arrayStr.map(v => `'${v}'`).join(', ')}]`);
+  }
+
+  /**
+   * Alias para arrayOverlaps (compatibility)
+   * @param {string} column - Columna array
+   * @param {array} values - Valores que se solapan
+   * @returns {PostgreSQLExtended}
+   */
+  arrayOverlap(column, values) {
+    return this.arrayOverlaps(column, values);
   }
 
   /**
@@ -651,32 +650,6 @@ export class PostgreSQLExtended extends PostgreSQL {
   }
 
   /**
-   * Override toString para procesar características específicas de PostgreSQL
-   * @returns {string}
-   */
-  toString() {
-    let sql = '';
-
-    // Agregar CTEs si existen
-    if (this.cteQueries && this.cteQueries.length > 0) {
-      const ctePrefix = this.isRecursive ? 'WITH RECURSIVE ' : 'WITH ';
-      sql += `${ctePrefix}${this.cteQueries.join(', ')}\n`;
-    }
-
-    // Llamar al toString del Core para generar SQL base
-    const baseSql = super.toString();
-    sql += baseSql;
-
-    // Agregar cláusula ON CONFLICT si existe
-    const conflictClause = this.buildConflictClause();
-    if (conflictClause) {
-      sql += `\n${conflictClause}`;
-    }
-
-    return sql;
-  }
-
-  /**
    * Información del dialecto
    * @returns {object}
    */
@@ -696,12 +669,13 @@ export class PostgreSQLExtended extends PostgreSQL {
    * @returns {PostgreSQLExtended}
    */
   clone() {
-    const clone = new PostgreSQLExtended(this.connection);
+    const clone = new PostgreSQLExtended();
     clone.q = [...this.q];
     clone.cteQueries = [...this.cteQueries];
     clone.conflictTarget = this.conflictTarget;
     clone.conflictAction = this.conflictAction;
     clone.isRecursive = this.isRecursive;
+    clone.connection = this.connection;
     return clone;
   }
 }

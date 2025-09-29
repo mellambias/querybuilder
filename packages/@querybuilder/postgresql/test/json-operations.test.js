@@ -8,21 +8,21 @@ import assert from "node:assert";
 import PostgreSQLExtended from "../postgresql-extended.js";
 
 describe("PostgreSQL - JSON Operations", async () => {
-  let sql;
-  
+  let qb;
+
   beforeEach(async () => {
-    sql = new PostgreSQLExtended();
+    qb = new PostgreSQLExtended();
   });
 
-  test("SELECT con operador JSON ->", { only: false }, async () => {
-    const result = sql.select(["data->>'name' as name"])
+  test("SELECT con operador JSON ->", async () => {
+    const result = await qb.select(["data->>'name' as name"])
       .from("users")
       .toString();
     assert.ok(result.includes("data->>'name'"));
   });
 
-  test("WHERE con jsonContains", { only: false }, async () => {
-    const result = sql.select()
+  test("WHERE con jsonContains", async () => {
+    const result = await qb.select()
       .from("products")
       .jsonContains("metadata", { brand: "Apple" })
       .toString();
@@ -91,7 +91,7 @@ describe("PostgreSQL - JSON Operations", async () => {
       preferences: { theme: "dark", language: "en" },
       tags: ["user", "premium"]
     };
-    
+
     const result = sql.insertInto("users", {
       data: JSON.stringify(jsonData)
     }).toString();

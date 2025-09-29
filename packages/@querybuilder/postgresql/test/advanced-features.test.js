@@ -9,7 +9,7 @@ import PostgreSQLExtended from "../postgresql-extended.js";
 
 describe("PostgreSQL - Advanced Features", async () => {
   let sql;
-  
+
   beforeEach(async () => {
     sql = new PostgreSQLExtended();
   });
@@ -19,12 +19,12 @@ describe("PostgreSQL - Advanced Features", async () => {
     const cteQuery = sql.select(["department", sql.avg("salary").as("avg_salary")])
       .from("employees")
       .groupBy("department");
-    
+
     const result = sql.with("dept_avg", cteQuery)
       .select()
       .from("dept_avg")
       .toString();
-    
+
     assert.ok(result.includes("WITH dept_avg AS"));
     assert.ok(result.includes("SELECT department"));
     assert.ok(result.includes("FROM dept_avg"));
@@ -34,16 +34,16 @@ describe("PostgreSQL - Advanced Features", async () => {
     const baseCase = sql.select(["id", "name", "manager_id", sql.raw("1 as level")])
       .from("employees")
       .whereNull("manager_id");
-    
+
     const recursiveCase = sql.select(["e.id", "e.name", "e.manager_id", "oc.level + 1"])
       .from("employees e")
       .join("org_chart oc", "e.manager_id", "oc.id");
-    
+
     const result = sql.withRecursive("org_chart", [baseCase, recursiveCase])
       .select()
       .from("org_chart")
       .toString();
-    
+
     assert.ok(result.includes("WITH RECURSIVE org_chart AS"));
     assert.ok(result.includes("UNION"));
   });
@@ -51,14 +51,14 @@ describe("PostgreSQL - Advanced Features", async () => {
   test("Múltiples CTEs", { only: false }, async () => {
     const cte1 = sql.select().from("table1");
     const cte2 = sql.select().from("table2");
-    
+
     const result = sql.with("cte1", cte1)
       .with("cte2", cte2)
       .select()
       .from("cte1")
       .join("cte2", "cte1.id", "cte2.id")
       .toString();
-    
+
     assert.ok(result.includes("WITH cte1 AS"));
     assert.ok(result.includes(", cte2 AS"));
   });
@@ -72,7 +72,7 @@ describe("PostgreSQL - Advanced Features", async () => {
     ])
       .from("employees")
       .toString();
-    
+
     assert.ok(result.includes("ROW_NUMBER() OVER"));
     assert.ok(result.includes("PARTITION BY department"));
     assert.ok(result.includes("ORDER BY salary DESC"));
@@ -87,7 +87,7 @@ describe("PostgreSQL - Advanced Features", async () => {
     ])
       .from("employees")
       .toString();
-    
+
     assert.ok(result.includes("RANK() OVER"));
     assert.ok(result.includes("DENSE_RANK() OVER"));
   });
@@ -101,7 +101,7 @@ describe("PostgreSQL - Advanced Features", async () => {
     ])
       .from("employees")
       .toString();
-    
+
     assert.ok(result.includes("LAG(salary) OVER"));
     assert.ok(result.includes("LEAD(salary) OVER"));
   });
@@ -118,7 +118,7 @@ describe("PostgreSQL - Advanced Features", async () => {
     ])
       .from("employees")
       .toString();
-    
+
     assert.ok(result.includes("SUM(salary) OVER"));
     assert.ok(result.includes("ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW"));
   });
@@ -135,7 +135,7 @@ describe("PostgreSQL - Advanced Features", async () => {
         updated_at: "NOW()"
       })
       .toString();
-    
+
     assert.ok(result.includes("INSERT INTO users"));
     assert.ok(result.includes("ON CONFLICT (email)"));
     assert.ok(result.includes("DO UPDATE SET"));
@@ -150,7 +150,7 @@ describe("PostgreSQL - Advanced Features", async () => {
       .onConflict("email")
       .doNothing()
       .toString();
-    
+
     assert.ok(result.includes("ON CONFLICT (email)"));
     assert.ok(result.includes("DO NOTHING"));
   });
@@ -165,7 +165,7 @@ describe("PostgreSQL - Advanced Features", async () => {
         name: "excluded.name"
       })
       .toString();
-    
+
     assert.ok(result.includes("ON CONFLICT ON CONSTRAINT users_email_key"));
   });
 
@@ -182,7 +182,7 @@ describe("PostgreSQL - Advanced Features", async () => {
       })
       .where("users.version < excluded.version")
       .toString();
-    
+
     assert.ok(result.includes("WHERE users.version < excluded.version"));
   });
 
@@ -192,7 +192,7 @@ describe("PostgreSQL - Advanced Features", async () => {
       .from("articles")
       .fullTextSearch("title", "javascript postgresql", "english")
       .toString();
-    
+
     assert.ok(result.includes("to_tsvector('english', title)"));
     assert.ok(result.includes("plainto_tsquery('english', 'javascript postgresql')"));
   });
@@ -206,7 +206,7 @@ describe("PostgreSQL - Advanced Features", async () => {
       .where(sql.raw("to_tsvector('english', title || ' ' || content) @@ plainto_tsquery('english', $1)"))
       .orderBy("rank", "desc")
       .toString();
-    
+
     assert.ok(result.includes("ts_rank"));
     assert.ok(result.includes("@@"));
   });

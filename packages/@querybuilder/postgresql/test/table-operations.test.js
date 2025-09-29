@@ -9,39 +9,39 @@ import PostgreSQL from "../PostgreSQL.js";
 
 describe("PostgreSQL - Table Operations", async () => {
   let sql;
-  
+
   beforeEach(async () => {
     sql = new PostgreSQL();
   });
 
-  test("Crear una tabla básica", { only: false }, async () => {
+  test("Crear una tabla básica", async () => {
     const result = sql.createTable("table_test");
     assert.equal(result, "CREATE TABLE table_test");
   });
 
-  test("Crear una tabla temporal global", { only: false }, async () => {
-    const result = sql.createTable("table_test", { 
-      temporary: "global", 
-      onCommit: "delete" 
+  test("Crear una tabla temporal global", async () => {
+    const result = sql.createTable("table_test", {
+      temporary: "global",
+      onCommit: "delete"
     });
     assert.equal(
       result,
-      "CREATE GLOBAL TEMPORARY TABLE table_test\n ON COMMIT DELETE ROWS"
+      "CREATE GLOBAL TEMPORARY TABLE table_test ON COMMIT DELETE ROWS"
     );
   });
 
-  test("Crear una tabla temporal local", { only: false }, async () => {
-    const result = sql.createTable("table_test", { 
-      temporary: "local", 
-      onCommit: "PRESERVE" 
+  test("Crear una tabla temporal local", async () => {
+    const result = sql.createTable("table_test", {
+      temporary: "local",
+      onCommit: "PRESERVE"
     });
     assert.equal(
       result,
-      "CREATE LOCAL TEMPORARY TABLE table_test\n ON COMMIT PRESERVE ROWS"
+      "CREATE LOCAL TEMPORARY TABLE table_test ON COMMIT PRESERVE ROWS"
     );
   });
 
-  test("Crear una tabla con múltiples columnas", { only: false }, async () => {
+  test("Crear una tabla con múltiples columnas", async () => {
     const columns = {
       ID_ARTISTA: "integer",
       NOMBRE_ARTISTA: { type: "CHARACTER(60)" },
@@ -49,59 +49,59 @@ describe("PostgreSQL - Table Operations", async () => {
       POSTER_EN_EXISTENCIA: "BOOLEAN",
       INTERVALO: "INTERVAL YEAR(2)",
     };
-    
-    const result = sql.createTable("table_test", { columns });
+
+    const result = sql.createTable("table_test", { cols: columns });
     assert.equal(
       result,
-      "CREATE TABLE table_test\n ( ID_ARTISTA INTEGER,\n NOMBRE_ARTISTA CHAR(60),\n FDN_ARTISTA DATE,\n POSTER_EN_EXISTENCIA BOOLEAN,\n INTERVALO INTERVAL YEAR(2) )"
+      "CREATE TABLE table_test\n( ID_ARTISTA INTEGER,\n NOMBRE_ARTISTA CHAR(60),\n FDN_ARTISTA DATE,\n POSTER_EN_EXISTENCIA BOOLEAN,\n INTERVALO INTERVAL YEAR(2) )"
     );
   });
 
-  test("Crear tabla con columnas JSON/JSONB", { only: false }, async () => {
+  test("Crear tabla con columnas JSON/JSONB", async () => {
     const columns = {
       id: "SERIAL PRIMARY KEY",
       data: "JSONB",
       metadata: "JSON",
       created_at: "TIMESTAMP DEFAULT NOW()"
     };
-    
-    const result = sql.createTable("json_table", { columns });
+
+    const result = sql.createTable("json_table", { cols: columns });
     assert.ok(result.includes("JSONB"));
     assert.ok(result.includes("JSON"));
   });
 
-  test("Crear tabla con arrays", { only: false }, async () => {
+  test("Crear tabla con arrays", async () => {
     const columns = {
       id: "SERIAL",
       tags: "TEXT[]",
       numbers: "INTEGER[]",
       emails: "VARCHAR(255)[]"
     };
-    
-    const result = sql.createTable("array_table", { columns });
+
+    const result = sql.createTable("array_table", { cols: columns });
     assert.ok(result.includes("TEXT[]"));
     assert.ok(result.includes("INTEGER[]"));
   });
 
-  test("Eliminar tabla", { only: false }, async () => {
+  test("Eliminar tabla", async () => {
     const result = sql.dropTable("table_test");
     assert.equal(result, "DROP TABLE table_test");
   });
 
-  test("Eliminar tabla con CASCADE", { only: false }, async () => {
+  test("Eliminar tabla con CASCADE", async () => {
     const result = sql.dropTable("table_test", { cascade: true });
     assert.equal(result, "DROP TABLE table_test CASCADE");
   });
 
-  test("Falla al crear tabla con columna de nombre reservado", { only: false }, async () => {
+  test("Falla al crear tabla con columna de nombre reservado", async () => {
     try {
       const columns = {
         DAY: "INTEGER",
         NOMBRE_ARTISTA: { type: "CHARACTER(60)" },
       };
-      sql.createTable("table_test", { columns });
+      sql.createTable("table_test", { cols: columns });
     } catch (error) {
-      assert.equal(error.message, "DAY no es un identificador valido");
+      assert.equal(error.message, "createTable error DAY no es un identificador valido");
     }
   });
 

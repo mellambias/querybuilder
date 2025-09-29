@@ -2,8 +2,10 @@
 PostgreSQL QueryBuilder - Implementa las variaciones al SQL2006 propias de PostgreSQL
 Versión optimizada con estructura simplificada
 */
-import Core from "@querybuilder/core/core";
+import Core from "../core/core.js";
 import postgreSQL from "./comandos/postgreSQL.js";
+import Types from "../core/types/Type.js";
+import "../core/utils/utils.js"; // Para toDataType
 
 /**
  * PostgreSQL QueryBuilder básico - Compatible con estructura original
@@ -14,6 +16,8 @@ class PostgreSQL extends Core {
 	constructor() {
 		super();
 		this.dataType = "postgresql"; // especifica el tipo de datos usado
+		// Configurar Types para validSqlId
+		Types.identificador.set("regular");
 	}
 
 	/**
@@ -31,6 +35,42 @@ class PostgreSQL extends Core {
 			return `${query} ${name} WITH (FORCE)`;
 		}
 		return `${query} ${name}`;
+	}
+
+	/**
+	 * Crea una base de datos con opciones específicas de PostgreSQL
+	 * @param {string} name - Nombre de la base de datos
+	 * @param {object} options - Opciones (encoding, owner, template, etc.)
+	 * @returns {string}
+	 */
+	createDatabase(name, options = {}) {
+		let query = `CREATE DATABASE ${name}`;
+
+		if (Object.keys(options).length > 0) {
+			const optionParts = [];
+
+			if (options.encoding) {
+				optionParts.push(`ENCODING '${options.encoding}'`);
+			}
+			if (options.owner) {
+				optionParts.push(`OWNER ${options.owner}`);
+			}
+			if (options.template) {
+				optionParts.push(`TEMPLATE ${options.template}`);
+			}
+			if (options.tablespace) {
+				optionParts.push(`TABLESPACE ${options.tablespace}`);
+			}
+			if (options.locale) {
+				optionParts.push(`LOCALE '${options.locale}'`);
+			}
+
+			if (optionParts.length > 0) {
+				query += ` WITH ${optionParts.join(' ')}`;
+			}
+		}
+
+		return query;
 	}
 
 	/**
@@ -64,12 +104,40 @@ class PostgreSQL extends Core {
 	}
 
 	/**
+	 * Elimina un esquema
+	 * @param {string} name - Nombre del esquema
+	 * @param {object} options - Opciones (cascade: boolean)
+	 * @returns {string}
+	 */
+	dropSchema(name, options = {}) {
+		let query = `DROP SCHEMA ${name}`;
+
+		if (options.cascade) {
+			query += " CASCADE";
+		} else if (options.restrict) {
+			query += " RESTRICT";
+		}
+
+		return query;
+	}
+
+	/**
+	 * Define una columna con tipos específicos de PostgreSQL
+	 * @param {string} name - Nombre de la columna
+	 * @param {string|object} options - Tipo de datos o opciones
+	 * @returns {string}
+	 */
+	column(name, options) {
+		return this.getStatement("", postgreSQL.column, { name, options }, " ");
+	}
+
+	/**
 	 * Crea una tabla con opciones específicas de PostgreSQL
 	 * @param {string} name - Nombre de la tabla
 	 * @param {object} options - Opciones de la tabla
 	 * @returns {string}
 	 */
-	createTable(name, options) {
+	createTable(name, options = {}) {
 		try {
 			const sql = this.getStatement(
 				"CREATE",

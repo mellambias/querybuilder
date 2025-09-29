@@ -9,7 +9,7 @@ import PostgreSQL from "../PostgreSQL.js";
 
 describe("PostgreSQL - Data Types", async () => {
   let sql;
-  
+
   beforeEach(async () => {
     sql = new PostgreSQL();
   });
@@ -25,15 +25,15 @@ describe("PostgreSQL - Data Types", async () => {
   });
 
   test("Crear tipo ENUM con valores", { only: false }, async () => {
-    const result = sql.createType("status_type", { 
-      as: "ENUM", 
-      values: ["active", "inactive", "pending"] 
+    const result = sql.createType("status_type", {
+      as: "ENUM",
+      values: ["active", "inactive", "pending"]
     });
     assert.equal(result, "CREATE TYPE status_type AS ENUM ('active', 'inactive', 'pending')");
   });
 
   test("Crear tipo compuesto", { only: false }, async () => {
-    const result = sql.createType("address_type", { 
+    const result = sql.createType("address_type", {
       as: "COMPOSITE",
       attributes: {
         street: "VARCHAR(100)",
@@ -75,7 +75,7 @@ describe("PostgreSQL - Data Types", async () => {
       price_range: "NUMRANGE",
       date_range: "DATERANGE"
     };
-    
+
     const result = sql.createTable("postgres_types", { columns });
     assert.ok(result.includes("UUID"));
     assert.ok(result.includes("TIMESTAMPTZ"));
@@ -91,7 +91,7 @@ describe("PostgreSQL - Data Types", async () => {
       timestamps: "TIMESTAMPTZ[]",
       ip_addresses: "INET[]"
     };
-    
+
     const result = sql.createTable("array_types", { columns });
     assert.ok(result.includes("UUID[]"));
     assert.ok(result.includes("TIMESTAMPTZ[]"));

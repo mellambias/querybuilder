@@ -2,6 +2,7 @@
  * @paramn { Object<columns>} as  - crear tipos compuestos que pueden utilizarse cpmp argumentos o tipos devueltos por una función
  * @paramn { Array<strings>} enum - crea tipos enumerados
  */
+import { column } from "./column.js";
 export const createType = {
 	name: (name) => `TYPE ${name}`,
 	as: function (cols, self) {
@@ -117,6 +118,17 @@ export const createTable = {
 		//[ ON COMMIT { PRESERVE ROWS | DELETE ROWS | DROP } ]
 		if (/^(PRESERVE ROWS|DELETE ROWS|DROP)/i.test(value)) {
 			return `ON COMMIT ${value.toUpperCase()}`;
+		}
+		// Support simplified values (case-insensitive)
+		const lowerValue = value?.toLowerCase();
+		if (lowerValue === "delete") {
+			return "ON COMMIT DELETE ROWS";
+		}
+		if (lowerValue === "preserve") {
+			return "ON COMMIT PRESERVE ROWS";
+		}
+		if (lowerValue === "drop") {
+			return "ON COMMIT DROP";
 		}
 	},
 	tablespace: (name) => {

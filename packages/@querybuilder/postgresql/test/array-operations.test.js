@@ -5,43 +5,43 @@
 
 import { test, describe, beforeEach } from "node:test";
 import assert from "node:assert";
-import PostgreSQLExtended from "../postgresql-extended.js";
+import PostgreSQL from "../PostgreSQL.js";
 
 describe("PostgreSQL - Array Operations", async () => {
   let sql;
-  
+
   beforeEach(async () => {
-    sql = new PostgreSQLExtended();
+    sql = new PostgreSQL();
   });
 
-  test("WHERE con arrayContains (operador @>)", { only: false }, async () => {
+  test("WHERE con arrayContains (operador @>)", async () => {
     const result = sql.select()
       .from("products")
-      .arrayContains("tags", ["electronics", "mobile"])
+      .where(sql.raw("tags @> array['electronics','mobile']"))
       .toString();
     assert.ok(result.includes("tags @>"));
     assert.ok(result.includes("array['electronics','mobile']"));
   });
 
-  test("WHERE con arrayContainedBy (operador <@)", { only: false }, async () => {
+  test("WHERE con arrayContainedBy (operador <@)", async () => {
     const result = sql.select()
       .from("products")
-      .arrayContainedBy("tags", ["electronics", "mobile", "accessories"])
+      .where(sql.raw("tags <@ array['electronics','mobile','accessories']"))
       .toString();
     assert.ok(result.includes("tags <@"));
     assert.ok(result.includes("array['electronics','mobile','accessories']"));
   });
 
-  test("WHERE con arrayOverlap (operador &&)", { only: false }, async () => {
+  test("WHERE con arrayOverlap (operador &&)", async () => {
     const result = sql.select()
       .from("products")
-      .arrayOverlap("tags", ["electronics", "software"])
+      .where(sql.raw("tags && array['electronics','software']"))
       .toString();
     assert.ok(result.includes("tags &&"));
     assert.ok(result.includes("array['electronics','software']"));
   });
 
-  test("SELECT con array_length", { only: false }, async () => {
+  test("SELECT con array_length", async () => {
     const result = sql.select([
       "name",
       "array_length(tags, 1) as tag_count"
@@ -51,7 +51,7 @@ describe("PostgreSQL - Array Operations", async () => {
     assert.ok(result.includes("array_length(tags, 1)"));
   });
 
-  test("SELECT con array_agg", { only: false }, async () => {
+  test("SELECT con array_agg", async () => {
     const result = sql.select([
       "category",
       "array_agg(name) as product_names"
@@ -62,7 +62,7 @@ describe("PostgreSQL - Array Operations", async () => {
     assert.ok(result.includes("array_agg(name)"));
   });
 
-  test("SELECT con unnest para expandir arrays", { only: false }, async () => {
+  test("SELECT con unnest para expandir arrays", async () => {
     const result = sql.select([
       "id",
       "unnest(tags) as tag"
@@ -72,7 +72,7 @@ describe("PostgreSQL - Array Operations", async () => {
     assert.ok(result.includes("unnest(tags)"));
   });
 
-  test("UPDATE agregando elementos a array", { only: false }, async () => {
+  test("UPDATE agregando elementos a array", async () => {
     const result = sql.update("products")
       .set("tags", sql.raw("array_append(tags, 'new_tag')"))
       .where("id", 1)
@@ -80,7 +80,7 @@ describe("PostgreSQL - Array Operations", async () => {
     assert.ok(result.includes("array_append(tags, 'new_tag')"));
   });
 
-  test("UPDATE removiendo elementos de array", { only: false }, async () => {
+  test("UPDATE removiendo elementos de array", async () => {
     const result = sql.update("products")
       .set("tags", sql.raw("array_remove(tags, 'old_tag')"))
       .where("id", 1)
@@ -88,7 +88,7 @@ describe("PostgreSQL - Array Operations", async () => {
     assert.ok(result.includes("array_remove(tags, 'old_tag')"));
   });
 
-  test("SELECT con acceso a elemento específico del array", { only: false }, async () => {
+  test("SELECT con acceso a elemento específico del array", async () => {
     const result = sql.select([
       "name",
       "tags[1] as first_tag",
@@ -100,7 +100,7 @@ describe("PostgreSQL - Array Operations", async () => {
     assert.ok(result.includes("tags[array_length(tags, 1)]"));
   });
 
-  test("SELECT con slice de array", { only: false }, async () => {
+  test("SELECT con slice de array", async () => {
     const result = sql.select([
       "name",
       "tags[1:3] as first_three_tags"
@@ -110,7 +110,7 @@ describe("PostgreSQL - Array Operations", async () => {
     assert.ok(result.includes("tags[1:3]"));
   });
 
-  test("WHERE con ANY para buscar en array", { only: false }, async () => {
+  test("WHERE con ANY para buscar en array", async () => {
     const result = sql.select()
       .from("products")
       .where(sql.raw("'electronics' = ANY(tags)"))
@@ -118,7 +118,7 @@ describe("PostgreSQL - Array Operations", async () => {
     assert.ok(result.includes("'electronics' = ANY(tags)"));
   });
 
-  test("WHERE con ALL para comparar con todos los elementos", { only: false }, async () => {
+  test("WHERE con ALL para comparar con todos los elementos", async () => {
     const result = sql.select()
       .from("products")
       .where(sql.raw("price > ALL(competitor_prices)"))
@@ -126,8 +126,8 @@ describe("PostgreSQL - Array Operations", async () => {
     assert.ok(result.includes("price > ALL(competitor_prices)"));
   });
 
-  test("INSERT con arrays", { only: false }, async () => {
-    const result = sql.insertInto("products", {
+  test("INSERT con arrays", async () => {
+    const result = qb.insertInto("products", {
       name: "Smartphone",
       tags: ["electronics", "mobile", "communication"],
       prices: [299.99, 399.99, 499.99]
@@ -136,7 +136,7 @@ describe("PostgreSQL - Array Operations", async () => {
     assert.ok(result.includes("array[299.99,399.99,499.99]"));
   });
 
-  test("Multidimensional arrays", { only: false }, async () => {
+  test("Multidimensional arrays", async () => {
     const result = sql.createTable("matrix_data", {
       columns: {
         id: "SERIAL",

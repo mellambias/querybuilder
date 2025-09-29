@@ -790,7 +790,7 @@ class QueryBuilder {
 	 * @returns
 	 */
 	where(predicados, next) {
-		next.isQB = predicados instanceof QueryBuilder;
+		next.isQB = predicados instanceof QueryBuilder || false;
 
 		// Special handling only for specific cases like DELETE subconsulta pattern
 		// Only apply when we have a QueryBuilder predicate in a DELETE/UPDATE context
