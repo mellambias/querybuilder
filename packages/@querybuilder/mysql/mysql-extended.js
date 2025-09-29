@@ -135,7 +135,7 @@ export class MySQLExtended extends QueryBuilder {
 
       // Operadores de comparación especiales
       NULL_SAFE_EQUALS: '<=>',
-      
+
       // Operadores de bits
       BITWISE_AND: '&',
       BITWISE_OR: '|',
@@ -260,16 +260,16 @@ export class MySQLExtended extends QueryBuilder {
    */
   rowNumber(options = {}) {
     let windowClause = 'ROW_NUMBER() OVER (';
-    
+
     if (options.partitionBy) {
       windowClause += `PARTITION BY ${Array.isArray(options.partitionBy) ? options.partitionBy.join(', ') : options.partitionBy} `;
     }
-    
+
     if (options.orderBy) {
       const order = Array.isArray(options.orderBy) ? options.orderBy.join(', ') : options.orderBy;
       windowClause += `ORDER BY ${order}`;
     }
-    
+
     windowClause += ')';
     return this.selectRaw(`${windowClause} as row_number`);
   }
@@ -281,16 +281,16 @@ export class MySQLExtended extends QueryBuilder {
    */
   rank(options = {}) {
     let windowClause = 'RANK() OVER (';
-    
+
     if (options.partitionBy) {
       windowClause += `PARTITION BY ${Array.isArray(options.partitionBy) ? options.partitionBy.join(', ') : options.partitionBy} `;
     }
-    
+
     if (options.orderBy) {
       const order = Array.isArray(options.orderBy) ? options.orderBy.join(', ') : options.orderBy;
       windowClause += `ORDER BY ${order}`;
     }
-    
+
     windowClause += ')';
     return this.selectRaw(`${windowClause} as rank`);
   }
@@ -305,22 +305,22 @@ export class MySQLExtended extends QueryBuilder {
    */
   lag(column, offset = 1, defaultValue = null, options = {}) {
     let windowClause = `LAG(${column}, ${offset}`;
-    
+
     if (defaultValue !== null) {
       windowClause += `, ${defaultValue}`;
     }
-    
+
     windowClause += ') OVER (';
-    
+
     if (options.partitionBy) {
       windowClause += `PARTITION BY ${Array.isArray(options.partitionBy) ? options.partitionBy.join(', ') : options.partitionBy} `;
     }
-    
+
     if (options.orderBy) {
       const order = Array.isArray(options.orderBy) ? options.orderBy.join(', ') : options.orderBy;
       windowClause += `ORDER BY ${order}`;
     }
-    
+
     windowClause += ')';
     return this.selectRaw(`${windowClause} as lag_${column}`);
   }
@@ -335,22 +335,22 @@ export class MySQLExtended extends QueryBuilder {
    */
   lead(column, offset = 1, defaultValue = null, options = {}) {
     let windowClause = `LEAD(${column}, ${offset}`;
-    
+
     if (defaultValue !== null) {
       windowClause += `, ${defaultValue}`;
     }
-    
+
     windowClause += ') OVER (';
-    
+
     if (options.partitionBy) {
       windowClause += `PARTITION BY ${Array.isArray(options.partitionBy) ? options.partitionBy.join(', ') : options.partitionBy} `;
     }
-    
+
     if (options.orderBy) {
       const order = Array.isArray(options.orderBy) ? options.orderBy.join(', ') : options.orderBy;
       windowClause += `ORDER BY ${order}`;
     }
-    
+
     windowClause += ')';
     return this.selectRaw(`${windowClause} as lead_${column}`);
   }
@@ -532,14 +532,14 @@ export class MySQLExtended extends QueryBuilder {
    */
   clone() {
     const cloned = new MySQLExtended(this.connection);
-    
+
     // Copiar propiedades básicas
     Object.assign(cloned, this);
-    
+
     // Copiar arrays específicos
     cloned.cteQueries = [...this.cteQueries];
     cloned.hints = [...this.hints];
-    
+
     return cloned;
   }
 

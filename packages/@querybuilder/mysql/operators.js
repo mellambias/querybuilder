@@ -28,7 +28,7 @@ export const ComparisonOperators = {
   GREATER_THAN: '>',
   GREATER_THAN_OR_EQUAL: '>=',
   SPACESHIP: '<=>',  // NULL-safe equality
-  
+
   // Pattern matching
   LIKE: 'LIKE',
   NOT_LIKE: 'NOT LIKE',
@@ -36,15 +36,15 @@ export const ComparisonOperators = {
   RLIKE: 'RLIKE',
   NOT_REGEXP: 'NOT REGEXP',
   NOT_RLIKE: 'NOT RLIKE',
-  
+
   // Range operators
   BETWEEN: 'BETWEEN',
   NOT_BETWEEN: 'NOT BETWEEN',
-  
+
   // Set membership
   IN: 'IN',
   NOT_IN: 'NOT IN',
-  
+
   // NULL checking
   IS_NULL: 'IS NULL',
   IS_NOT_NULL: 'IS NOT NULL'
@@ -178,8 +178,8 @@ export const MySQLOperators = {
  */
 export function isValidMySQLOperator(operator) {
   const upperOp = operator.toUpperCase();
-  return Object.values(MySQLOperators).includes(operator) || 
-         Object.values(MySQLOperators).includes(upperOp);
+  return Object.values(MySQLOperators).includes(operator) ||
+    Object.values(MySQLOperators).includes(upperOp);
 }
 
 /**
@@ -189,21 +189,21 @@ export function isValidMySQLOperator(operator) {
  */
 export function getMySQLOperatorCategory(operator) {
   const upperOp = operator.toUpperCase();
-  
-  if (Object.values(ArithmeticOperators).includes(operator) || 
-      Object.values(ArithmeticOperators).includes(upperOp)) return 'arithmetic';
-  if (Object.values(ComparisonOperators).includes(operator) || 
-      Object.values(ComparisonOperators).includes(upperOp)) return 'comparison';
+
+  if (Object.values(ArithmeticOperators).includes(operator) ||
+    Object.values(ArithmeticOperators).includes(upperOp)) return 'arithmetic';
+  if (Object.values(ComparisonOperators).includes(operator) ||
+    Object.values(ComparisonOperators).includes(upperOp)) return 'comparison';
   if (Object.values(LogicalOperators).includes(upperOp)) return 'logical';
   if (Object.values(AssignmentOperators).includes(operator)) return 'assignment';
   if (Object.values(BitwiseOperators).includes(operator)) return 'bitwise';
   if (Object.values(JsonOperators).includes(operator)) return 'json';
   if (Object.values(StringOperators).includes(upperOp)) return 'string';
-  if (Object.values(DateTimeOperators).includes(operator) || 
-      Object.values(DateTimeOperators).includes(upperOp)) return 'datetime';
+  if (Object.values(DateTimeOperators).includes(operator) ||
+    Object.values(DateTimeOperators).includes(upperOp)) return 'datetime';
   if (Object.values(SubqueryOperators).includes(upperOp)) return 'subquery';
   if (Object.values(SetOperators).includes(upperOp)) return 'set';
-  
+
   return 'unknown';
 }
 
@@ -214,14 +214,14 @@ export function getMySQLOperatorCategory(operator) {
  */
 export function getMySQLOperatorPrecedence(operator) {
   const upperOp = operator.toUpperCase();
-  
+
   for (let i = 0; i < OperatorPrecedence.length; i++) {
-    if (OperatorPrecedence[i].includes(operator) || 
-        OperatorPrecedence[i].includes(upperOp)) {
+    if (OperatorPrecedence[i].includes(operator) ||
+      OperatorPrecedence[i].includes(upperOp)) {
       return i;
     }
   }
-  
+
   return OperatorPrecedence.length; // Precedencia más baja para operadores desconocidos
 }
 
@@ -233,14 +233,14 @@ export function getMySQLOperatorPrecedence(operator) {
 export function isBinaryOperator(operator) {
   const binaryOps = [
     ...Object.values(ArithmeticOperators),
-    ...Object.values(ComparisonOperators).filter(op => 
+    ...Object.values(ComparisonOperators).filter(op =>
       !['IS NULL', 'IS NOT NULL'].includes(op)),
     ...Object.values(LogicalOperators).filter(op => op !== 'NOT'),
     ...Object.values(BitwiseOperators).filter(op => op !== '~'),
     ...Object.values(JsonOperators),
     'LIKE', 'NOT LIKE', 'REGEXP', 'NOT REGEXP'
   ];
-  
+
   const upperOp = operator.toUpperCase();
   return binaryOps.includes(operator) || binaryOps.includes(upperOp);
 }

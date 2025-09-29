@@ -22,7 +22,7 @@ console.log('\n1. TESTING METHOD AVAILABILITY:');
 // Verificar métodos JSON
 console.log('✅ JSON Methods:');
 console.log('  - jsonExtract:', typeof mysql.jsonExtract === 'function');
-console.log('  - jsonUnquote:', typeof mysql.jsonUnquote === 'function'); 
+console.log('  - jsonUnquote:', typeof mysql.jsonUnquote === 'function');
 console.log('  - jsonObject:', typeof mysql.jsonObject === 'function');
 console.log('  - jsonArray:', typeof mysql.jsonArray === 'function');
 console.log('  - jsonContains:', typeof mysql.jsonContains === 'function');

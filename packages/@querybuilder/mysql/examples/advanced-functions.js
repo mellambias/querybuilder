@@ -4,11 +4,11 @@
  */
 
 import MySQL from '../MySQL.js';
-import { 
-  WindowFunctions, 
-  StringFunctions, 
+import {
+  WindowFunctions,
+  StringFunctions,
   DateTimeFunctions,
-  MathFunctions 
+  MathFunctions
 } from '../functions.js';
 
 // Crear instancia de MySQL QueryBuilder

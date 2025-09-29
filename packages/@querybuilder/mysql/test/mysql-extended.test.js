@@ -93,7 +93,7 @@ mysql.reset();
 console.log('\n3. TESTING UPSERT:');
 
 const upsertQuery = await mysql
-  .upsert('users', 
+  .upsert('users',
     {
       email: 'john@example.com',
       name: 'John Doe',

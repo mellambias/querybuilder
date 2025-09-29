@@ -11,12 +11,12 @@ export const JsonFunctions = {
   JSON_ARRAY: 'JSON_ARRAY',
   JSON_OBJECT: 'JSON_OBJECT',
   JSON_QUOTE: 'JSON_QUOTE',
-  
+
   // Extraction functions
   JSON_EXTRACT: 'JSON_EXTRACT',
   JSON_UNQUOTE: 'JSON_UNQUOTE',
   JSON_KEYS: 'JSON_KEYS',
-  
+
   // Manipulation functions
   JSON_SET: 'JSON_SET',
   JSON_INSERT: 'JSON_INSERT',
@@ -25,7 +25,7 @@ export const JsonFunctions = {
   JSON_MERGE: 'JSON_MERGE',
   JSON_MERGE_PATCH: 'JSON_MERGE_PATCH',
   JSON_MERGE_PRESERVE: 'JSON_MERGE_PRESERVE',
-  
+
   // Info functions
   JSON_LENGTH: 'JSON_LENGTH',
   JSON_TYPE: 'JSON_TYPE',
@@ -33,7 +33,7 @@ export const JsonFunctions = {
   JSON_CONTAINS: 'JSON_CONTAINS',
   JSON_CONTAINS_PATH: 'JSON_CONTAINS_PATH',
   JSON_SEARCH: 'JSON_SEARCH',
-  
+
   // Array functions
   JSON_ARRAY_APPEND: 'JSON_ARRAY_APPEND',
   JSON_ARRAY_INSERT: 'JSON_ARRAY_INSERT'
@@ -48,36 +48,36 @@ export const StringFunctions = {
   LOWER: 'LOWER',
   UCASE: 'UCASE',
   LCASE: 'LCASE',
-  
+
   // Trim functions
   TRIM: 'TRIM',
   LTRIM: 'LTRIM',
   RTRIM: 'RTRIM',
-  
+
   // Substring functions
   SUBSTRING: 'SUBSTRING',
   LEFT: 'LEFT',
   RIGHT: 'RIGHT',
   MID: 'MID',
-  
+
   // Length functions
   LENGTH: 'LENGTH',
   CHAR_LENGTH: 'CHAR_LENGTH',
   CHARACTER_LENGTH: 'CHARACTER_LENGTH',
-  
+
   // Position functions
   LOCATE: 'LOCATE',
   POSITION: 'POSITION',
   INSTR: 'INSTR',
-  
+
   // Replace functions
   REPLACE: 'REPLACE',
   INSERT: 'INSERT',
-  
+
   // Concatenation
   CONCAT: 'CONCAT',
   CONCAT_WS: 'CONCAT_WS',
-  
+
   // Format functions
   FORMAT: 'FORMAT',
   LPAD: 'LPAD',
@@ -85,7 +85,7 @@ export const StringFunctions = {
   REPEAT: 'REPEAT',
   REVERSE: 'REVERSE',
   SPACE: 'SPACE',
-  
+
   // Pattern matching
   REGEXP: 'REGEXP',
   RLIKE: 'RLIKE',
@@ -104,12 +104,12 @@ export const MathFunctions = {
   FLOOR: 'FLOOR',
   ROUND: 'ROUND',
   TRUNCATE: 'TRUNCATE',
-  
+
   // Power and root
   POWER: 'POWER',
   POW: 'POW',
   SQRT: 'SQRT',
-  
+
   // Trigonometric
   SIN: 'SIN',
   COS: 'COS',
@@ -118,21 +118,21 @@ export const MathFunctions = {
   ACOS: 'ACOS',
   ATAN: 'ATAN',
   ATAN2: 'ATAN2',
-  
+
   // Logarithmic
   LOG: 'LOG',
   LOG10: 'LOG10',
   LOG2: 'LOG2',
   LN: 'LN',
   EXP: 'EXP',
-  
+
   // Constants
   PI: 'PI',
-  
+
   // Random
   RAND: 'RAND',
   RANDOM: 'RANDOM',
-  
+
   // Sign and modulo
   SIGN: 'SIGN',
   MOD: 'MOD'
@@ -153,7 +153,7 @@ export const DateTimeFunctions = {
   UTC_DATE: 'UTC_DATE',
   UTC_TIME: 'UTC_TIME',
   UTC_TIMESTAMP: 'UTC_TIMESTAMP',
-  
+
   // Date arithmetic
   DATE_ADD: 'DATE_ADD',
   DATE_SUB: 'DATE_SUB',
@@ -161,7 +161,7 @@ export const DateTimeFunctions = {
   SUBDATE: 'SUBDATE',
   DATEDIFF: 'DATEDIFF',
   TIMEDIFF: 'TIMEDIFF',
-  
+
   // Date extraction
   YEAR: 'YEAR',
   MONTH: 'MONTH',
@@ -176,12 +176,12 @@ export const DateTimeFunctions = {
   WEEKDAY: 'WEEKDAY',
   WEEK: 'WEEK',
   QUARTER: 'QUARTER',
-  
+
   // Date formatting
   DATE_FORMAT: 'DATE_FORMAT',
   TIME_FORMAT: 'TIME_FORMAT',
   STR_TO_DATE: 'STR_TO_DATE',
-  
+
   // Conversion
   UNIX_TIMESTAMP: 'UNIX_TIMESTAMP',
   FROM_UNIXTIME: 'FROM_UNIXTIME',
@@ -197,7 +197,7 @@ export const AggregateFunctions = {
   AVG: 'AVG',
   MIN: 'MIN',
   MAX: 'MAX',
-  
+
   // Statistical functions
   STD: 'STD',
   STDDEV: 'STDDEV',
@@ -206,10 +206,10 @@ export const AggregateFunctions = {
   VARIANCE: 'VARIANCE',
   VAR_POP: 'VAR_POP',
   VAR_SAMP: 'VAR_SAMP',
-  
+
   // String aggregation
   GROUP_CONCAT: 'GROUP_CONCAT',
-  
+
   // Bitwise aggregation
   BIT_AND: 'BIT_AND',
   BIT_OR: 'BIT_OR',
@@ -226,7 +226,7 @@ export const WindowFunctions = {
   DENSE_RANK: 'DENSE_RANK',
   PERCENT_RANK: 'PERCENT_RANK',
   CUME_DIST: 'CUME_DIST',
-  
+
   // Value functions
   FIRST_VALUE: 'FIRST_VALUE',
   LAST_VALUE: 'LAST_VALUE',
@@ -298,7 +298,7 @@ export function isValidMySQLFunction(func) {
  */
 export function getMySQLFunctionCategory(func) {
   const upperFunc = func.toUpperCase();
-  
+
   if (Object.values(JsonFunctions).includes(upperFunc)) return 'json';
   if (Object.values(StringFunctions).includes(upperFunc)) return 'string';
   if (Object.values(MathFunctions).includes(upperFunc)) return 'math';
@@ -307,7 +307,7 @@ export function getMySQLFunctionCategory(func) {
   if (Object.values(WindowFunctions).includes(upperFunc)) return 'window';
   if (Object.values(FlowControlFunctions).includes(upperFunc)) return 'control';
   if (Object.values(InfoFunctions).includes(upperFunc)) return 'info';
-  
+
   return 'unknown';
 }
 

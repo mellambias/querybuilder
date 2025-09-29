@@ -119,8 +119,8 @@ const containsQuery = mysql
   .from('products')
   .where(
     mysql.func(JsonFunctions.JSON_CONTAINS, [
-      'attributes', 
-      '"gaming"', 
+      'attributes',
+      '"gaming"',
       '$.tags'
     ]), '=', 1
   )
@@ -135,10 +135,10 @@ const searchQuery = mysql
     'id',
     'name',
     mysql.func(JsonFunctions.JSON_SEARCH, [
-      'attributes', 
-      'one', 
-      'Intel%', 
-      null, 
+      'attributes',
+      'one',
+      'Intel%',
+      null,
       '$.specs.*'
     ]).as('intel_path')
   ])
@@ -205,7 +205,7 @@ const complexJsonQuery = mysql
     ]), '=', 1
   )
   .orderBy(
-    mysql.func(JsonFunctions.JSON_EXTRACT, ['attributes', '$.price']), 
+    mysql.func(JsonFunctions.JSON_EXTRACT, ['attributes', '$.price']),
     'ASC'
   )
   .toString();

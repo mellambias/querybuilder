@@ -61,9 +61,9 @@ console.log(selectQuery);
 console.log('\n=== UPDATE ===');
 const updateQuery = mysql
   .update('users')
-  .set({ 
+  .set({
     name: 'Jane Doe',
-    age: 31 
+    age: 31
   })
   .where('id', '=', 1)
   .toString();

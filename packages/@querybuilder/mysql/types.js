@@ -123,13 +123,13 @@ export const MySQLTypes = {
 export function isValidMySQLType(type) {
   const upperType = type.toUpperCase();
   return Object.values(MySQLTypes).includes(upperType) ||
-         upperType.startsWith('VARCHAR(') ||
-         upperType.startsWith('CHAR(') ||
-         upperType.startsWith('DECIMAL(') ||
-         upperType.startsWith('FLOAT(') ||
-         upperType.startsWith('DOUBLE(') ||
-         upperType.startsWith('ENUM(') ||
-         upperType.startsWith('SET(');
+    upperType.startsWith('VARCHAR(') ||
+    upperType.startsWith('CHAR(') ||
+    upperType.startsWith('DECIMAL(') ||
+    upperType.startsWith('FLOAT(') ||
+    upperType.startsWith('DOUBLE(') ||
+    upperType.startsWith('ENUM(') ||
+    upperType.startsWith('SET(');
 }
 
 /**
@@ -139,35 +139,35 @@ export function isValidMySQLType(type) {
  */
 export function getMySQLTypeInfo(type) {
   const upperType = type.toUpperCase();
-  
+
   if (Object.values(JsonTypes).includes(upperType)) {
     return { category: 'json', isNative: true, supportsArrays: false };
   }
-  
+
   if (Object.values(IntegerTypes).includes(upperType)) {
     return { category: 'integer', isNative: true, supportsArrays: false };
   }
-  
+
   if (Object.values(TextTypes).includes(upperType)) {
     return { category: 'text', isNative: true, supportsArrays: false };
   }
-  
+
   if (Object.values(NumericTypes).includes(upperType)) {
     return { category: 'numeric', isNative: true, supportsArrays: false };
   }
-  
+
   if (Object.values(DateTimeTypes).includes(upperType)) {
     return { category: 'datetime', isNative: true, supportsArrays: false };
   }
-  
+
   if (Object.values(SpecialTypes).includes(upperType)) {
     return { category: 'special', isNative: true, supportsArrays: false };
   }
-  
+
   if (Object.values(GeometryTypes).includes(upperType)) {
     return { category: 'geometry', isNative: true, supportsArrays: false };
   }
-  
+
   return { category: 'unknown', isNative: false, supportsArrays: false };
 }
 
