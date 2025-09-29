@@ -1,4 +1,4 @@
-import { privilegios, objectTypes, splitCommand } from "../../utils/utils.js";
+import { privilegios, objectTypes, splitCommand } from "../../../core/utils/utils.js";
 
 const globalPrivileges = [
 	"CREATE TABLESPACE",
