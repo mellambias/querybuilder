@@ -1,4 +1,4 @@
-import sql2006 from "../sql2006.js";
+import sql2006 from "../../../core/comandos/sql2006.js";
 export const dropTable = {
 	...sql2006.dropTable,
 	temporary: (temporary) => (temporary === true ? "TEMPORARY" : undefined),

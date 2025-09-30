@@ -1,9 +1,9 @@
 /*
 Implementa las variaciones al SQL2006 propias del SGBD
 */
-import Core from "../core.js";
-import Mysql84 from "../comandos/Mysql.js";
-import Expresion from "../expresion.js";
+import Core from "../core/core.js";
+import Mysql84 from "./comandos/Mysql.js";
+import Expresion from "../core/expresion.js";
 
 class MySQL extends Core {
 	constructor() {

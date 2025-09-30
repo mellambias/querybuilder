@@ -1,4 +1,4 @@
-import QueryBuilder from "../../querybuilder.js";
+import QueryBuilder from "../../../core/querybuilder.js";
 export const createView = {
 	replace: (replace) => (replace === true ? "OR REPLACE" : ""),
 	algorithm: (algorithm) =>

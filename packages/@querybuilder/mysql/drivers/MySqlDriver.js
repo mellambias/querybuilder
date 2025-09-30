@@ -1,4 +1,4 @@
-import Driver from "./Driver.js";
+import Driver from "../../core/drivers/Driver.js";
 import MysqlResult from "../results/MysqlResult.js";
 import mysql from "mysql2/promise";
 class MySqlDriver extends Driver {

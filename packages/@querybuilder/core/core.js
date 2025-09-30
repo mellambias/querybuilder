@@ -6,13 +6,17 @@
 import sql2006 from "./comandos/sql2006.js";
 import Expresion from "./expresion.js";
 import Column from "./column.js";
-import { log } from "./utils/utils.js";
+import { log, Types } from "./utils/utils.js";
 
 class Core {
 	constructor() {
 		this.dataType = "sql2006";
 		this.q = []; // Initialize the query array
 		this.id = Math.random(); // Debug: unique id for each instance
+		
+		// Initialize Types.identificador for validSqlId method
+		Types.identificador.set("regular");
+		
 		this.predicados();
 		this.functionOneParam();
 		this.functionDate();

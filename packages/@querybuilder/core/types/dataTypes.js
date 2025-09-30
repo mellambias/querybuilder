@@ -196,6 +196,37 @@ const dataTypes = {
 		postgresql: "BOOLEAN",
 		mongobd: "boolean",
 	},
+	// MySQL-specific types
+	JSON: {
+		mysql: "JSON",
+		postgresql: "JSON",
+		mongobd: "object",
+	},
+	DECIMAL: {
+		mysql: "DECIMAL",
+		postgresql: "DECIMAL",
+		mongobd: "number",
+	},
+	TINYINT: {
+		mysql: "TINYINT",
+		postgresql: "SMALLINT",
+		mongobd: "number",
+	},
+	MEDIUMINT: {
+		mysql: "MEDIUMINT",
+		postgresql: "INTEGER",
+		mongobd: "number",
+	},
+	LONGTEXT: {
+		mysql: "LONGTEXT",
+		postgresql: "TEXT",
+		mongobd: "string",
+	},
+	MEDIUMTEXT: {
+		mysql: "MEDIUMTEXT",
+		postgresql: "TEXT",
+		mongobd: "string",
+	},
 };
 
 export { dataTypes };
