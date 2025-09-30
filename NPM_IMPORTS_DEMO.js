@@ -34,16 +34,16 @@ console.log("🎯 DEMOSTRACIÓN: Imports coherentes con distribución NPM");
 console.log("====================================================");
 
 try {
-    // Importación NPM-style (simulando desde workspace local)
-    const { QueryBuilder, Driver, Result } = await import("@querybuilder/core");
-    
-    console.log("✅ Core imports funcionando:");
-    console.log("   - QueryBuilder:", typeof QueryBuilder);
-    console.log("   - Driver:", typeof Driver);  
-    console.log("   - Result:", typeof Result);
-    
-    console.log("\n🎯 Ejemplo de uso en aplicación real:");
-    console.log(`
+  // Importación NPM-style (simulando desde workspace local)
+  const { QueryBuilder, Driver, Result } = await import("@querybuilder/core");
+
+  console.log("✅ Core imports funcionando:");
+  console.log("   - QueryBuilder:", typeof QueryBuilder);
+  console.log("   - Driver:", typeof Driver);
+  console.log("   - Result:", typeof Result);
+
+  console.log("\n🎯 Ejemplo de uso en aplicación real:");
+  console.log(`
 // Instalar paquetes:
 npm install @querybuilder/core @querybuilder/mysql @querybuilder/postgresql @querybuilder/mongodb
 
@@ -58,9 +58,9 @@ const mysqlQB = new QueryBuilder(MySQL).driver(MySqlDriver, config);
 const postgresQB = new QueryBuilder(PostgreSQL).driver(PostgreSQLDriver, config);
 const mongoQB = new QueryBuilder(MongoDB).driver(MongodbDriver, config);
     `);
-    
-    console.log("🎊 Imports NPM-style implementados correctamente!");
-    
+
+  console.log("🎊 Imports NPM-style implementados correctamente!");
+
 } catch (error) {
-    console.error("❌ Error:", error.message);
+  console.error("❌ Error:", error.message);
 }
