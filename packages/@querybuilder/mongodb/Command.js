@@ -1,4 +1,4 @@
-import QueryBuilder from "../querybuilder.js";
+import QueryBuilder from "../core/querybuilder.js";
 import { jsonReplacer } from "./mongoUtils.js";
 class Command {
 	constructor(command, driverDB) {

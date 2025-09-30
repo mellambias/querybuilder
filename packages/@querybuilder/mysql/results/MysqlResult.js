@@ -1,4 +1,4 @@
-import Result from "./Result.js";
+import Result from "../../core/results/Result.js";
 
 class MysqlResult extends Result {
 	constructor(query, response) {
