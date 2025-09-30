@@ -227,6 +227,146 @@ const dataTypes = {
 		postgresql: "TEXT",
 		mongobd: "string",
 	},
+	// Tipos específicos de PostgreSQL
+	UUID: {
+		postgresql: "UUID",
+	},
+	TIMESTAMPTZ: {
+		postgresql: "TIMESTAMPTZ",
+	},
+	INET: {
+		postgresql: "INET",
+	},
+	MACADDR: {
+		postgresql: "MACADDR",
+	},
+	CIDR: {
+		postgresql: "CIDR",
+	},
+	NUMRANGE: {
+		postgresql: "NUMRANGE",
+	},
+	DATERANGE: {
+		postgresql: "DATERANGE",
+	},
+	TSRANGE: {
+		postgresql: "TSRANGE",
+	},
+	TSTZRANGE: {
+		postgresql: "TSTZRANGE",
+	},
+	JSONB: {
+		postgresql: "JSONB",
+	},
+	XML: {
+		postgresql: "XML",
+	},
+	TSVECTOR: {
+		postgresql: "TSVECTOR",
+	},
+	TSQUERY: {
+		postgresql: "TSQUERY",
+	},
+	BYTEA: {
+		postgresql: "BYTEA",
+	},
+	OID: {
+		postgresql: "OID",
+	},
+	REGPROC: {
+		postgresql: "REGPROC",
+	},
+	REGPROCEDURE: {
+		postgresql: "REGPROCEDURE",
+	},
+	REGOPER: {
+		postgresql: "REGOPER",
+	},
+	REGOPERATOR: {
+		postgresql: "REGOPERATOR",
+	},
+	REGCLASS: {
+		postgresql: "REGCLASS",
+	},
+	REGTYPE: {
+		postgresql: "REGTYPE",
+	},
+	REGCONFIG: {
+		postgresql: "REGCONFIG",
+	},
+	REGDICTIONARY: {
+		postgresql: "REGDICTIONARY",
+	},
+	// Tipos array de PostgreSQL
+	"INTEGER[]": {
+		postgresql: "INTEGER[]",
+	},
+	"BIGINT[]": {
+		postgresql: "BIGINT[]",
+	},
+	"SMALLINT[]": {
+		postgresql: "SMALLINT[]",
+	},
+	"REAL[]": {
+		postgresql: "REAL[]",
+	},
+	"DOUBLE PRECISION[]": {
+		postgresql: "DOUBLE PRECISION[]",
+	},
+	"NUMERIC[]": {
+		postgresql: "NUMERIC[]",
+	},
+	"DECIMAL[]": {
+		postgresql: "DECIMAL[]",
+	},
+	"CHAR[]": {
+		postgresql: "CHAR[]",
+	},
+	"VARCHAR[]": {
+		postgresql: "VARCHAR[]",
+	},
+	"TEXT[]": {
+		postgresql: "TEXT[]",
+	},
+	"BYTEA[]": {
+		postgresql: "BYTEA[]",
+	},
+	"DATE[]": {
+		postgresql: "DATE[]",
+	},
+	"TIME[]": {
+		postgresql: "TIME[]",
+	},
+	"TIMESTAMP[]": {
+		postgresql: "TIMESTAMP[]",
+	},
+	"TIMESTAMPTZ[]": {
+		postgresql: "TIMESTAMPTZ[]",
+	},
+	"INTERVAL[]": {
+		postgresql: "INTERVAL[]",
+	},
+	"BOOLEAN[]": {
+		postgresql: "BOOLEAN[]",
+	},
+	"JSON[]": {
+		postgresql: "JSON[]",
+	},
+	"JSONB[]": {
+		postgresql: "JSONB[]",
+	},
+	"UUID[]": {
+		postgresql: "UUID[]",
+	},
+	"INET[]": {
+		postgresql: "INET[]",
+	},
+	"CIDR[]": {
+		postgresql: "CIDR[]",
+	},
+	"MACADDR[]": {
+		postgresql: "MACADDR[]",
+	},
 };
 
 export { dataTypes };
