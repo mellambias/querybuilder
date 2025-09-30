@@ -49,6 +49,10 @@ Thumbs.db
 dist/
 build/
 
+# Test projects and local development folders
+test-pnpm-install/
+test-local-install/
+
 # NPM configuration files (local only)
 .npmignore
 
