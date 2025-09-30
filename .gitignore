@@ -45,9 +45,12 @@ Thumbs.db
 # Test coverage
 .nyc_output/
 
-# Build outputs (comentado porque queremos incluir dist/ para mostrar la distribución)
-# dist/
-# build/
+# Build outputs (exclude distribution from GitHub)
+dist/
+build/
+
+# NPM configuration files (local only)
+.npmignore
 
 # Legacy source directory (keep local but exclude from GitHub)
 src/
