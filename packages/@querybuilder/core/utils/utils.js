@@ -23,6 +23,7 @@ function splitCommand(value) {
 String.prototype.toDataType = function (target) {
 	const [command] = splitCommand(this.toString());
 	const sqlKey = command.toUpperCase();
+
 	if (/^(sql|sql2006)$/i.test(target)) {
 		const keys = Object.keys(dataTypes);
 		const exist = keys.find((key) => key === sqlKey);
@@ -39,11 +40,15 @@ String.prototype.toDataType = function (target) {
 		);
 	}
 
-	if (dataTypes[sqlKey][target.toLowerCase()] !== undefined) {
-		return this.toString().replace(
-			command,
-			dataTypes[sqlKey][target.toLowerCase()],
-		);
+	// Try exact key first, then lowercase key
+	const exactKey = dataTypes[sqlKey] && dataTypes[sqlKey][target.toLowerCase()];
+	const lowerKey = dataTypes[sqlKey.toLowerCase()] && dataTypes[sqlKey.toLowerCase()][target.toLowerCase()];
+
+	if (exactKey !== undefined) {
+		return this.toString().replace(command, exactKey);
+	}
+	if (lowerKey !== undefined) {
+		return this.toString().replace(command, lowerKey);
 	}
 	return new Error(
 		`El dataType '${command}' no se corresponde a ningun tipo declarado de ${target}`,

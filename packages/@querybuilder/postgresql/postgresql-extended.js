@@ -2,42 +2,23 @@
 PostgreSQL QueryBuilder Extendido - Incluye todas las características avanzadas de PostgreSQL
 JSON/JSONB, UPSERT, Window Functions, CTEs, Arrays, Full-Text Search, etc.
 */
+import QueryBuilder from '../core/querybuilder.js';
 import PostgreSQL from './PostgreSQL.js';
 
 /**
  * PostgreSQL QueryBuilder Extendido con todas las características avanzadas
  * @class PostgreSQLExtended
- * @extends PostgreSQL
+ * @extends QueryBuilder
  */
-export class PostgreSQLExtended extends PostgreSQL {
-  constructor(connection = null) {
-    super();
-    this.dialect = 'postgresql';
-    this.version = '16.0'; // PostgreSQL version support
-    this.connection = connection;
+class PostgreSQLExtended extends QueryBuilder {
+  constructor() {
+    super(PostgreSQL);
 
-    // Características específicas de PostgreSQL
-    this.features = {
-      cte: true,                // Common Table Expressions
-      upsert: true,            // INSERT ... ON CONFLICT
-      jsonOperators: true,     // JSON/JSONB operators
-      windowFunctions: true,   // Window functions
-      arrays: true,            // Array support
-      fullTextSearch: true,    // Full-text search
-      recursive: true,         // Recursive queries
-      partitioning: true,      // Table partitioning
-      extensions: true         // PostgreSQL extensions
-    };
-
-    // Estado para características específicas
+    // Propiedades mínimas necesarias para las funcionalidades
     this.cteQueries = [];
     this.conflictTarget = null;
     this.conflictAction = null;
-    this.windowSpecs = {};
     this.isRecursive = false;
-
-    // Inicializar extensiones
-    this.initializePostgreSQLFeatures();
   }
 
   /**
@@ -45,14 +26,10 @@ export class PostgreSQLExtended extends PostgreSQL {
    * @private
    */
   initializePostgreSQLFeatures() {
-    // Registrar tipos de datos específicos
-    this.registerPostgreSQLTypes();
-
-    // Registrar operadores específicos
-    this.registerPostgreSQLOperators();
-
-    // Registrar funciones específicas  
-    this.registerPostgreSQLFunctions();
+    // Minimal initialization - solo lo necesario
+    this.pgTypes = {};
+    this.pgOperators = {};
+    this.pgFunctions = {};
   }
 
   /**
@@ -190,7 +167,8 @@ export class PostgreSQLExtended extends PostgreSQL {
    */
   jsonContains(column, value) {
     const jsonValue = typeof value === 'string' ? value : JSON.stringify(value);
-    return this.where(`${column}`, '@>', `'${jsonValue}'`);
+    const condition = `${column} @> '${jsonValue}'`;
+    return this.where(condition);
   }
 
   /**
@@ -201,7 +179,7 @@ export class PostgreSQLExtended extends PostgreSQL {
    */
   jsonContainedBy(column, value) {
     const jsonValue = typeof value === 'string' ? value : JSON.stringify(value);
-    return this.where(`${column}`, '<@', `'${jsonValue}'`);
+    return this.where(`${column} <@ '${jsonValue}'`);
   }
 
   /**
@@ -400,9 +378,10 @@ export class PostgreSQLExtended extends PostgreSQL {
    * @private
    * @param {array} partitionBy - Columnas de partición
    * @param {array} orderBy - Columnas de ordenamiento
+   * @param {string} frameClause - Cláusula de frame opcional
    * @returns {string}
    */
-  buildWindowClause(partitionBy = [], orderBy = []) {
+  buildWindowClause(partitionBy = [], orderBy = [], frameClause = '') {
     let clause = 'OVER (';
     const parts = [];
 
@@ -414,10 +393,70 @@ export class PostgreSQLExtended extends PostgreSQL {
       parts.push(`ORDER BY ${orderBy.join(', ')}`);
     }
 
+    if (frameClause) {
+      parts.push(frameClause);
+    }
+
     clause += parts.join(' ');
     clause += ')';
 
     return clause;
+  }
+
+  /**
+   * Crea una función de ventana con frame específico de filas
+   * @param {string} func - Función de agregación
+   * @param {string} column - Columna (opcional)
+   * @returns {WindowFunction}
+   */
+  windowFunction(func, column = '') {
+    return new WindowFunction(func, column);
+  }
+
+  /**
+   * Funciones de agregación con soporte para window frames
+   */
+  sum(column) {
+    return this.windowFunction('SUM', column);
+  }
+
+  avg(column) {
+    return this.windowFunction('AVG', column);
+  }
+
+  count(column = '*') {
+    return this.windowFunction('COUNT', column);
+  }
+
+  max(column) {
+    return this.windowFunction('MAX', column);
+  }
+
+  min(column) {
+    return this.windowFunction('MIN', column);
+  }
+
+  /**
+   * Window functions específicas
+   */
+  lag(column, offset = 1, defaultValue = null) {
+    return new WindowFunction('LAG', column, [offset, defaultValue].filter(v => v !== null));
+  }
+
+  lead(column, offset = 1, defaultValue = null) {
+    return new WindowFunction('LEAD', column, [offset, defaultValue].filter(v => v !== null));
+  }
+
+  rowNumber() {
+    return new WindowFunction('ROW_NUMBER');
+  }
+
+  rank() {
+    return new WindowFunction('RANK');
+  }
+
+  denseRank() {
+    return new WindowFunction('DENSE_RANK');
   }
 
   // ===== CTE SUPPORT =====
@@ -458,7 +497,7 @@ export class PostgreSQLExtended extends PostgreSQL {
    */
   arrayContains(column, values) {
     const arrayStr = Array.isArray(values) ? values : [values];
-    return this.where(`${column}`, '@>', `ARRAY[${arrayStr.map(v => `'${v}'`).join(', ')}]`);
+    return this.where(`${column} @> ARRAY[${arrayStr.map(v => `'${v}'`).join(', ')}]`);
   }
 
   /**
@@ -469,7 +508,7 @@ export class PostgreSQLExtended extends PostgreSQL {
    */
   arrayContainedBy(column, values) {
     const arrayStr = Array.isArray(values) ? values : [values];
-    return this.where(`${column}`, '<@', `ARRAY[${arrayStr.map(v => `'${v}'`).join(', ')}]`);
+    return this.where(`${column} <@ ARRAY[${arrayStr.map(v => `'${v}'`).join(', ')}]`);
   }
 
   /**
@@ -480,7 +519,17 @@ export class PostgreSQLExtended extends PostgreSQL {
    */
   arrayOverlaps(column, values) {
     const arrayStr = Array.isArray(values) ? values : [values];
-    return this.where(`${column}`, '&&', `ARRAY[${arrayStr.map(v => `'${v}'`).join(', ')}]`);
+    return this.where(`${column} && ARRAY[${arrayStr.map(v => `'${v}'`).join(', ')}]`);
+  }
+
+  /**
+   * Alias para arrayOverlaps (compatibility)
+   * @param {string} column - Columna array
+   * @param {array} values - Valores que se solapan
+   * @returns {PostgreSQLExtended}
+   */
+  arrayOverlap(column, values) {
+    return this.arrayOverlaps(column, values);
   }
 
   /**
@@ -561,7 +610,7 @@ export class PostgreSQLExtended extends PostgreSQL {
    * @returns {PostgreSQLExtended}
    */
   regexMatch(column, pattern) {
-    return this.whereRaw(`${column} ~ '${pattern}'`);
+    return this.where(`${column} ~ '${pattern}'`);
   }
 
   /**
@@ -571,7 +620,7 @@ export class PostgreSQLExtended extends PostgreSQL {
    * @returns {PostgreSQLExtended}
    */
   regexMatchCI(column, pattern) {
-    return this.whereRaw(`${column} ~* '${pattern}'`);
+    return this.where(`${column} ~* '${pattern}'`);
   }
 
   // ===== UTILITY FUNCTIONS =====
@@ -651,32 +700,6 @@ export class PostgreSQLExtended extends PostgreSQL {
   }
 
   /**
-   * Override toString para procesar características específicas de PostgreSQL
-   * @returns {string}
-   */
-  toString() {
-    let sql = '';
-
-    // Agregar CTEs si existen
-    if (this.cteQueries && this.cteQueries.length > 0) {
-      const ctePrefix = this.isRecursive ? 'WITH RECURSIVE ' : 'WITH ';
-      sql += `${ctePrefix}${this.cteQueries.join(', ')}\n`;
-    }
-
-    // Llamar al toString del Core para generar SQL base
-    const baseSql = super.toString();
-    sql += baseSql;
-
-    // Agregar cláusula ON CONFLICT si existe
-    const conflictClause = this.buildConflictClause();
-    if (conflictClause) {
-      sql += `\n${conflictClause}`;
-    }
-
-    return sql;
-  }
-
-  /**
    * Información del dialecto
    * @returns {object}
    */
@@ -696,13 +719,134 @@ export class PostgreSQLExtended extends PostgreSQL {
    * @returns {PostgreSQLExtended}
    */
   clone() {
-    const clone = new PostgreSQLExtended(this.connection);
+    const clone = new PostgreSQLExtended();
     clone.q = [...this.q];
     clone.cteQueries = [...this.cteQueries];
     clone.conflictTarget = this.conflictTarget;
     clone.conflictAction = this.conflictAction;
     clone.isRecursive = this.isRecursive;
+    clone.connection = this.connection;
     return clone;
+  }
+}
+
+/**
+ * Clase para construir window functions con frames
+ */
+class WindowFunction {
+  constructor(func, column = '', params = []) {
+    this.func = func;
+    this.column = column;
+    this.params = params;
+    this.partitionColumns = [];
+    this.orderColumns = [];
+    this.frameClause = '';
+  }
+
+  /**
+   * Cláusula OVER
+   * @returns {WindowFunction}
+   */
+  over() {
+    return this;
+  }
+
+  /**
+   * PARTITION BY
+   * @param {...string} columns - Columnas de partición
+   * @returns {WindowFunction}
+   */
+  partitionBy(...columns) {
+    this.partitionColumns = columns;
+    return this;
+  }
+
+  /**
+   * ORDER BY
+   * @param {string} column - Columna de ordenamiento
+   * @param {string} direction - ASC o DESC
+   * @returns {WindowFunction}
+   */
+  orderBy(column, direction = 'ASC') {
+    this.orderColumns.push(`${column} ${direction}`);
+    return this;
+  }
+
+  /**
+   * ROWS frame
+   * @param {string} start - Inicio del frame
+   * @param {string} end - Fin del frame (opcional)
+   * @returns {WindowFunction}
+   */
+  rows(start, end = null) {
+    if (end) {
+      this.frameClause = `ROWS BETWEEN ${start} AND ${end}`;
+    } else {
+      this.frameClause = `ROWS ${start}`;
+    }
+    return this;
+  }
+
+  /**
+   * RANGE frame
+   * @param {string} start - Inicio del frame
+   * @param {string} end - Fin del frame (opcional)
+   * @returns {WindowFunction}
+   */
+  range(start, end = null) {
+    if (end) {
+      this.frameClause = `RANGE BETWEEN ${start} AND ${end}`;
+    } else {
+      this.frameClause = `RANGE ${start}`;
+    }
+    return this;
+  }
+
+  /**
+   * Alias para el resultado
+   * @param {string} alias - Nombre del alias
+   * @returns {string}
+   */
+  as(alias) {
+    return `${this.toString()} AS ${alias}`;
+  }
+
+  /**
+   * Convierte a string SQL
+   * @returns {string}
+   */
+  toString() {
+    let sql = this.func;
+
+    if (this.column || this.params.length > 0) {
+      const allParams = [this.column, ...this.params].filter(p => p !== '');
+      sql += `(${allParams.join(', ')})`;
+    } else if (this.func !== 'ROW_NUMBER' && this.func !== 'RANK' && this.func !== 'DENSE_RANK') {
+      sql += '()';
+    } else {
+      sql += '()';
+    }
+
+    // Construir cláusula OVER
+    let overClause = 'OVER (';
+    const parts = [];
+
+    if (this.partitionColumns.length > 0) {
+      parts.push(`PARTITION BY ${this.partitionColumns.join(', ')}`);
+    }
+
+    if (this.orderColumns.length > 0) {
+      parts.push(`ORDER BY ${this.orderColumns.join(', ')}`);
+    }
+
+    if (this.frameClause) {
+      parts.push(this.frameClause);
+    }
+
+    overClause += parts.join(' ');
+    overClause += ')';
+
+    return `${sql} ${overClause}`;
   }
 }
 

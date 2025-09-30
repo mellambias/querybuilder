@@ -11,7 +11,7 @@ describe("Table Operations", async () => {
     });
   });
 
-  test("Crear una tabla", { only: false }, async () => {
+  test("Crear tabla", async () => {
     const result = await qb
       .use("testing")
       .createTable("table_test", { cols: { ID: "INT" } })
