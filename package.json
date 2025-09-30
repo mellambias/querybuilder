@@ -3,6 +3,13 @@
   "version": "2.0.0",
   "private": true,
   "type": "module",
+  "author": "mellambias",
+  "organization": "bdinfogestio",
+  "description": "Universal QueryBuilder for SQL and NoSQL databases - Development Workspace",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bdinfogestio/querybuilder.git"
+  },
   "workspaces": [
     "packages/@querybuilder/*"
   ],

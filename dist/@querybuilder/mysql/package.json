@@ -21,7 +21,13 @@
     "sql",
     "database"
   ],
+  "author": "mellambias",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bdinfogestio/querybuilder.git"
+  },
+  "organization": "bdinfogestio",
   "engines": {
     "node": ">=16.0.0"
   }

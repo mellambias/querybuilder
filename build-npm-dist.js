@@ -111,11 +111,13 @@ async function buildCore() {
       "utils/"
     ],
     keywords: ["querybuilder", "sql", "nosql", "database", "orm"],
+    author: "mellambias",
     license: "MIT",
     repository: {
       type: "git",
-      url: "https://github.com/your-org/querybuilder.git"
+      url: "https://github.com/bdinfogestio/querybuilder.git"
     },
+    organization: "bdinfogestio",
     engines: {
       node: ">=16.0.0"
     }
@@ -180,7 +182,13 @@ export { default as MysqlResult } from './results/MysqlResult.js';
       "mysql2": "^3.0.0"
     },
     keywords: ["querybuilder", "mysql", "sql", "database"],
+    author: "mellambias",
     license: "MIT",
+    repository: {
+      type: "git",
+      url: "https://github.com/bdinfogestio/querybuilder.git"
+    },
+    organization: "bdinfogestio",
     engines: {
       node: ">=16.0.0"
     }
@@ -251,7 +259,13 @@ export { default as PostgreSQLExtended } from './postgresql-extended.js';
       "pg": "^8.0.0"
     },
     keywords: ["querybuilder", "postgresql", "postgres", "sql", "database", "jsonb"],
+    author: "mellambias",
     license: "MIT",
+    repository: {
+      type: "git",
+      url: "https://github.com/bdinfogestio/querybuilder.git"
+    },
+    organization: "bdinfogestio",
     engines: {
       node: ">=16.0.0"
     }
@@ -319,7 +333,13 @@ export * from './mongoUtils.js';
       "mongodb": "^6.0.0"
     },
     keywords: ["querybuilder", "mongodb", "nosql", "database", "document"],
+    author: "mellambias",
     license: "MIT",
+    repository: {
+      type: "git",
+      url: "https://github.com/bdinfogestio/querybuilder.git"
+    },
+    organization: "bdinfogestio",
     engines: {
       node: ">=16.0.0"
     }
