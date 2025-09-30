@@ -4,49 +4,11 @@
   "description": "Test configuration for MySQL QueryBuilder module",
   "type": "module",
   "scripts": {
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
-    "test:driver": "jest mysql-driver.test.js",
-    "test:integration": "jest mysql-integration.test.js",
-    "test:extended": "jest mysql-extended.test.js",
-    "test:all": "jest --runInBand"
-  },
-  "jest": {
-    "preset": "default",
-    "testEnvironment": "node",
-    "extensionsToTreatAsEsm": [".js"],
-    "globals": {
-      "ts-jest": {
-        "useESM": true
-      }
-    },
-    "moduleNameMapping": {
-      "^(\\.{1,2}/.*)\\.js$": "$1"
-    },
-    "transform": {},
-    "collectCoverageFrom": [
-      "../**/*.js",
-      "!../node_modules/**",
-      "!../test/**",
-      "!../coverage/**"
-    ],
-    "coverageDirectory": "./coverage",
-    "coverageReporters": [
-      "text",
-      "lcov",
-      "html"
-    ],
-    "testMatch": [
-      "**/*.test.js",
-      "**/__tests__/**/*.js"
-    ],
-    "verbose": true,
-    "setupFilesAfterEnv": ["<rootDir>/test-setup.js"]
-  },
-  "devDependencies": {
-    "@jest/globals": "^29.0.0",
-    "jest": "^29.0.0"
+    "test": "node run-tests.js",
+    "test:driver": "node mysql-driver.test.js",
+    "test:integration": "node mysql-integration.test.js",
+    "test:extended": "node mysql-extended.test.js",
+    "test:all": "node run-tests.js --all"
   },
   "dependencies": {
     "mysql2": "^3.0.0"

@@ -9,6 +9,7 @@ class Driver {
 		this.port = params?.port;
 		this.username = params?.username;
 		this.password = params?.password;
+		this.database = params?.database;
 	}
 
 	async connect() {

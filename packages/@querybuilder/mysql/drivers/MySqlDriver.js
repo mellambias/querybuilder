@@ -10,19 +10,29 @@ class MySqlDriver extends Driver {
 		this.serverResponse = null;
 	}
 	async connect() {
-		this.connection = await this.library.createConnection({
-			host: this.host,
-			port: this.port,
-			user: this.username,
-			password: this.password,
-			database: this.database || "",
-			multipleStatements: true, // Permite varias consultas en una llamada
-			decimalNumbers: true, //DECIMAL and NEWDECIMAL types always returned as string unless you pass this config option. Could lose precision on the number as Javascript Number is a Float!
-		});
-		return this;
+		try {
+			this.connection = await this.library.createConnection({
+				host: this.host,
+				port: this.port,
+				user: this.username,
+				password: this.password,
+				database: this.database || "",
+				multipleStatements: true, // Permite varias consultas en una llamada
+				decimalNumbers: true, //DECIMAL and NEWDECIMAL types always returned as string unless you pass this config option. Could lose precision on the number as Javascript Number is a Float!
+			});
+			return {
+				success: true,
+				error: null
+			};
+		} catch (error) {
+			return {
+				success: false,
+				error: error.message
+			};
+		}
 	}
 
-	async execute(query, options) {
+	async execute(query, values = null, options) {
 		this.queyResult = [];
 		this.queryFields = [];
 		this.results = [];
@@ -41,7 +51,12 @@ class MySqlDriver extends Driver {
 				.filter((q) => q.length > 2)
 				.map((item) => item.trim().concat(";"));
 			for (this.query of querys) {
-				this.serverResponse = await this.connection.query(this.query);
+				// Si se proporcionan valores, usarlos para prepared statements
+				if (values && Array.isArray(values)) {
+					this.serverResponse = await this.connection.execute(this.query, values);
+				} else {
+					this.serverResponse = await this.connection.query(this.query);
+				}
 				this.queyResult.push(new MysqlResult(this.query, this.serverResponse));
 			}
 			if (
@@ -50,15 +65,53 @@ class MySqlDriver extends Driver {
 			) {
 				await this.close();
 			}
-			return this;
+
+			// Devolver resultado estructurado para tests
+			return {
+				success: true,
+				response: this.getFormattedResponse(),
+				error: null,
+				count: this.queyResult.length
+			};
 		} catch (error) {
 			await this.close();
 			const result = new MysqlResult(this.query, this.serverResponse);
-			[result.info, result.error] = error.sqlMessage.split("; ");
+			if (error.sqlMessage) {
+				const parts = error.sqlMessage.split("; ");
+				result.info = parts[0] || '';
+				result.error = parts[1] || error.sqlMessage;
+			} else {
+				result.error = error.message;
+			}
 			result.errorStatus = 1;
 			this.queyResult.push(result);
-			return this;
+
+			// Devolver error estructurado para tests
+			return {
+				success: false,
+				response: null,
+				error: error.sqlMessage || error.message,
+				count: this.queyResult.length
+			};
 		}
+	}
+
+	/**
+	 * Formatear respuesta para compatibilidad con tests
+	 */
+	getFormattedResponse() {
+		if (this.queyResult.length === 0) {
+			return [];
+		}
+
+		// Si hay un solo resultado, devolver su respuesta directamente
+		if (this.queyResult.length === 1) {
+			const result = this.queyResult[0];
+			return result.response || [];
+		}
+
+		// Si hay múltiples resultados, devolver array de respuestas
+		return this.queyResult.map(result => result.response || []);
 	}
 
 	response() {
@@ -71,9 +124,15 @@ class MySqlDriver extends Driver {
 				await this.connection.close();
 				this.connection = null;
 			}
-			return this;
+			return {
+				success: true,
+				error: null
+			};
 		} catch (error) {
-			throw new Error(error.message);
+			return {
+				success: false,
+				error: error.message
+			};
 		}
 	}
 }

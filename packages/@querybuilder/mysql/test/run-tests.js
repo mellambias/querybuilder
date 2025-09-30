@@ -1,16 +1,18 @@
 #!/usr/bin/env node
 
 /**
- * MySQL Driver Test Runner
+ * MySQL Driver Test Runner - Real Database Tests
  * 
- * Script utilitario para ejecutar tests del MySqlDriver con diferentes configuraciones
- * y opciones de testing.
+ * Script utilitario para ejecutar tests de integración del MySqlDriver 
+ * usando una base de datos MySQL real en lugar de mocks.
  */
 
 import { execSync } from 'child_process';
 import { existsSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { initializeDatabase, cleanupDatabase, createTestDatabase } from './test-setup.js';
+import { config } from '../../core/config.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -51,212 +53,278 @@ class TestRunner {
     this.log(`⚠️  ${message}`, 'yellow');
   }
 
-  checkDependencies() {
-    this.info('Checking dependencies...');
-    
-    const requiredFiles = [
+  /**
+   * Verificar configuración del entorno de testing
+   */
+  checkEnvironment() {
+    this.info('Verificando configuración del entorno...');
+
+    // Obtener configuración de test desde core/config.js
+    const testConfig = config.testing.MySQL;
+
+    this.info('Configuración desde core/config.js:');
+    console.log(`  Host: ${testConfig.params.host}`);
+    console.log(`  Puerto: ${testConfig.params.port}`);
+    console.log(`  Usuario: ${testConfig.params.username}`);
+    console.log(`  Base de datos: ${testConfig.params.database}`);
+    console.log(`  Driver: MariaDB (puerto 3306)`);
+
+    // Verificar que la configuración esté completa
+    if (!testConfig.params.password) {
+      this.error('Password no configurado en core/config.js testing.MySQL.params.password');
+      return false;
+    }
+
+    this.success('Configuración cargada correctamente desde core/config.js'); return true;
+  }
+
+  /**
+   * Verificar que los archivos de test existan
+   */
+  checkTestFiles() {
+    this.info('Verificando archivos de test...');
+
+    const testFiles = [
       'mysql-driver.test.js',
-      'test-setup.js',
-      'package.json'
+      'test-setup.js'
     ];
 
-    for (const file of requiredFiles) {
-      const filePath = path.join(this.testDir, file);
+    let hasErrors = false;
+
+    for (const testFile of testFiles) {
+      const filePath = path.join(this.testDir, testFile);
       if (!existsSync(filePath)) {
-        this.error(`Required file not found: ${file}`);
-        return false;
+        this.error(`Archivo de test no encontrado: ${testFile}`);
+        hasErrors = true;
+      } else {
+        this.success(`Encontrado: ${testFile}`);
       }
     }
 
-    this.success('All required files found');
-    return true;
+    return !hasErrors;
   }
 
-  installDependencies() {
-    this.info('Installing test dependencies...');
-    
+  /**
+   * Probar conectividad con la base de datos
+   */
+  async testDatabaseConnectivity() {
+    this.info('Probando conectividad con la base de datos...');
+
     try {
-      execSync('npm install', {
-        cwd: this.testDir,
-        stdio: 'pipe'
-      });
-      this.success('Dependencies installed successfully');
+      await createTestDatabase();
+      this.success('Base de datos de pruebas disponible');
+
+      await initializeDatabase();
+      this.success('Conexión a base de datos establecida');
+
+      await cleanupDatabase();
+      this.success('Limpieza de conexiones completada');
+
       return true;
     } catch (error) {
-      this.error(`Failed to install dependencies: ${error.message}`);
+      this.error(`Error de conectividad: ${error.message}`);
+      this.info('Sugerencias para resolver problemas de conectividad:');
+      console.log('  1. Verificar que MySQL esté ejecutándose');
+      console.log('  2. Verificar credenciales de acceso');
+      console.log('  3. Verificar que el usuario tenga permisos para crear bases de datos');
+      console.log('  4. Verificar configuración de red y firewall');
       return false;
     }
   }
 
-  runTests(options = {}) {
-    const {
-      testFile = '',
-      coverage = false,
-      watch = false,
-      verbose = true,
-      bail = false,
-      pattern = ''
-    } = options;
+  /**
+   * Ejecutar archivo de test específico
+   */
+  async runTestFile(testFile) {
+    this.info(`Ejecutando: ${testFile}`);
 
-    let command = 'npx jest';
-    
-    if (testFile) {
-      command += ` ${testFile}`;
-    }
-    
-    if (pattern) {
-      command += ` --testNamePattern="${pattern}"`;
-    }
-    
-    if (coverage) {
-      command += ' --coverage';
-    }
-    
-    if (watch) {
-      command += ' --watch';
-    }
-    
-    if (verbose) {
-      command += ' --verbose';
-    }
-    
-    if (bail) {
-      command += ' --bail';
-    }
-
-    this.info(`Running command: ${command}`);
-    
     try {
-      execSync(command, {
-        cwd: this.testDir,
-        stdio: 'inherit'
+      const testPath = path.join(this.testDir, testFile);
+
+      if (!existsSync(testPath)) {
+        throw new Error(`Archivo de test no encontrado: ${testFile}`);
+      }
+
+      // Ejecutar el test usando Node.js directamente
+      const result = execSync(`node "${testPath}"`, {
+        encoding: 'utf8',
+        stdio: 'pipe',
+        env: { ...process.env },
+        cwd: this.testDir
       });
-      this.success('Tests completed successfully');
-      return true;
+
+      this.success(`Completado: ${testFile}`);
+      return { success: true, output: result };
+
     } catch (error) {
-      this.error('Tests failed');
+      this.error(`Error en ${testFile}: ${error.message}`);
+
+      // Mostrar output del error si está disponible
+      if (error.stdout) {
+        console.log('STDOUT:', error.stdout);
+      }
+      if (error.stderr) {
+        console.log('STDERR:', error.stderr);
+      }
+
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Ejecutar todos los tests
+   */
+  async runAllTests() {
+    this.log('\n🧪 MySQL QueryBuilder - Test Runner', 'cyan');
+    this.log('==================================', 'cyan');
+
+    // Verificaciones previas
+    if (!this.checkEnvironment()) {
+      return false;
+    }
+
+    if (!this.checkTestFiles()) {
+      return false;
+    }
+
+    if (!await this.testDatabaseConnectivity()) {
+      return false;
+    }
+
+    // Ejecutar tests
+    this.log('\n🚀 Ejecutando tests de integración...', 'blue');
+
+    const testFiles = [
+      'mysql-driver.test.js'
+    ];
+
+    let totalTests = 0;
+    let passedTests = 0;
+    let failedTests = 0;
+
+    for (const testFile of testFiles) {
+      const result = await this.runTestFile(testFile);
+      totalTests++;
+
+      if (result.success) {
+        passedTests++;
+      } else {
+        failedTests++;
+      }
+    }
+
+    // Resumen final
+    this.log('\n📊 Resumen de Tests', 'cyan');
+    this.log('==================', 'cyan');
+    console.log(`Total de archivos: ${totalTests}`);
+    console.log(`✅ Exitosos: ${passedTests}`);
+    console.log(`❌ Fallidos: ${failedTests}`);
+
+    if (failedTests === 0) {
+      this.success('🎉 Todos los tests pasaron correctamente!');
+      return true;
+    } else {
+      this.error(`💥 ${failedTests} test(s) fallaron`);
       return false;
     }
   }
 
-  runDriverTests() {
-    this.log('🧪 Running MySqlDriver Tests', 'cyan');
-    return this.runTests({ testFile: 'mysql-driver.test.js' });
-  }
-
-  runAllTests() {
-    this.log('🧪 Running All MySQL Tests', 'cyan');
-    return this.runTests();
-  }
-
-  runTestsWithCoverage() {
-    this.log('📊 Running Tests with Coverage', 'cyan');
-    return this.runTests({ coverage: true });
-  }
-
-  runTestsInWatchMode() {
-    this.log('👀 Running Tests in Watch Mode', 'cyan');
-    return this.runTests({ watch: true });
-  }
-
-  runSpecificTest(testName) {
-    this.log(`🎯 Running Specific Test: ${testName}`, 'cyan');
-    return this.runTests({ pattern: testName });
-  }
-
+  /**
+   * Mostrar ayuda de uso
+   */
   showHelp() {
     console.log(`
-${this.colors.cyan}MySQL Driver Test Runner${this.colors.reset}
+🧪 MySQL QueryBuilder Test Runner
 
-Usage: node run-tests.js [command] [options]
+Uso:
+  node run-tests.js [opciones]
 
-Commands:
-  driver                Run only MySqlDriver tests
-  all                   Run all MySQL tests
-  coverage              Run tests with coverage report
-  watch                 Run tests in watch mode
-  specific <pattern>    Run tests matching pattern
-  install               Install test dependencies
-  check                 Check dependencies and setup
-  help                  Show this help message
+Opciones:
+  --help, -h          Mostrar esta ayuda
+  --driver           Ejecutar solo tests del driver
+  --check-env        Solo verificar configuración del entorno
+  --check-db         Solo probar conectividad de base de datos
 
-Examples:
-  node run-tests.js driver
-  node run-tests.js coverage
-  node run-tests.js specific "should connect"
-  node run-tests.js watch
+Configuración:
+  La configuración se carga desde: packages/@querybuilder/core/config.js
+  Sección utilizada: config.testing.MySQL
+  Base de datos: MariaDB (puerto 3306)
+  Base de datos de test: querybuilder_test
 
-Environment Variables:
-  MYSQL_TEST_HOST       MySQL test server host (default: localhost)
-  MYSQL_TEST_PORT       MySQL test server port (default: 3306)
-  MYSQL_TEST_USER       MySQL test user (default: test_user)
-  MYSQL_TEST_PASSWORD   MySQL test password (default: test_password)
-  MYSQL_TEST_DATABASE   MySQL test database (default: test_db)
+Nota:
+  Ya no se requieren variables de entorno.
+  Toda la configuración está centralizada en core/config.js
 
-${this.colors.yellow}Note: Make sure you have a MySQL server running for integration tests${this.colors.reset}
-    `);
+Ejemplos:
+  node run-tests.js
+  node run-tests.js --driver
+  node run-tests.js --check-env
+`);
+  }
+}
+
+/**
+ * Función principal
+ */
+async function main() {
+  const runner = new TestRunner();
+  const args = process.argv.slice(2);
+
+  // Procesar argumentos
+  if (args.includes('--help') || args.includes('-h')) {
+    runner.showHelp();
+    process.exit(0);
   }
 
-  async run() {
-    const args = process.argv.slice(2);
-    const command = args[0] || 'help';
-    const option = args[1];
+  if (args.includes('--check-env')) {
+    const envOk = runner.checkEnvironment();
+    process.exit(envOk ? 0 : 1);
+  }
 
-    this.log('🚀 MySQL QueryBuilder Test Runner', 'magenta');
-    console.log('─'.repeat(50));
-
-    switch (command) {
-      case 'check':
-        return this.checkDependencies();
-
-      case 'install':
-        if (!this.checkDependencies()) return false;
-        return this.installDependencies();
-
-      case 'driver':
-        if (!this.checkDependencies()) return false;
-        return this.runDriverTests();
-
-      case 'all':
-        if (!this.checkDependencies()) return false;
-        return this.runAllTests();
-
-      case 'coverage':
-        if (!this.checkDependencies()) return false;
-        return this.runTestsWithCoverage();
-
-      case 'watch':
-        if (!this.checkDependencies()) return false;
-        return this.runTestsInWatchMode();
-
-      case 'specific':
-        if (!option) {
-          this.error('Please provide a test pattern');
-          return false;
-        }
-        if (!this.checkDependencies()) return false;
-        return this.runSpecificTest(option);
-
-      case 'help':
-      default:
-        this.showHelp();
-        return true;
+  if (args.includes('--check-db')) {
+    try {
+      const dbOk = await runner.testDatabaseConnectivity();
+      process.exit(dbOk ? 0 : 1);
+    } catch (error) {
+      runner.error(`Error: ${error.message}`);
+      process.exit(1);
     }
   }
-}
 
-// Ejecutar si el archivo se llama directamente
-if (import.meta.url === `file://${process.argv[1]}`) {
-  const runner = new TestRunner();
-  
-  runner.run()
-    .then(success => {
-      process.exit(success ? 0 : 1);
-    })
-    .catch(error => {
-      console.error('❌ Unexpected error:', error);
+  if (args.includes('--driver')) {
+    try {
+      const result = await runner.runTestFile('mysql-driver.test.js');
+      process.exit(result.success ? 0 : 1);
+    } catch (error) {
+      runner.error(`Error: ${error.message}`);
       process.exit(1);
-    });
+    }
+  }
+
+  // Ejecutar todos los tests por defecto
+  try {
+    const success = await runner.runAllTests();
+    process.exit(success ? 0 : 1);
+  } catch (error) {
+    runner.error(`Error fatal: ${error.message}`);
+    process.exit(1);
+  }
 }
 
-export default TestRunner;
+// Manejo de señales para limpieza
+process.on('SIGINT', async () => {
+  console.log('\n🛑 Interrumpido por usuario...');
+  await cleanupDatabase();
+  process.exit(130);
+});
+
+process.on('SIGTERM', async () => {
+  console.log('\n🛑 Terminando...');
+  await cleanupDatabase();
+  process.exit(143);
+});
+
+// Ejecutar si es el módulo principal
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main();
+}

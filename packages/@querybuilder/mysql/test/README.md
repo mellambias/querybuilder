@@ -1,363 +1,252 @@
-# MySQL QueryBuilder - Tests
+# MySQL QueryBuilder - Tests de Integración
 
-Este directorio contiene la suite completa de tests para el módulo MySQL del QueryBuilder.
+Este directorio contiene tests de integración para el módulo MySQL del QueryBuilder, utilizando una **base de datos MariaDB real** con configuración centralizada desde `core/config.js`.
 
-## 📋 Estructura de Tests
+## 🔧 Configuración
 
+### Configuración Centralizada
+Los tests usan la configuración desde `packages/@querybuilder/core/config.js`:
+
+```javascript
+testing: {
+  MySQL: {
+    version: "",
+    driver: MySqlDriver,
+    params: {
+      host: "localhost",
+      port: "3306",
+      username: "root", 
+      password: "d4t55qpl",
+      database: "querybuilder_test"
+    }
+  }
+}
 ```
-test/
-├── mysql-driver.test.js           # Tests para MySqlDriver
-├── mysql-integration.test.js      # Tests de integración 
-├── mysql-extended.test.js         # Tests para MySqlExtended
-├── mysql-extended-simple.test.js  # Tests básicos MySqlExtended
-├── package.json                   # Configuración Jest y dependencias
-├── test-setup.js                  # Configuración global de tests
-├── run-tests.js                   # Script runner de tests
-└── README.md                      # Esta documentación
-```
 
-## 🚀 Ejecución de Tests
+### Base de Datos
+- **Motor**: MariaDB (puerto 3306)
+- **Base de datos de test**: `querybuilder_test` (se crea automáticamente)
+- **Usuario**: root con la contraseña configurada en config.js
 
-### Scripts Disponibles
+## 🚀 Ejecutar Tests
+
+### Comandos Disponibles
 
 ```bash
 # Ejecutar todos los tests
 npm test
 
-# Tests específicos del driver
+# Solo tests del driver
 npm run test:driver
 
-# Tests con coverage
-npm run test:coverage
+# Verificar configuración
+node run-tests.js --check-env
 
-# Tests en modo watch
-npm run test:watch
+# Probar conectividad con la base de datos
+node run-tests.js --check-db
 
-# Tests de integración
-npm run test:integration
+# Ver ayuda
+node run-tests.js --help
 ```
 
-### Usando el Test Runner
+## 📁 Estructura de Archivos
 
-```bash
-# Runner personalizado
-node run-tests.js [comando]
-
-# Comandos disponibles:
-node run-tests.js driver          # Solo tests del driver
-node run-tests.js all             # Todos los tests
-node run-tests.js coverage        # Con reporte de cobertura
-node run-tests.js watch           # Modo watch
-node run-tests.js specific "test" # Test específico
-node run-tests.js install         # Instalar dependencias
-node run-tests.js check           # Verificar setup
+```
+test/
+├── package.json                 # Configuración sin Jest, solo mysql2
+├── test-setup.js               # Setup usando core/config.js
+├── mysql-driver.test.js        # Tests de integración del MySqlDriver
+├── run-tests.js               # Test runner personalizado
+└── README.md                  # Este archivo
 ```
 
 ## 🧪 Tipos de Tests
 
-### 1. Unit Tests (mysql-driver.test.js)
+### Tests de Integración
+Los tests verifican el funcionamiento real del MySqlDriver:
 
-Tests unitarios para la clase `MySqlDriver`:
+- **Conexión**: Conexión real a MariaDB con credenciales del config.js
+- **Queries**: Ejecución de SELECT, INSERT, CREATE TABLE, etc.
+- **Manejo de Errores**: Queries con sintaxis incorrecta, tablas inexistentes
+- **Transacciones**: BEGIN, COMMIT, ROLLBACK (cuando esté implementado)
+- **Limpieza**: Cierre correcto de conexiones
 
-- ✅ **Constructor**: Inicialización y herencia
-- ✅ **Conexión**: Establecer conexión con MySQL
-- ✅ **Ejecución**: Queries simples y múltiples
-- ✅ **Transacciones**: Manejo de transacciones
-- ✅ **Errores**: Gestión de errores SQL
-- ✅ **Cierre**: Cerrar conexiones
-- ✅ **Integración**: Flujos completos
+### Ventajas de Configuración Centralizada
+- ✅ Una sola fuente de verdad para todas las configuraciones
+- ✅ No necesita variables de entorno
+- ✅ Fácil de mantener y actualizar
+- ✅ Consistencia entre desarrollo y testing
+- ✅ Configuración versionada en git
 
-### 2. Integration Tests (mysql-integration.test.js)
+## 🗄️ Gestión de Base de Datos
 
-Tests de integración con base de datos real:
+### Creación Automática
+Los tests crean automáticamente:
+- Base de datos `querybuilder_test` (si no existe)
+- Tablas temporales para cada test
+- Pool de conexiones gestionado
 
-- 🔄 **CRUD Operations**: Create, Read, Update, Delete
-- 🔗 **Joins**: Consultas con múltiples tablas
-- 📊 **Aggregations**: GROUP BY, SUM, COUNT, etc.
-- 🏗️ **DDL**: CREATE, ALTER, DROP tables
-- 🔒 **Transactions**: BEGIN, COMMIT, ROLLBACK
-- 🎯 **Performance**: Tests de rendimiento
+### Limpieza Automática
+- Tablas temporales se eliminan después de cada test
+- Conexiones se cierran al finalizar
+- Pool de conexiones se limpia correctamente
 
-### 3. Extended Tests (mysql-extended.test.js)
+### Aislamiento de Tests
+- Cada test usa tablas con nombres únicos generados automáticamente
+- No hay interferencia entre tests
+- Base de datos se mantiene limpia
 
-Tests para funcionalidades avanzadas:
+## ⚙️ Configuración Avanzada
 
-- 🔧 **MySQL Extended**: Funciones específicas MySQL
-- 📝 **Query Builder**: Construcción fluida de queries
-- 🎛️ **Functions**: Funciones SQL avanzadas
-- 🎯 **Operators**: Operadores MySQL específicos
-- 📊 **Types**: Sistema de tipos MySQL
+### Modificar Configuración de Test
+Editar `packages/@querybuilder/core/config.js`:
 
-## ⚙️ Configuración
-
-### Variables de Entorno
-
-```bash
-# Base de datos de testing
-MYSQL_TEST_HOST=localhost
-MYSQL_TEST_PORT=3306
-MYSQL_TEST_USER=test_user
-MYSQL_TEST_PASSWORD=test_password
-MYSQL_TEST_DATABASE=test_db
-
-# Configuración de tests
-NODE_ENV=test
-TEST_TIMEOUT=30000
-```
-
-### Setup de Base de Datos
-
-Para tests de integración, necesitas una base de datos MySQL:
-
-```sql
--- Crear usuario de testing
-CREATE USER 'test_user'@'localhost' IDENTIFIED BY 'test_password';
-
--- Crear base de datos de testing
-CREATE DATABASE test_db;
-
--- Otorgar permisos
-GRANT ALL PRIVILEGES ON test_db.* TO 'test_user'@'localhost';
-FLUSH PRIVILEGES;
-```
-
-### Jest Configuration
-
-El archivo `package.json` incluye configuración Jest optimizada para ES modules:
-
-```json
-{
-  "jest": {
-    "preset": "default",
-    "testEnvironment": "node",
-    "extensionsToTreatAsEsm": [".js"],
-    "moduleNameMapping": {
-      "^(\\.{1,2}/.*)\\.js$": "$1"
-    },
-    "setupFilesAfterEnv": ["<rootDir>/test-setup.js"]
+```javascript
+testing: {
+  MySQL: {
+    params: {
+      host: "localhost",        // Cambiar host si es necesario
+      port: "3306",            // Puerto de MariaDB
+      username: "root",        // Usuario de BD
+      password: "tu_password", // Tu contraseña
+      database: "querybuilder_test" // BD de test
+    }
   }
 }
 ```
 
-## 📊 Coverage Reports
-
-Los tests generan reportes de cobertura en:
-
-```
-coverage/
-├── lcov-report/     # Reporte HTML
-├── lcov.info        # Formato LCOV
-└── coverage.json    # Datos de cobertura
-```
-
-### Métricas de Cobertura
-
-- **Statements**: >90%
-- **Branches**: >85%
-- **Functions**: >95%
-- **Lines**: >90%
-
-## 🧰 Utilities y Helpers
-
-### Test Helpers (test-setup.js)
-
-Funciones utilitarias disponibles globalmente:
-
+### Personalizar Timeout
+En `test-setup.js`, modificar:
 ```javascript
-// Parámetros de conexión de prueba
-const params = testHelpers.createTestConnectionParams();
-
-// Mock de ResultSetHeader
-const header = testHelpers.createMockResultSetHeader({
-  affectedRows: 1,
-  insertId: 123
-});
-
-// Mock de resultados SELECT
-const result = testHelpers.createMockSelectResult(
-  [{ id: 1, name: 'test' }],
-  ['id', 'name']
-);
-
-// Error SQL de prueba
-const error = testHelpers.createMockSqlError('Table not found');
-
-// Datos de usuario de prueba
-const users = testHelpers.getTestUsers();
-
-// Crear tabla de prueba
-const createTable = testHelpers.createTestTable('users');
+const DB_TIMEOUT = 30000; // 30 segundos
 ```
-
-### Mocks Globales
-
-Mocks automáticos disponibles:
-
-```javascript
-// Mock de mysql2/promise
-global.mockMysql2.createConnection();
-global.mockMysql2.createPool();
-
-// Funciones de utilidad
-global.silenceConsole();     // Silenciar console.log
-global.restoreConsole();     // Restaurar console
-global.cleanupTest();        // Limpiar después de test
-```
-
-## 🐛 Debugging Tests
-
-### Debug Individual
-
-```bash
-# Test específico con debug
-node --inspect-brk run-tests.js specific "should connect"
-
-# Con logs detallados
-DEBUG=* npm test
-```
-
-### Debug en VSCode
-
-Configuración `.vscode/launch.json`:
-
-```json
-{
-  "type": "node",
-  "request": "launch",
-  "name": "Debug MySQL Tests",
-  "program": "${workspaceFolder}/packages/@querybuilder/mysql/test/run-tests.js",
-  "args": ["driver"],
-  "console": "integratedTerminal",
-  "skipFiles": ["<node_internals>/**"]
-}
-```
-
-## 📝 Escribir Nuevos Tests
-
-### Template Básico
-
-```javascript
-describe('Nueva Funcionalidad', () => {
-  let driver;
-  
-  beforeEach(() => {
-    driver = new MySqlDriver(testHelpers.createTestConnectionParams());
-  });
-  
-  afterEach(async () => {
-    await driver.close();
-  });
-  
-  test('debe hacer algo específico', async () => {
-    // Arrange
-    const query = 'SELECT 1';
-    
-    // Act
-    await driver.execute(query);
-    const response = driver.response();
-    
-    // Assert
-    expect(response.count).toBe(1);
-  });
-});
-```
-
-### Best Practices
-
-1. **Aislamiento**: Cada test debe ser independiente
-2. **Cleanup**: Limpiar recursos después de cada test
-3. **Mocks**: Usar mocks para dependencias externas
-4. **Descriptive**: Nombres descriptivos de tests
-5. **AAA Pattern**: Arrange, Act, Assert
 
 ## 🔍 Troubleshooting
 
-### Problemas Comunes
+### Error: "Access denied for user"
+```bash
+# Verificar credenciales en config.js
+# Conectar manualmente para probar:
+mysql -h localhost -P 3306 -u root -p
 
-1. **Connection Issues**:
-   ```bash
-   Error: connect ECONNREFUSED 127.0.0.1:3306
-   ```
-   - Verificar que MySQL esté ejecutándose
-   - Revisar variables de entorno
+# Verificar permisos:
+GRANT ALL PRIVILEGES ON querybuilder_test.* TO 'root'@'localhost';
+FLUSH PRIVILEGES;
+```
 
-2. **Permission Denied**:
-   ```bash
-   Error: Access denied for user 'test_user'@'localhost'
-   ```
-   - Verificar credenciales en variables de entorno
-   - Revisar permisos de usuario en MySQL
+### Error: "Can't connect to MySQL server"
+```bash
+# Verificar que MariaDB esté ejecutándose
+# Windows:
+net start mariadb
 
-3. **Module Not Found**:
-   ```bash
-   Cannot find module 'mysql2/promise'
-   ```
-   - Ejecutar `npm install` en directorio de tests
-   - Verificar dependencias en package.json
+# Linux/macOS:
+sudo systemctl start mariadb
+# o
+brew services start mariadb
+```
 
-### Logs de Debug
+### Error: "Database doesn't exist"
+Los tests crean la base de datos automáticamente, pero el usuario debe tener permisos:
+```sql
+GRANT CREATE ON *.* TO 'root'@'localhost';
+```
+
+### Configuración no encontrada
+- Verificar que `core/config.js` existe
+- Verificar que la sección `testing.MySQL` está configurada
+- Verificar las rutas de import en los archivos de test
+
+## 📋 Ejemplo de Ejecución
 
 ```bash
-# Habilitar logs detallados
-export DEBUG=mysql:*,querybuilder:*
-npm test
+$ npm test
 
-# Solo logs de conexión
-export DEBUG=mysql:connection
-npm test
+🧪 MySQL QueryBuilder Test Runner
+==================================
+ℹ️  Verificando configuración del entorno...
+Configuración desde core/config.js:
+  Host: localhost
+  Puerto: 3306
+  Usuario: root
+  Base de datos: querybuilder_test
+  Driver: MariaDB (puerto 3306)
+✅ Configuración cargada correctamente desde core/config.js
+
+ℹ️  Verificando archivos de test...
+✅ Encontrado: mysql-driver.test.js
+✅ Encontrado: test-setup.js
+
+ℹ️  Probando conectividad con la base de datos...
+📊 Test database 'querybuilder_test' created or verified
+🧪 MySQL Test Database initialized (MariaDB)
+📊 Test Database: querybuilder_test
+🏠 Test Host: localhost:3306
+👤 Test User: root
+🔧 Using configuration from: @querybuilder/core/config.js
+✅ Base de datos de pruebas disponible
+
+🚀 Ejecutando tests de integración...
+🚀 Starting MySQL Driver Integration Tests
+
+📋 Constructor y Configuración
+✅ debería crear una instancia con parámetros válidos (2ms)
+✅ debería manejar parámetros de conexión faltantes (1ms)
+✅ debería configurar parámetros por defecto correctamente (0ms)
+
+📋 Conexión a Base de Datos
+✅ debería conectar exitosamente con parámetros válidos (45ms)
+✅ debería fallar con credenciales incorrectas (1015ms)
+✅ debería manejar timeout de conexión (1002ms)
+
+📋 Ejecución de Queries
+✅ debería ejecutar SELECT simple correctamente (12ms)
+✅ debería crear tabla de prueba (23ms)
+✅ debería insertar y recuperar datos (31ms)
+✅ debería manejar queries con error de sintaxis (8ms)
+
+📋 Cierre de Conexión
+✅ debería cerrar conexión correctamente (5ms)
+✅ debería manejar múltiples llamadas a close() (25ms)
+
+📊 Test Results Summary:
+========================
+Total Tests: 10
+✅ Passed: 10
+❌ Failed: 0
+📈 Success Rate: 100.0%
+🎉 Todos los tests pasaron correctamente!
 ```
 
-## 📈 Métricas y Performance
+## 🔄 Cambios Recientes
 
-### Benchmarks
+### Migración a Configuración Centralizada
+- ❌ **Antes**: Variables de entorno (`MYSQL_TEST_*`)
+- ✅ **Ahora**: Configuración en `core/config.js`
+- ✅ **Beneficio**: Una sola fuente de configuración para todo el proyecto
 
-Los tests incluyen métricas de rendimiento:
-
-- **Conexión**: < 100ms
-- **Query Simple**: < 50ms
-- **Query Compleja**: < 500ms
-- **Transacción**: < 200ms
-
-### Monitoring
-
+### Estructura de Configuración
 ```javascript
-// Medir tiempo de ejecución
-console.time('test-execution');
-await driver.execute(query);
-console.timeEnd('test-execution');
-
-// Memory usage
-const used = process.memoryUsage();
-console.log('Memory usage:', used);
+// Estructura en core/config.js
+config = {
+  databases: {
+    // Configuraciones de desarrollo/producción
+    MySql8: { /* MySQL 8 en puerto 3308 */ },
+    MariaDB: { /* MariaDB en puerto 3306 */ },
+    PostgreSQL: { /* PostgreSQL */ },
+    MongoDB: { /* MongoDB */ }
+  },
+  testing: {
+    // Configuraciones específicas para tests
+    MySQL: { /* MariaDB para tests */ },
+    PostgreSQL: { /* PostgreSQL para tests */ },
+    MongoDB: { /* MongoDB para tests */ }
+  }
+}
 ```
 
-## 🎯 Roadmap de Tests
-
-### Próximas Mejoras
-
-- [ ] Tests de stress/carga
-- [ ] Tests de concurrencia
-- [ ] Tests de failover
-- [ ] Benchmarks automatizados
-- [ ] Tests de seguridad
-- [ ] Tests de migración
-
-### Tests Faltantes
-
-- [ ] Pool de conexiones
-- [ ] Prepared statements
-- [ ] Streaming de resultados
-- [ ] Bulk operations
-- [ ] SSL connections
-
----
-
-## 💡 Tips de Desarrollo
-
-1. **TDD**: Escribir tests antes del código
-2. **Coverage**: Mantener >90% de cobertura
-3. **Fast Tests**: Tests unitarios < 100ms
-4. **Isolation**: Tests independientes entre sí
-5. **Documentation**: Documentar casos complejos
-
-Para más información, revisar la documentación principal del QueryBuilder.
+### Ventajas del Nuevo Enfoque
+- 🔧 Configuración centralizada y versionada
+- 🚀 Setup más simple (sin variables de entorno)
+- 📊 Consistencia entre desarrollo y testing
+- 🔄 Fácil cambio entre diferentes motores de BD
