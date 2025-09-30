@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      mysql2:
+        specifier: ^3.0.0
+        version: 3.11.3
       pg:
         specifier: ^8.0.0
         version: 8.13.0
