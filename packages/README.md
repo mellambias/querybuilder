@@ -6,23 +6,24 @@ Este monorepo contiene los paquetes modulares de QueryBuilder, una biblioteca pa
 
 ### @querybuilder/core
 El paquete principal que contiene la funcionalidad base del QueryBuilder con soporte para SQL2006 estándar.
+Permite obtener la "query" en formato texto
 
 ```javascript
 import { QueryBuilder, SQL2006 } from '@querybuilder/core';
 ```
 
 ### @querybuilder/mysql
-Adaptador específico para MySQL con características propias de MySQL.
+Adaptador específico para MySQL y un Querybuilder con características propias MySQLExtended.
 
 ```javascript
-import { MySQL } from '@querybuilder/mysql';
+import { MySQL, MySQLExtended } from '@querybuilder/mysql';
 ```
 
 ### @querybuilder/postgresql
-Adaptador específico para PostgreSQL con características propias de PostgreSQL.
+Adaptador específico para PostgreSQL y un Querybuilder con características propias de PostgreSQLExtended.
 
 ```javascript
-import { PostgreSQL } from '@querybuilder/postgresql';
+import { PostgreSQL, PostgreSQLExtended } from '@querybuilder/postgresql';
 ```
 
 ### @querybuilder/mongodb
@@ -34,20 +35,20 @@ import { MongoDB } from '@querybuilder/mongodb';
 
 ## Instalación
 
-Puedes instalar solo los paquetes que necesites:
+El único módulo obligatorio es el core e instalar solo los paquetes que necesites:
 
 ```bash
-# Para SQL estándar
-npm install @querybuilder/core
+# Obligatorio son soporte SQL2006
+pnpm install @querybuilder/core
 
-# Para MySQL específico
-npm install @querybuilder/mysql
+# Controladores para MySQL / MariaDB 
+pnpm install @querybuilder/mysql
 
-# Para PostgreSQL específico
-npm install @querybuilder/postgresql
+# Controladores para PostgreSQL
+pnpm install @querybuilder/postgresql
 
-# Para MongoDB
-npm install @querybuilder/mongodb
+# PaControladores MongoDB
+pnpm install @querybuilder/mongodb
 ```
 
 ## Uso básico
@@ -57,13 +58,20 @@ npm install @querybuilder/mongodb
 import { QueryBuilder } from '@querybuilder/core';
 
 const qb = new QueryBuilder();
-const query = qb.select('*').from('users').where('active', '=', 1);
+const query = await qb.select('*').from('users').where('active = 1').toString();
+// devuelve la sentencia
+SELECT * FROM users WHERE active = 1;
 
 // Usando adaptadores específicos
 import { MySQL } from '@querybuilder/mysql';
 
-const mysql = new MySQL();
-const mysqlQuery = mysql.select('*').from('users').limit(10);
+const qb = new QueryBuilder(MySQL);
+const mysqlQuery = await qb.select('*')
+.from('users')
+.limit(10)
+.execute();
+
+Devuelve el resultado de "SELECT * FROM users LIMIT 10;"
 ```
 
 ## Estructura del monorepo

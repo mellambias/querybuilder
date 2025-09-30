@@ -1,10 +1,10 @@
 /*
 Implementa las variaciones al SQL2006 propias de los NoSQL
 */
-import Core from "../core.js";
+import Core from "../core/core.js";
 import mongo from "./comandos/mongoDB.js";
 import Command from "./Command.js";
-import QueryBuilder from "../querybuilder.js";
+import QueryBuilder from "../core/querybuilder.js";
 
 class MongoDB extends Core {
 	constructor(qbuilder) {

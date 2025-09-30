@@ -1,4 +1,4 @@
-import { splitCommand } from "../../utils/utils.js";
+import { splitCommand } from "../../../core/utils/utils.js";
 
 export const sqlToMongo = {
 	select: "find",

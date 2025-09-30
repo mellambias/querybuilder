@@ -37,7 +37,7 @@ npm install @querybuilder/core @querybuilder/mysql @querybuilder/postgresql @que
 
 ### Configurar Base de Datos
 ```bash
-# 1. Copiar template de configuración
+# 1. Copiar template de configuración en el directorio del core
 copy config.example.js config.js
 
 # 2. Editar config.js con tus credenciales
@@ -51,10 +51,11 @@ copy config.example.js config.js
 ### MySQL
 ```javascript
 import { QueryBuilder } from "@querybuilder/core";
-import { MySQL, MySqlDriver } from "@querybuilder/mysql";
+import { MySQL} from "@querybuilder/mysql";
 import config from "./config.js";
 
-const qb = new QueryBuilder(MySQL).driver(MySqlDriver, config.databases.MySql8.params);
+const mysql = config.databases.MySql8
+const qb = new QueryBuilder(MySQL).driver(mysql.driver, mysql.params);
 
 // Crear tabla
 await qb.createTable("users", {
@@ -70,23 +71,24 @@ await qb.table("users")
 
 // Consultar datos
 const users = await qb.table("users")
-  .where("name", "LIKE", "%Juan%")
   .select("*")
+  .where(qb.like("name", "%Juan%"))
   .execute();
 ```
 
 ### PostgreSQL
 ```javascript
 import { QueryBuilder } from "@querybuilder/core";
-import { PostgreSQL, PostgreSQLDriver } from "@querybuilder/postgresql";
+import { PostgreSQL, PostgreSQLExtended} from "@querybuilder/postgresql";
 import config from "./config.js";
 
-const qb = new QueryBuilder(PostgreSQL).driver(PostgreSQLDriver, config.databases.PostgreSQL.params);
+const postgreSQL = config.databases.PostgreSQL;
+const qb = new PostgreSQLExtended(PostgreSQL).driver(postgreSQL.driver, postgreSQL.params);
 
 // Consulta con JSONB (PostgreSQL específico)
 const result = await qb.table("products")
-  .whereJsonContains("metadata", { category: "electronics" })
   .select("*")
+  .whereJsonContains("metadata", { category: "electronics" })
   .execute();
 ```
 
@@ -96,7 +98,8 @@ import { QueryBuilder } from "@querybuilder/core";
 import { MongoDB, MongodbDriver } from "@querybuilder/mongodb";
 import config from "./config.js";
 
-const qb = new QueryBuilder(MongoDB).driver(MongodbDriver, config.databases.MongoDB.params);
+const mongoDB = config.databases.MongoDB
+const qb = new QueryBuilder(MongoDB).driver(mongoDB.driver, mongoDB.params);
 
 // Operaciones NoSQL con sintaxis familiar
 await qb.collection("users")
@@ -104,8 +107,8 @@ await qb.collection("users")
   .execute();
 
 const users = await qb.collection("users")
-  .where("name", "Juan")
   .select()
+  .where("name", "Juan")
   .execute();
 ```
 

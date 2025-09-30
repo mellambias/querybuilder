@@ -10,6 +10,7 @@
 import fs from 'fs-extra';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { execSync } from 'child_process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,6 +22,72 @@ const DIST_DIR = path.join(ROOT_DIR, 'dist');
 console.log('🏗️ Building NPM Distribution for QueryBuilder');
 console.log('==============================================');
 
+// 🎯 **FUNCIÓN PARA EJECUTAR ROLLUP BUILD**
+async function runRollupBuild() {
+  console.log('🚀 Running Rollup optimization...');
+  try {
+    execSync('npx rollup -c', {
+      stdio: 'inherit',
+      cwd: ROOT_DIR
+    });
+    console.log('✅ Rollup build completed successfully');
+  } catch (error) {
+    console.error('❌ Rollup build failed:', error.message);
+    throw error;
+  }
+}
+
+// 🧹 **FUNCIÓN PARA LIMPIAR ARCHIVOS NO MINIFICADOS**
+async function cleanupNonMinifiedFiles() {
+  console.log('\n🧹 Removing non-minified files from distribution...');
+
+  const filesToRemove = [
+    // Core - archivos originales
+    'dist/@querybuilder/core/querybuilder.js',
+    'dist/@querybuilder/core/core.js',
+    'dist/@querybuilder/core/column.js',
+    'dist/@querybuilder/core/expresion.js',
+    'dist/@querybuilder/core/cursor.js',
+    'dist/@querybuilder/core/transaction.js',
+    'dist/@querybuilder/core/value.js',
+    'dist/@querybuilder/core/proxy.js',
+    'dist/@querybuilder/core/drivers/Driver.js',
+    'dist/@querybuilder/core/results/Result.js',
+    'dist/@querybuilder/core/utils/utils.js',
+    'dist/@querybuilder/core/types/dataTypes.js',
+    'dist/@querybuilder/core/types/privilegios.js',
+    'dist/@querybuilder/core/types/reservedWords.js',
+    'dist/@querybuilder/core/types/Type.js',
+
+    // MySQL - archivos originales
+    'dist/@querybuilder/mysql/MySQL.js',
+    'dist/@querybuilder/mysql/drivers/MySqlDriver.js',
+
+    // PostgreSQL - archivos originales
+    'dist/@querybuilder/postgresql/PostgreSQL.js',
+    'dist/@querybuilder/postgresql/postgresql-extended.js',
+    'dist/@querybuilder/postgresql/drivers/PostgreSQLDriver.js',
+
+    // MongoDB - archivos originales
+    'dist/@querybuilder/mongodb/MongoDB.js',
+    'dist/@querybuilder/mongodb/Command.js',
+    'dist/@querybuilder/mongodb/mongoUtils.js',
+    'dist/@querybuilder/mongodb/drivers/MongodbDriver.js'
+  ];
+
+  let removedCount = 0;
+  for (const file of filesToRemove) {
+    const filePath = path.join(ROOT_DIR, file);
+    if (await fs.pathExists(filePath)) {
+      await fs.remove(filePath);
+      console.log(`  🗑️  Removed ${file.replace('dist/@querybuilder/', '')}`);
+      removedCount++;
+    }
+  }
+
+  console.log(`✅ Cleanup completed: ${removedCount} non-minified files removed`);
+}
+
 async function main() {
   try {
     // Limpiar directorio dist
@@ -28,14 +95,26 @@ async function main() {
     await fs.remove(DIST_DIR);
     await fs.ensureDir(DIST_DIR);
 
-    // Build cada paquete
+    // 🚀 EJECUTAR ROLLUP PARA OPTIMIZACIÓN COMPLETA
+    await runRollupBuild();
+
+    // Build cada paquete con archivos adicionales
     await buildCore();
     await buildMySQL();
     await buildPostgreSQL();
     await buildMongoDB();
 
+    // 🧹 LIMPIAR ARCHIVOS NO MINIFICADOS
+    await cleanupNonMinifiedFiles();
+
     console.log('\n✅ Distribution build completed successfully!');
     console.log(`📁 Output directory: ${DIST_DIR}`);
+    console.log('\n📊 Generated files per package:');
+    console.log('├── {package}.min.js     - Production version (optimized)');
+    console.log('├── {package}.bundle.min.js - CDN bundle (UMD format)');
+    console.log('├── *.min.js             - All auxiliary files minified');
+    console.log('└── *.map               - Source maps for debugging');
+    console.log('\n🎯 Distribution contains ONLY minified files for maximum optimization');
     console.log('\n🚀 Next steps:');
     console.log('1. Review generated files in dist/');
     console.log('2. Test installation: npm run test:dist');
@@ -82,22 +161,28 @@ async function buildCore() {
     }
   }
 
-  // Generar package.json limpio
+  // Generar package.json limpio con exports optimizados
   const packageJson = {
     name: "@querybuilder/core",
     version: "1.0.0",
     description: "Universal QueryBuilder for SQL and NoSQL databases",
     type: "module",
-    main: "./src/index.js",
+    main: "./core.min.js",
+    module: "./core.min.js",
+    browser: "./core.min.js",
+    unpkg: "./core.bundle.min.js",
     exports: {
-      ".": "./src/index.js",
+      ".": "./core.min.js",
+      "./bundle": "./core.bundle.min.js",
       "./drivers": "./drivers/Driver.js",
       "./results": "./results/Result.js",
       "./types": "./types/dataTypes.js"
     },
     files: [
+      "core.min.js",
+      "core.bundle.min.js",
+      "*.map",
       "querybuilder.js",
-      "core.js",
       "column.js",
       "expresion.js",
       "cursor.js",
@@ -108,9 +193,8 @@ async function buildCore() {
       "results/",
       "types/",
       "utils/"
-      // "src/" - Removed: legacy directory not included in NPM package
     ],
-    keywords: ["querybuilder", "sql", "nosql", "database", "orm"],
+    keywords: ["querybuilder", "sql", "nosql", "database", "orm", "mysql", "postgresql", "mongodb"],
     author: "mellambias",
     license: "PROPRIETARY",
     repository: {
@@ -120,7 +204,8 @@ async function buildCore() {
     organization: "mellambias",
     engines: {
       node: ">=16.0.0"
-    }
+    },
+    sideEffects: false
   };
 
   await fs.writeJson(path.join(distDir, 'package.json'), packageJson, { spaces: 2 });
@@ -163,14 +248,24 @@ export { default as MysqlResult } from './results/MysqlResult.js';
   await fs.writeFile(path.join(distDir, 'index.js'), indexContent);
   console.log('  ✅ Generated index.js');
 
-  // Generar package.json
+  // Generar package.json optimizado
   const packageJson = {
     name: "@querybuilder/mysql",
     version: "1.0.0",
     description: "MySQL adapter for QueryBuilder",
     type: "module",
-    main: "./index.js",
+    main: "./mysql.min.js",
+    module: "./mysql.min.js",
+    browser: "./mysql.min.js",
+    unpkg: "./mysql.bundle.min.js",
+    exports: {
+      ".": "./mysql.min.js",
+      "./bundle": "./mysql.bundle.min.js"
+    },
     files: [
+      "mysql.min.js",
+      "mysql.bundle.min.js",
+      "*.map",
       "index.js",
       "MySQL.js",
       "drivers/",
@@ -181,7 +276,7 @@ export { default as MysqlResult } from './results/MysqlResult.js';
       "@querybuilder/core": "^1.0.0",
       "mysql2": "^3.0.0"
     },
-    keywords: ["querybuilder", "mysql", "sql", "database"],
+    keywords: ["querybuilder", "mysql", "sql", "database", "orm"],
     author: "mellambias",
     license: "PROPRIETARY",
     repository: {
@@ -191,7 +286,8 @@ export { default as MysqlResult } from './results/MysqlResult.js';
     organization: "mellambias",
     engines: {
       node: ">=16.0.0"
-    }
+    },
+    sideEffects: false
   };
 
   await fs.writeJson(path.join(distDir, 'package.json'), packageJson, { spaces: 2 });
@@ -237,14 +333,25 @@ export { default as PostgreSQLExtended } from './postgresql-extended.js';
   await fs.writeFile(path.join(distDir, 'index.js'), indexContent);
   console.log('  ✅ Generated index.js');
 
-  // Generar package.json
+  // Generar package.json optimizado
   const packageJson = {
     name: "@querybuilder/postgresql",
     version: "1.0.0",
     description: "PostgreSQL adapter for QueryBuilder with advanced features",
     type: "module",
-    main: "./index.js",
+    main: "./postgresql.min.js",
+    module: "./postgresql.min.js",
+    browser: "./postgresql.min.js",
+    unpkg: "./postgresql.bundle.min.js",
+    exports: {
+      ".": "./postgresql.min.js",
+      "./bundle": "./postgresql.bundle.min.js",
+      "./extended": "./postgresql-extended.js"
+    },
     files: [
+      "postgresql.min.js",
+      "postgresql.bundle.min.js",
+      "*.map",
       "index.js",
       "PostgreSQL.js",
       "postgresql-extended.js",
@@ -258,7 +365,7 @@ export { default as PostgreSQLExtended } from './postgresql-extended.js';
       "@querybuilder/core": "^1.0.0",
       "pg": "^8.0.0"
     },
-    keywords: ["querybuilder", "postgresql", "postgres", "sql", "database", "jsonb"],
+    keywords: ["querybuilder", "postgresql", "postgres", "sql", "database", "jsonb", "orm"],
     author: "mellambias",
     license: "PROPRIETARY",
     repository: {
@@ -268,7 +375,8 @@ export { default as PostgreSQLExtended } from './postgresql-extended.js';
     organization: "mellambias",
     engines: {
       node: ">=16.0.0"
-    }
+    },
+    sideEffects: false
   };
 
   await fs.writeJson(path.join(distDir, 'package.json'), packageJson, { spaces: 2 });
@@ -313,14 +421,25 @@ export * from './mongoUtils.js';
   await fs.writeFile(path.join(distDir, 'index.js'), indexContent);
   console.log('  ✅ Generated index.js');
 
-  // Generar package.json
+  // Generar package.json optimizado
   const packageJson = {
     name: "@querybuilder/mongodb",
     version: "1.0.0",
     description: "MongoDB adapter for QueryBuilder with NoSQL features",
     type: "module",
-    main: "./index.js",
+    main: "./mongodb.min.js",
+    module: "./mongodb.min.js",
+    browser: "./mongodb.min.js",
+    unpkg: "./mongodb.bundle.min.js",
+    exports: {
+      ".": "./mongodb.min.js",
+      "./bundle": "./mongodb.bundle.min.js",
+      "./utils": "./mongoUtils.js"
+    },
     files: [
+      "mongodb.min.js",
+      "mongodb.bundle.min.js",
+      "*.map",
       "index.js",
       "MongoDB.js",
       "Command.js",
@@ -332,7 +451,7 @@ export * from './mongoUtils.js';
       "@querybuilder/core": "^1.0.0",
       "mongodb": "^6.0.0"
     },
-    keywords: ["querybuilder", "mongodb", "nosql", "database", "document"],
+    keywords: ["querybuilder", "mongodb", "nosql", "database", "document", "orm"],
     author: "mellambias",
     license: "PROPRIETARY",
     repository: {
@@ -342,7 +461,8 @@ export * from './mongoUtils.js';
     organization: "mellambias",
     engines: {
       node: ">=16.0.0"
-    }
+    },
+    sideEffects: false
   };
 
   await fs.writeJson(path.join(distDir, 'package.json'), packageJson, { spaces: 2 });
