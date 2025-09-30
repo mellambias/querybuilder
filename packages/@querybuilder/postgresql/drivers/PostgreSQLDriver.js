@@ -3,7 +3,7 @@
  *
  * utiliza la libreria pg https://www.npmjs.com/package/pg
  */
-import Driver from "../../core/drivers/Driver.js";
+import { Driver } from "@querybuilder/core";
 import pg from "pg";
 const { Client } = pg;
 class PostgreSQLDriver extends Driver {

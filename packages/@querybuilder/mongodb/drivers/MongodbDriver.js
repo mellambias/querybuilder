@@ -3,7 +3,7 @@
  *
  * Utiliza el paquete mongodb https://www.npmjs.com/package/mongodb
  */
-import Driver from "../../core/drivers/Driver.js";
+import { Driver } from "@querybuilder/core";
 import { MongoClient } from "mongodb";
 import Command from "../Command.js";
 import { jsonReviver } from "../mongoUtils.js";

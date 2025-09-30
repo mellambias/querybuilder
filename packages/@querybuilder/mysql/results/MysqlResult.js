@@ -1,4 +1,4 @@
-import Result from "../../core/results/Result.js";
+import { Result } from "@querybuilder/core";
 
 class MysqlResult extends Result {
 	constructor(query, response) {
