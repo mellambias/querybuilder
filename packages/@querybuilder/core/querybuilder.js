@@ -1880,4 +1880,6 @@ class QueryBuilder {
 		};
 	}
 }
+// Exportaciones
 export default QueryBuilder;
+export { QueryBuilder };

@@ -28,6 +28,12 @@
     "publish:mysql": "cd dist/@querybuilder/mysql && npm publish",
     "publish:postgresql": "cd dist/@querybuilder/postgresql && npm publish",
     "publish:mongodb": "cd dist/@querybuilder/mongodb && npm publish",
+    "link:local": "node link-local.js",
+    "unlink:local": "node unlink-local.js",
+    "link:pnpm": "node link-pnpm.js",
+    "unlink:pnpm": "node unlink-pnpm.js",
+    "test:local": "node create-test-project.js",
+    "test:pnpm": "node create-test-pnpm.js",
     "demo": "node examples/package-separation-demo.js"
   },
   "devDependencies": {

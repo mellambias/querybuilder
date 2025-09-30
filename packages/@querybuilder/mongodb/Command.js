@@ -165,4 +165,6 @@ class Command {
 		return command;
 	}
 }
+// Exportaciones
 export default Command;
+export { Command };

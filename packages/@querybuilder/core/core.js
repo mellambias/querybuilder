@@ -13,10 +13,10 @@ class Core {
 		this.dataType = "sql2006";
 		this.q = []; // Initialize the query array
 		this.id = Math.random(); // Debug: unique id for each instance
-		
+
 		// Initialize Types.identificador for validSqlId method
 		Types.identificador.set("regular");
-		
+
 		this.predicados();
 		this.functionOneParam();
 		this.functionDate();
@@ -1305,5 +1305,7 @@ class Core {
 		return 'ON 1=1'; // fallback
 	}
 }
+// Exportaciones
 export default Core;
+export { Core };
 

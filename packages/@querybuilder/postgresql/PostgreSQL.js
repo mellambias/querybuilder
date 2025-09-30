@@ -280,4 +280,6 @@ class PostgreSQL extends Core {
 	}
 }
 
+// Exportaciones
 export default PostgreSQL;
+export { PostgreSQL };

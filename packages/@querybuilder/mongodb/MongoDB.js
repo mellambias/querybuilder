@@ -991,4 +991,6 @@ The view definition is public; i.e. db.getCollectionInfos() and explain operatio
 	}
 }
 
+// Exportaciones
 export default MongoDB;
+export { MongoDB };

@@ -179,4 +179,6 @@ class MySQL extends Core {
 		).trim();
 	}
 }
+// Exportaciones
 export default MySQL;
+export { MySQL };
