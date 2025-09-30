@@ -68,8 +68,8 @@ async function buildCore() {
     'drivers/',
     'results/',
     'types/',
-    'utils/',
-    'src/'
+    'utils/'
+    // 'src/' - Removed: legacy directory excluded from distribution
   ];
 
   for (const file of filesToCopy) {
@@ -96,7 +96,6 @@ async function buildCore() {
       "./types": "./types/dataTypes.js"
     },
     files: [
-      "src/",
       "querybuilder.js",
       "core.js",
       "column.js",
@@ -109,6 +108,7 @@ async function buildCore() {
       "results/",
       "types/",
       "utils/"
+      // "src/" - Removed: legacy directory not included in NPM package
     ],
     keywords: ["querybuilder", "sql", "nosql", "database", "orm"],
     author: "mellambias",
