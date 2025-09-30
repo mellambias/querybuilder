@@ -1,0 +1,28 @@
+{
+  "name": "@querybuilder/mysql",
+  "version": "1.0.0",
+  "description": "MySQL adapter for QueryBuilder",
+  "type": "module",
+  "main": "./index.js",
+  "files": [
+    "index.js",
+    "MySQL.js",
+    "drivers/",
+    "results/",
+    "comandos/"
+  ],
+  "dependencies": {
+    "@querybuilder/core": "^1.0.0",
+    "mysql2": "^3.0.0"
+  },
+  "keywords": [
+    "querybuilder",
+    "mysql",
+    "sql",
+    "database"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

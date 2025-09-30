@@ -1,0 +1,30 @@
+{
+  "name": "@querybuilder/mongodb",
+  "version": "1.0.0",
+  "description": "MongoDB adapter for QueryBuilder with NoSQL features",
+  "type": "module",
+  "main": "./index.js",
+  "files": [
+    "index.js",
+    "MongoDB.js",
+    "Command.js",
+    "mongoUtils.js",
+    "drivers/",
+    "comandos/"
+  ],
+  "dependencies": {
+    "@querybuilder/core": "^1.0.0",
+    "mongodb": "^6.0.0"
+  },
+  "keywords": [
+    "querybuilder",
+    "mongodb",
+    "nosql",
+    "database",
+    "document"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

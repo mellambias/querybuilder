@@ -1,0 +1,33 @@
+{
+  "name": "@querybuilder/postgresql",
+  "version": "1.0.0",
+  "description": "PostgreSQL adapter for QueryBuilder with advanced features",
+  "type": "module",
+  "main": "./index.js",
+  "files": [
+    "index.js",
+    "PostgreSQL.js",
+    "postgresql-extended.js",
+    "drivers/",
+    "comandos/",
+    "types.js",
+    "operators.js",
+    "functions.js"
+  ],
+  "dependencies": {
+    "@querybuilder/core": "^1.0.0",
+    "pg": "^8.0.0"
+  },
+  "keywords": [
+    "querybuilder",
+    "postgresql",
+    "postgres",
+    "sql",
+    "database",
+    "jsonb"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

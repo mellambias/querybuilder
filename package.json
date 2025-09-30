@@ -9,9 +9,22 @@
   "scripts": {
     "test": "node --test test/**/*.test.js",
     "build": "npm run build --workspaces",
+    "build:dist": "node build-npm-dist.js",
+    "test:dist": "node test-npm-distribution.js",
+    "pack:all": "npm run pack:core && npm run pack:mysql && npm run pack:postgresql && npm run pack:mongodb",
+    "pack:core": "cd dist/@querybuilder/core && npm pack",
+    "pack:mysql": "cd dist/@querybuilder/mysql && npm pack",
+    "pack:postgresql": "cd dist/@querybuilder/postgresql && npm pack",
+    "pack:mongodb": "cd dist/@querybuilder/mongodb && npm pack",
+    "publish:all": "npm run publish:core && npm run publish:mysql && npm run publish:postgresql && npm run publish:mongodb",
+    "publish:core": "cd dist/@querybuilder/core && npm publish",
+    "publish:mysql": "cd dist/@querybuilder/mysql && npm publish",
+    "publish:postgresql": "cd dist/@querybuilder/postgresql && npm publish",
+    "publish:mongodb": "cd dist/@querybuilder/mongodb && npm publish",
     "demo": "node examples/package-separation-demo.js"
   },
   "devDependencies": {
+    "fs-extra": "^11.3.2",
     "rollup": "4.0.0"
   },
   "dependencies": {
