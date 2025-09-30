@@ -1,0 +1,16 @@
+{
+  "name": "@querybuilder/mysql-tests",
+  "version": "1.0.0",
+  "description": "Test configuration for MySQL QueryBuilder module",
+  "type": "module",
+  "scripts": {
+    "test": "node run-tests.js",
+    "test:driver": "node mysql-driver.test.js",
+    "test:integration": "node mysql-integration.test.js",
+    "test:extended": "node mysql-extended.test.js",
+    "test:all": "node run-tests.js --all"
+  },
+  "dependencies": {
+    "mysql2": "^3.0.0"
+  }
+}
