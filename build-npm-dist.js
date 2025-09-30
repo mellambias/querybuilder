@@ -115,9 +115,9 @@ async function buildCore() {
     license: "MIT",
     repository: {
       type: "git",
-      url: "https://github.com/bdinfogestio/querybuilder.git"
+      url: "https://github.com/mellambias/querybuilder.git"
     },
-    organization: "bdinfogestio",
+    organization: "mellambias",
     engines: {
       node: ">=16.0.0"
     }
@@ -186,9 +186,9 @@ export { default as MysqlResult } from './results/MysqlResult.js';
     license: "MIT",
     repository: {
       type: "git",
-      url: "https://github.com/bdinfogestio/querybuilder.git"
+      url: "https://github.com/mellambias/querybuilder.git"
     },
-    organization: "bdinfogestio",
+    organization: "mellambias",
     engines: {
       node: ">=16.0.0"
     }
@@ -263,9 +263,9 @@ export { default as PostgreSQLExtended } from './postgresql-extended.js';
     license: "MIT",
     repository: {
       type: "git",
-      url: "https://github.com/bdinfogestio/querybuilder.git"
+      url: "https://github.com/mellambias/querybuilder.git"
     },
-    organization: "bdinfogestio",
+    organization: "mellambias",
     engines: {
       node: ">=16.0.0"
     }
@@ -337,9 +337,9 @@ export * from './mongoUtils.js';
     license: "MIT",
     repository: {
       type: "git",
-      url: "https://github.com/bdinfogestio/querybuilder.git"
+      url: "https://github.com/mellambias/querybuilder.git"
     },
-    organization: "bdinfogestio",
+    organization: "mellambias",
     engines: {
       node: ">=16.0.0"
     }

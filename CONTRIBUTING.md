@@ -169,8 +169,8 @@ constructor(dialect) {
 
 ## 📞 Contacto
 
-- **Issues**: [GitHub Issues](https://github.com/bdinfogestio/querybuilder/issues)
-- **Discusiones**: [GitHub Discussions](https://github.com/bdinfogestio/querybuilder/discussions)
+- **Issues**: [GitHub Issues](https://github.com/mellambias/querybuilder/issues)
+- **Discusiones**: [GitHub Discussions](https://github.com/mellambias/querybuilder/discussions)
 - **Email**: mellambias@gmail.com
 
 ## 🙏 Reconocimiento

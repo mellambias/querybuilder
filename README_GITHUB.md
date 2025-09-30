@@ -1,8 +1,8 @@
 # 🚀 QueryBuilder Universal
 
 [![NPM Version](https://img.shields.io/npm/v/@querybuilder/core?style=flat-square)](https://www.npmjs.com/package/@querybuilder/core)
-[![License](https://img.shields.io/github/license/bdinfogestio/querybuilder?style=flat-square)](https://github.com/bdinfogestio/querybuilder/blob/main/LICENSE)
-[![Build Status](https://img.shields.io/github/workflow/status/bdinfogestio/querybuilder/CI?style=flat-square)](https://github.com/bdinfogestio/querybuilder/actions)
+[![License](https://img.shields.io/github/license/mellambias/querybuilder?style=flat-square)](https://github.com/mellambias/querybuilder/blob/main/LICENSE)
+[![Build Status](https://img.shields.io/github/workflow/status/mellambias/querybuilder/CI?style=flat-square)](https://github.com/mellambias/querybuilder/actions)
 
 Un **QueryBuilder universal** que soporta tanto bases de datos **SQL** como **NoSQL** con una API unificada y elegante.
 
@@ -143,7 +143,7 @@ El QueryBuilder proporciona una interfaz consistente sin importar la base de dat
 ### Setup Local
 ```bash
 # Clonar repositorio
-git clone https://github.com/bdinfogestio/querybuilder.git
+git clone https://github.com/mellambias/querybuilder.git
 cd querybuilder
 
 # Instalar dependencias
@@ -189,7 +189,7 @@ Este proyecto está bajo la licencia [MIT](./LICENSE).
 
 ## 👤 **Autor**
 
-**mellambias** - [bdinfogestio](https://github.com/bdinfogestio)
+**mellambias** - [mellambias](https://github.com/mellambias)
 
 ## 🏆 **Agradecimientos**
 
@@ -197,6 +197,6 @@ Agradecemos a todos los contribuidores que han hecho posible este proyecto.
 
 ---
 
-**¿Problemas o sugerencias?** [Abre un issue](https://github.com/bdinfogestio/querybuilder/issues) 
+**¿Problemas o sugerencias?** [Abre un issue](https://github.com/mellambias/querybuilder/issues) 
 
 **¿Te gusta el proyecto?** ⭐ ¡Dale una estrella al repositorio!
