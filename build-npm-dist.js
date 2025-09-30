@@ -112,7 +112,7 @@ async function buildCore() {
     ],
     keywords: ["querybuilder", "sql", "nosql", "database", "orm"],
     author: "mellambias",
-    license: "MIT",
+    license: "PROPRIETARY",
     repository: {
       type: "git",
       url: "https://github.com/mellambias/querybuilder.git"
@@ -183,7 +183,7 @@ export { default as MysqlResult } from './results/MysqlResult.js';
     },
     keywords: ["querybuilder", "mysql", "sql", "database"],
     author: "mellambias",
-    license: "MIT",
+    license: "PROPRIETARY",
     repository: {
       type: "git",
       url: "https://github.com/mellambias/querybuilder.git"
@@ -260,7 +260,7 @@ export { default as PostgreSQLExtended } from './postgresql-extended.js';
     },
     keywords: ["querybuilder", "postgresql", "postgres", "sql", "database", "jsonb"],
     author: "mellambias",
-    license: "MIT",
+    license: "PROPRIETARY",
     repository: {
       type: "git",
       url: "https://github.com/mellambias/querybuilder.git"
@@ -334,7 +334,7 @@ export * from './mongoUtils.js';
     },
     keywords: ["querybuilder", "mongodb", "nosql", "database", "document"],
     author: "mellambias",
-    license: "MIT",
+    license: "PROPRIETARY",
     repository: {
       type: "git",
       url: "https://github.com/mellambias/querybuilder.git"

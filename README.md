@@ -1,7 +1,7 @@
 # 🚀 QueryBuilder Universal
 
 [![NPM Version](https://img.shields.io/npm/v/@querybuilder/core?style=flat-square)](https://www.npmjs.com/package/@querybuilder/core)
-[![License](https://img.shields.io/github/license/mellambias/querybuilder?style=flat-square)](https://github.com/mellambias/querybuilder/blob/main/LICENSE)
+[![License](https://img.shields.io/badge/license-PROPRIETARY-red?style=flat-square)](https://github.com/mellambias/querybuilder/blob/main/LICENSE)
 [![Build Status](https://img.shields.io/github/workflow/status/mellambias/querybuilder/CI?style=flat-square)](https://github.com/mellambias/querybuilder/actions)
 
 Un **QueryBuilder universal** que soporta tanto bases de datos **SQL** como **NoSQL** con una API unificada y elegante.
@@ -188,7 +188,9 @@ npm run publish:all   # Publicar a NPM
 
 ## 📄 **Licencia**
 
-Este proyecto está bajo la licencia [MIT](./LICENSE).
+Este proyecto está bajo licencia **PROPRIETARY**. Ver [LICENSE](./LICENSE) para términos y condiciones.
+
+**⚠️ IMPORTANTE**: Este software es propietario. No está permitido copiar, modificar, distribuir o crear trabajos derivados sin autorización explícita por escrito.
 
 ## 👤 **Autor**
 
