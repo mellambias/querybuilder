@@ -19,7 +19,7 @@ coverage/
 logs
 *.log
 
-# Environment variables
+# Environment variables and config files with credentials
 .env
 .env.local
 .env.development.local

@@ -33,19 +33,28 @@ npm install @querybuilder/mongodb    # Para MongoDB
 npm install @querybuilder/core @querybuilder/mysql @querybuilder/postgresql @querybuilder/mongodb
 ```
 
+## ⚙️ **Configuración**
+
+### Configurar Base de Datos
+```bash
+# 1. Copiar template de configuración
+copy config.example.js config.js
+
+# 2. Editar config.js con tus credenciales
+# (El archivo config.js está en .gitignore por seguridad)
+```
+
+📋 Ver [CONFIG.md](./CONFIG.md) para instrucciones detalladas de configuración.
+
 ## 🚀 **Uso Rápido**
 
 ### MySQL
 ```javascript
 import { QueryBuilder } from "@querybuilder/core";
 import { MySQL, MySqlDriver } from "@querybuilder/mysql";
+import config from "./config.js";
 
-const qb = new QueryBuilder(MySQL).driver(MySqlDriver, {
-  host: 'localhost',
-  user: 'root',
-  password: 'password',
-  database: 'mydb'
-});
+const qb = new QueryBuilder(MySQL).driver(MySqlDriver, config.databases.MySql8.params);
 
 // Crear tabla
 await qb.createTable("users", {
@@ -70,13 +79,9 @@ const users = await qb.table("users")
 ```javascript
 import { QueryBuilder } from "@querybuilder/core";
 import { PostgreSQL, PostgreSQLDriver } from "@querybuilder/postgresql";
+import config from "./config.js";
 
-const qb = new QueryBuilder(PostgreSQL).driver(PostgreSQLDriver, {
-  host: 'localhost',
-  user: 'postgres',
-  password: 'password',
-  database: 'mydb'
-});
+const qb = new QueryBuilder(PostgreSQL).driver(PostgreSQLDriver, config.databases.PostgreSQL.params);
 
 // Consulta con JSONB (PostgreSQL específico)
 const result = await qb.table("products")
@@ -89,11 +94,9 @@ const result = await qb.table("products")
 ```javascript
 import { QueryBuilder } from "@querybuilder/core";
 import { MongoDB, MongodbDriver } from "@querybuilder/mongodb";
+import config from "./config.js";
 
-const qb = new QueryBuilder(MongoDB).driver(MongodbDriver, {
-  url: 'mongodb://localhost:27017',
-  database: 'mydb'
-});
+const qb = new QueryBuilder(MongoDB).driver(MongodbDriver, config.databases.MongoDB.params);
 
 // Operaciones NoSQL con sintaxis familiar
 await qb.collection("users")
