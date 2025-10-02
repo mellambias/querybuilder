@@ -1,0 +1,33 @@
+{
+  "name": "@querybuilder/chroma",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "QueryBuilder Chroma implementation - Vector database for AI/ML applications",
+  "main": "Chroma.js",
+  "scripts": {
+    "test": "node test/chroma.test.js",
+    "test:all": "node test/test-funciones-chroma.js"
+  },
+  "keywords": [
+    "querybuilder",
+    "chroma",
+    "vector",
+    "database",
+    "embeddings",
+    "similarity-search",
+    "ai",
+    "ml"
+  ],
+  "author": "QueryBuilder Team",
+  "license": "MIT",
+  "dependencies": {
+    "@querybuilder/core": "workspace:*",
+    "chromadb": "^1.8.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
