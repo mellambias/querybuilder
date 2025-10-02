@@ -1,179 +1,41 @@
-{{
-
-  "name": "@querybuilder/redis",  "name": "@querybuilder/redis",
-
-  "version": "1.0.0",  "version": "1.0.0",
-
-  "description": "Redis integration for QueryBuilder - In-memory data structure store",  "description": "Redis adapter for QueryBuilder with key-value operations, caching, and real-time features",
-
-  "main": "Redis.js",  "type": "module",
-
-  "type": "module",  "main": "./redis.min.js",
-
-  "keywords": [  "module": "./redis.min.js",
-
-    "redis",  "browser": "./redis.min.js",
-
-    "querybuilder",  "unpkg": "./redis.bundle.min.js",
-
-    "in-memory",  "exports": {
-
-    "cache",    ".": "./redis.min.js",
-
-    "pub-sub",    "./bundle": "./redis.bundle.min.js",
-
-    "streams",    "./driver": "./drivers/RedisDriver.js",
-
-    "data-structures",    "./commands": "./comandos/Redis.js"
-
-    "key-value",  },
-
-    "nosql"  "files": [
-
-  ],    "redis.min.js",
-
-  "author": "QueryBuilder Team",    "redis.bundle.min.js",
-
-  "license": "MIT",    "*.map",
-
-  "dependencies": {    "index.js",
-
-    "@querybuilder/core": "workspace:*",    "Redis.js",
-
-    "redis": "^4.6.0"    "drivers/",
-
-  },    "comandos/",
-
-  "devDependencies": {    "examples/",
-
-    "vitest": "^1.0.0",    "README.md"
-
-    "@types/node": "^20.0.0"  ],
-
-  },  "scripts": {
-
-  "peerDependencies": {    "test": "node test/test-runner.js",
-
-    "@querybuilder/core": "^1.0.0"    "test:unit": "node test/test-runner.js --unit",
-
-  },    "test:integration": "node test/test-runner.js --integration",
-
-  "scripts": {    "test:watch": "node test/test-runner.js --watch",
-
-    "test": "vitest",    "test:coverage": "c8 node test/test-runner.js",
-
-    "test:watch": "vitest --watch",    "test:ci": "node test/test-runner.js --ci",
-
-    "test:coverage": "vitest --coverage",    "test:redis": "node test/test-runner.js --redis-required",
-
-    "test:ui": "vitest --ui",    "test:mock": "node test/test-runner.js --mock-only",
-
-    "build": "echo 'Redis module ready'",    "test:performance": "node test/test-runner.js --performance",
-
-    "lint": "eslint *.js",    "test:all": "npm run test:unit && npm run test:integration",
-
-    "format": "prettier --write *.js",    "test:lint": "eslint test/ --ext .js",
-
-    "redis:start": "redis-server --port 6379",    "validate": "node test/validate-env.js",
-
-    "redis:cli": "redis-cli",    "setup:test": "node test/setup-test-env.js",
-
-    "redis:docker": "docker run -d -p 6379:6379 --name redis-querybuilder redis:alpine",    "cleanup:test": "node test/cleanup-test-env.js",
-
-    "redis:stop": "redis-cli shutdown || docker stop redis-querybuilder",    "coverage:report": "c8 report --reporter=html --reporter=text",
-
-    "benchmark": "node test/benchmark.js"    "coverage:check": "c8 check-coverage",
-
-  },    "build": "rollup -c",
-
-  "files": [    "dev": "rollup -c --watch",
-
-    "Redis.js",    "pretest": "npm run validate && npm run setup:test",
-
-    "comandos/",    "posttest": "npm run cleanup:test"
-
-    "test/",  },
-
-    "drivers/",  "dependencies": {
-
-    "README.md"  },
-
-  ],  "peerDependencies": {
-
-  "repository": {    "redis": "^4.0.0",
-
-    "type": "git",    "ioredis": "^5.0.0"
-
-    "url": "https://github.com/mellambias/querybuilder",  },
-
-    "directory": "packages/@querybuilder/redis"  "peerDependenciesMeta": {
-
-  },    "redis": {
-
-  "bugs": {      "optional": true
-
-    "url": "https://github.com/mellambias/querybuilder/issues"    },
-
-  },    "ioredis": {
-
-  "homepage": "https://github.com/mellambias/querybuilder/tree/main/packages/@querybuilder/redis#readme",      "optional": true
-
-  "engines": {    }
-
-    "node": ">=16.0.0"  },
-
-  },  "devDependencies": {
-
-  "publishConfig": {    "c8": "^8.0.0",
-
-    "access": "public"    "eslint": "^8.0.0",
-
-  }    "chokidar": "^3.5.0"
-
-}  },
+{
+  "name": "@querybuilder/redis",
+  "version": "1.0.0",
+  "description": "Redis integration for QueryBuilder - In-memory data structure store",
+  "main": "Redis.js",
+  "type": "module",
+  "scripts": {
+    "test": "node test/redis.test.js",
+    "build": "echo Redis module ready"
+  },
   "keywords": [
-    "querybuilder", 
-    "redis", 
-    "key-value", 
-    "cache", 
-    "session", 
-    "database", 
-    "memory", 
-    "nosql",
+    "redis",
+    "querybuilder",
+    "in-memory",
+    "cache",
     "pub-sub",
     "streams",
-    "clustering",
-    "pipeline",
-    "transaction",
-    "lua",
-    "geospatial",
-    "bitmap",
-    "hyperloglog",
-    "real-time",
-    "performance",
-    "scaling"
+    "data-structures",
+    "key-value",
+    "nosql"
   ],
-  "author": "mellambias",
-  "license": "PROPRIETARY",
+  "author": "QueryBuilder Team",
+  "license": "MIT",
+  "dependencies": {
+    "@querybuilder/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "redis": "^4.6.0"
+  },
   "repository": {
     "type": "git",
-    "url": "https://github.com/mellambias/querybuilder.git",
+    "url": "https://github.com/mellambias/querybuilder",
     "directory": "packages/@querybuilder/redis"
   },
-  "homepage": "https://github.com/mellambias/querybuilder/tree/main/packages/@querybuilder/redis",
-  "bugs": {
-    "url": "https://github.com/mellambias/querybuilder/issues"
-  },
-  "organization": "mellambias",
   "engines": {
     "node": ">=16.0.0"
   },
   "publishConfig": {
     "access": "public"
-  },
-  "sideEffects": false,
-  "funding": {
-    "type": "individual",
-    "url": "https://github.com/sponsors/mellambias"
   }
 }

@@ -8,7 +8,8 @@
     "test": "node test/cassandra.test.js",
     "dev": "node --inspect test/cassandra.test.js",
     "lint": "eslint .",
-    "start": "node Cassandra.js"
+    "start": "node Cassandra.js",
+    "build": "echo 'Cassandra package ready for production'"
   },
   "keywords": [
     "cassandra",

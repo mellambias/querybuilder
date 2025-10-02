@@ -6,7 +6,8 @@
   "main": "Chroma.js",
   "scripts": {
     "test": "node test/chroma.test.js",
-    "test:all": "node test/test-funciones-chroma.js"
+    "test:all": "node test/test-funciones-chroma.js",
+    "build": "echo 'Chroma package ready for production'"
   },
   "keywords": [
     "querybuilder",

@@ -2,5 +2,20 @@
   "name": "@querybuilder/sqlite",
   "version": "1.0.0",
   "type": "module",
-  "main": "SQLite.js"
+  "main": "SQLite.js",
+  "scripts": {
+    "test": "node test/sqlite.test.js",
+    "start": "node SQLite.js",
+    "build": "echo 'SQLite package ready for production'"
+  },
+  "keywords": [
+    "sqlite",
+    "sql",
+    "database",
+    "querybuilder"
+  ],
+  "dependencies": {
+    "@querybuilder/core": "workspace:*",
+    "sqlite3": "^5.1.6"
+  }
 }
