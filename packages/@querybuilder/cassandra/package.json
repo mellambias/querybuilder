@@ -1,0 +1,45 @@
+{
+  "name": "@querybuilder/cassandra",
+  "version": "1.0.0",
+  "description": "Cassandra integration for QueryBuilder - Distributed NoSQL for Big Data",
+  "main": "Cassandra.js",
+  "type": "module",
+  "scripts": {
+    "test": "node test/cassandra.test.js",
+    "dev": "node --inspect test/cassandra.test.js",
+    "lint": "eslint .",
+    "start": "node Cassandra.js"
+  },
+  "keywords": [
+    "cassandra",
+    "nosql",
+    "distributed",
+    "big-data",
+    "cql",
+    "querybuilder",
+    "database",
+    "time-series",
+    "clustering",
+    "consistency"
+  ],
+  "author": "QueryBuilder Team",
+  "license": "MIT",
+  "dependencies": {
+    "cassandra-driver": "^4.7.2",
+    "@querybuilder/core": "workspace:*"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/your-repo/querybuilder.git",
+    "directory": "packages/@querybuilder/cassandra"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
