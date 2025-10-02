@@ -16,6 +16,15 @@
   ],
   "author": "Miguel E. Llambías Llansó",
   "license": "MPL-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mellambias/querybuilder.git",
+    "directory": "packages/@querybuilder/sqlite"
+  },
+  "homepage": "https://github.com/mellambias/querybuilder#readme",
+  "bugs": {
+    "url": "https://github.com/mellambias/querybuilder/issues"
+  },
   "dependencies": {
     "@querybuilder/core": "workspace:*",
     "sqlite3": "^5.1.6"

@@ -34,8 +34,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/your-repo/querybuilder.git",
+    "url": "git+https://github.com/mellambias/querybuilder.git",
     "directory": "packages/@querybuilder/cassandra"
+  },
+  "homepage": "https://github.com/mellambias/querybuilder#readme",
+  "bugs": {
+    "url": "https://github.com/mellambias/querybuilder/issues"
   },
   "publishConfig": {
     "access": "public"
