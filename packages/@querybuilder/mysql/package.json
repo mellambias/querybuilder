@@ -25,8 +25,8 @@
     "mariadb",
     "rdbms"
   ],
-  "author": "Your Name",
-  "license": "MIT",
+  "author": "Miguel E. Llambías Llansó",
+  "license": "MPL-2.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/your-username/querybuilder.git",

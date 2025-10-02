@@ -19,8 +19,8 @@
     "key-value",
     "nosql"
   ],
-  "author": "QueryBuilder Team",
-  "license": "MIT",
+  "author": "Miguel E. Llambías Llansó",
+  "license": "MPL-2.0",
   "dependencies": {
     "@querybuilder/core": "workspace:*"
   },

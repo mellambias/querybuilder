@@ -3,9 +3,10 @@
   "version": "2.0.0",
   "private": true,
   "type": "module",
-  "author": "mellambias",
+  "author": "Miguel E. Llambías Llansó",
   "organization": "mellambias",
-  "description": "Universal QueryBuilder for SQL and NoSQL databases - Development Workspace",
+  "license": "MPL-2.0",
+  "description": "QueryBuilder for SQL and NoSQL databases - Development Workspace",
   "repository": {
     "type": "git",
     "url": "https://github.com/mellambias/querybuilder.git"
@@ -18,16 +19,24 @@
     "build": "npm run build --workspaces",
     "build:dist": "node build-npm-dist.js",
     "test:dist": "node test-npm-distribution.js",
-    "pack:all": "npm run pack:core && npm run pack:mysql && npm run pack:postgresql && npm run pack:mongodb",
+    "pack:all": "npm run pack:core && npm run pack:mysql && npm run pack:postgresql && npm run pack:mongodb && npm run pack:sqlite && npm run pack:chroma && npm run pack:redis && npm run pack:cassandra",
     "pack:core": "cd dist/@querybuilder/core && npm pack",
     "pack:mysql": "cd dist/@querybuilder/mysql && npm pack",
     "pack:postgresql": "cd dist/@querybuilder/postgresql && npm pack",
     "pack:mongodb": "cd dist/@querybuilder/mongodb && npm pack",
-    "publish:all": "npm run publish:core && npm run publish:mysql && npm run publish:postgresql && npm run publish:mongodb",
+    "pack:sqlite": "cd dist/@querybuilder/sqlite && npm pack",
+    "pack:chroma": "cd dist/@querybuilder/chroma && npm pack",
+    "pack:redis": "cd dist/@querybuilder/redis && npm pack",
+    "pack:cassandra": "cd dist/@querybuilder/cassandra && npm pack",
+    "publish:all": "npm run publish:core && npm run publish:mysql && npm run publish:postgresql && npm run publish:mongodb && npm run publish:sqlite && npm run publish:chroma && npm run publish:redis && npm run publish:cassandra",
     "publish:core": "cd dist/@querybuilder/core && npm publish",
     "publish:mysql": "cd dist/@querybuilder/mysql && npm publish",
     "publish:postgresql": "cd dist/@querybuilder/postgresql && npm publish",
     "publish:mongodb": "cd dist/@querybuilder/mongodb && npm publish",
+    "publish:sqlite": "cd dist/@querybuilder/sqlite && npm publish",
+    "publish:chroma": "cd dist/@querybuilder/chroma && npm publish",
+    "publish:redis": "cd dist/@querybuilder/redis && npm publish",
+    "publish:cassandra": "cd dist/@querybuilder/cassandra && npm publish",
     "link:local": "node link-local.js",
     "unlink:local": "node unlink-local.js",
     "link:pnpm": "node link-pnpm.js",
@@ -48,6 +57,10 @@
   "dependencies": {
     "mongodb": "^6.0.0",
     "mysql2": "^3.0.0",
-    "pg": "^8.0.0"
+    "pg": "^8.0.0",
+    "better-sqlite3": "^9.0.0",
+    "chromadb": "^1.8.0",
+    "redis": "^4.6.0",
+    "cassandra-driver": "^4.7.2"
   }
 }

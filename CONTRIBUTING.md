@@ -1,6 +1,6 @@
 # Guía de Contribución
 
-¡Gracias por tu interés en contribuir al QueryBuilder Universal! 🎉
+¡Gracias por tu interés en contribuir al QueryBuilder! 🎉
 
 ## 🚀 Cómo Contribuir
 
@@ -97,7 +97,7 @@ test('QueryBuilder should create valid SQL', () => {
 ```
 QueryBuilder/
 ├── packages/@querybuilder/     # Packages NPM
-│   ├── core/                   # Core universal
+│   ├── core/                   # Core fundamental
 │   ├── mysql/                  # Adapter MySQL
 │   ├── postgresql/             # Adapter PostgreSQL
 │   └── mongodb/                # Adapter MongoDB

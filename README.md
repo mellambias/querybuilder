@@ -1,10 +1,10 @@
-# 🚀 QueryBuilder Universal
+# 🚀 QueryBuilder
 
 [![NPM Version](https://img.shields.io/npm/v/@querybuilder/core?style=flat-square)](https://www.npmjs.com/package/@querybuilder/core)
-[![License](https://img.shields.io/badge/license-PROPRIETARY-red?style=flat-square)](https://github.com/mellambias/querybuilder/blob/main/LICENSE)
+[![License](https://img.shields.io/badge/license-MPL--2.0-blue?style=flat-square)](https://www.mozilla.org/en-US/MPL/2.0/)
 [![Build Status](https://img.shields.io/github/workflow/status/mellambias/querybuilder/CI?style=flat-square)](https://github.com/mellambias/querybuilder/actions)
 
-Un **QueryBuilder universal** que soporta tanto bases de datos **SQL** como **NoSQL** con una API unificada y elegante.
+Un **QueryBuilder** que soporta tanto bases de datos **SQL** como **NoSQL** con una API unificada y elegante.
 
 ## 🎯 **Características Principales**
 
@@ -128,7 +128,7 @@ El QueryBuilder proporciona una interfaz consistente sin importar la base de dat
 
 ```
 @querybuilder/
-├── core/           → Base universal y tipos
+├── core/           → Base fundamental y tipos
 ├── mysql/          → Adaptador MySQL
 ├── postgresql/     → Adaptador PostgreSQL  
 └── mongodb/        → Adaptador MongoDB
