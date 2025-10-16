@@ -1,6 +1,22 @@
+/**
+ * @file Comando SQL2006 CONSTRAINT.
+ * @module comandos/sql2006/constraint
+ * @description Objeto que representa el comando CONSTRAINT del estándar SQL2006.
+ */
+
 import QueryBuilder from "../../querybuilder.js";
 import { log } from "../../utils/utils.js";
 
+/**
+ * @name constraint
+ * @description Objeto que representa el comando CONSTRAINT del estándar SQL2006.
+ * Permite construir definiciones de restricciones para sentencias SQL.
+ * @property {String} name - el nombre de la restricción.
+ * @property {String} type - el tipo de restricción (NOT NULL, UNIQUE, PRIMARY KEY) y las columnas asociadas.
+ * @property {Array<String>} cols - las columnas asociadas a la restricción.
+ * @property {Object} foreignKey - una clave foránea que referencia a otra tabla.
+ * @property {String | QueryBuilder} check - una restricción CHECK para la tabla o columna.
+ */
 export const constraint = {
 	name: (name) => `${name}`,
 	type: (type, self) =>

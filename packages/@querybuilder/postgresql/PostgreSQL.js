@@ -1,20 +1,64 @@
-/*
-PostgreSQL QueryBuilder - Implementa las variaciones al SQL2006 propias de PostgreSQL
-Versión optimizada con estructura simplificada
-*/
+/**
+ * @fileoverview PostgreSQL QueryBuilder - Implementa las variaciones al SQL2006 propias de PostgreSQL
+ * @description Clase especializada para PostgreSQL que extiende Core con funcionalidades específicas del SGBD.
+ * Versión optimizada con estructura simplificada. Incluye soporte completo para tipos personalizados, 
+ * dominios, schemas, transacciones avanzadas y características específicas de PostgreSQL.
+ * @version 2.0.0
+ * @author QueryBuilder Team
+ * @license MIT
+ * @since 1.0.0
+ * @example
+ * // Crear instancia PostgreSQL
+ * const pg = new PostgreSQL();
+ * 
+ * // Crear base de datos con opciones PostgreSQL
+ * const createDbSQL = pg.createDatabase('myapp_db', {
+ *   encoding: 'UTF8',
+ *   owner: 'app_user',
+ *   template: 'template0',
+ *   locale: 'en_US.UTF-8'
+ * });
+ * 
+ * // Crear tipo personalizado
+ * const typeSQL = pg.createType('address_type', {
+ *   type: 'COMPOSITE',
+ *   attributes: [
+ *     { name: 'street', type: 'TEXT' },
+ *     { name: 'city', type: 'TEXT' }
+ *   ]
+ * });
+ */
 import Core from "../core/core.js";
 import postgreSQL from "./comandos/postgreSQL.js";
 import Types from "../core/types/Type.js";
 import "../core/utils/utils.js"; // Para toDataType
 
 /**
- * PostgreSQL QueryBuilder básico - Compatible con estructura original
+ * Clase PostgreSQL QueryBuilder para operaciones específicas de PostgreSQL
  * @class PostgreSQL
  * @extends Core
+ * @description Implementa las variaciones específicas de PostgreSQL al estándar SQL2006.
+ * Compatible con estructura original, optimizada y simplificada.
+ * Incluye soporte para tipos personalizados, dominios, schemas, transacciones avanzadas, 
+ * funciones, triggers, y características avanzadas de PostgreSQL.
+ * @since 1.0.0
  */
 class PostgreSQL extends Core {
+	/**
+	 * Constructor de la clase PostgreSQL
+	 * @description Inicializa una nueva instancia del QueryBuilder para PostgreSQL
+	 * @constructor
+	 * @since 1.0.0
+	 * @example
+	 * const pg = new PostgreSQL();
+	 * console.log(pg.dataType); // 'postgresql'
+	 */
 	constructor() {
 		super();
+		/**
+		 * Tipo de base de datos - siempre 'postgresql'
+		 * @type {string}
+		 */
 		this.dataType = "postgresql"; // especifica el tipo de datos usado
 		// Configurar Types para validSqlId
 		Types.identificador.set("regular");

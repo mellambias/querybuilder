@@ -1,6 +1,13 @@
 /**
+ * @fileoverview MongoDB Database Driver Implementation
+ * @description MongoDB driver extending base Driver class with mongodb library
+ * @version 2.0.0
+ * @author Miguel E. Llambías Llansó
+ * @license MPL-2.0
+ */
+
+/**
  * Adaptador para conectar con bases de datos MongoDB
- *
  * Utiliza el paquete mongodb https://www.npmjs.com/package/mongodb
  */
 import { Driver } from "@querybuilder/core";
@@ -8,17 +15,123 @@ import { MongoClient } from "mongodb";
 import Command from "../Command.js";
 import { jsonReviver } from "../mongoUtils.js";
 
+/**
+ * MongoDB database driver implementation
+ * Extends base Driver class to provide MongoDB-specific connection and operations
+ * Uses official MongoDB Node.js driver for database operations
+ * 
+ * @class MongodbDriver
+ * @extends Driver
+ * @version 2.0.0
+ * @example
+ * ```javascript
+ * import MongodbDriver from '@querybuilder/mongodb/drivers/MongodbDriver';
+ * 
+ * const driver = new MongodbDriver({
+ *   host: 'localhost',
+ *   port: 27017,
+ *   database: 'myapp',
+ *   getConnectionString: () => 'mongodb://localhost:27017/myapp'
+ * });
+ * 
+ * await driver.connect();
+ * const result = await driver.execute(new Command('find', 'users', {}));
+ * ```
+ */
 class MongodbDriver extends Driver {
+	/**
+	 * Creates a new MongoDB driver instance
+	 * Initializes MongoDB connection parameters and state
+	 * 
+	 * @constructor
+	 * @memberof MongodbDriver
+	 * @param {Object} params - MongoDB connection parameters
+	 * @param {string} [params.host='localhost'] - MongoDB server host
+	 * @param {number} [params.port=27017] - MongoDB server port
+	 * @param {string} [params.database] - Default database name
+	 * @param {Function} params.getConnectionString - Function returning MongoDB connection string
+	 * @example
+	 * ```javascript
+	 * const driver = new MongodbDriver({
+	 *   host: 'localhost',
+	 *   port: 27017,
+	 *   database: 'mydb',
+	 *   getConnectionString: () => 'mongodb://localhost:27017/mydb'
+	 * });
+	 * ```
+	 */
 	constructor(params) {
 		super(MongoClient, params);
+		/**
+		 * MongoDB connection parameters
+		 * @type {Object}
+		 * @private
+		 */
 		this.params = params;
+
+		/**
+		 * MongoDB database connection instance
+		 * @type {mongodb.Db|null}
+		 * @private
+		 */
 		this.connection = null;
+
+		/**
+		 * Query execution results
+		 * @type {Array}
+		 * @private
+		 */
 		this.queyResult = [];
+
+		/**
+		 * Query field metadata
+		 * @type {Array}
+		 * @private
+		 */
 		this.queryFields = [];
+
+		/**
+		 * Query result rows
+		 * @type {Array}
+		 * @private
+		 */
 		this.queryRows = [];
+
+		/**
+		 * MongoDB client instance
+		 * @type {MongoClient|null}
+		 * @private
+		 */
 		this.client = null;
+
+		/**
+		 * Active process counter for connection management
+		 * @type {number}
+		 * @private
+		 */
 		this._process = 0;
 	}
+
+	/**
+	 * Establishes connection to MongoDB database
+	 * Creates MongoClient connection using connection string
+	 * 
+	 * @method connect
+	 * @memberof MongodbDriver
+	 * @async
+	 * @override
+	 * @returns {Promise<MongodbDriver>} Driver instance for method chaining
+	 * @throws {Error} When connection fails
+	 * @example
+	 * ```javascript
+	 * try {
+	 *   await driver.connect();
+	 *   console.log('Connected to MongoDB');
+	 * } catch (error) {
+	 *   console.error('Connection failed:', error.message);
+	 * }
+	 * ```
+	 */
 	async connect() {
 		try {
 			this.client = new this.library(this.params.getConnectionString());
@@ -34,10 +147,40 @@ class MongodbDriver extends Driver {
 			);
 		}
 	}
+
+	/**
+	 * Switches to a different MongoDB database
+	 * Sets the database name for subsequent operations
+	 * 
+	 * @method use
+	 * @memberof MongodbDriver
+	 * @async
+	 * @override
+	 * @param {string} database - Name of the database to switch to
+	 * @returns {Promise<void>} Resolves when database is set
+	 * @example
+	 * ```javascript
+	 * await driver.use('new_database');
+	 * console.log('Switched to new_database');
+	 * ```
+	 */
 	async use(database) {
 		this.database = database;
 	}
 
+	/**
+	 * Sets the active process counter for connection management
+	 * Automatically closes connection when counter reaches zero
+	 * 
+	 * @setter process
+	 * @memberof MongodbDriver
+	 * @param {number} value - Process counter value
+	 * @example
+	 * ```javascript
+	 * driver.process = 1; // Increment active processes
+	 * driver.process = 0; // Decrements and closes connection when zero
+	 * ```
+	 */
 	set process(value) {
 		this._process = value;
 		if (this._process <= 0) {
@@ -45,6 +188,18 @@ class MongodbDriver extends Driver {
 			this.close();
 		}
 	}
+
+	/**
+	 * Gets the active process counter
+	 * 
+	 * @getter process
+	 * @memberof MongodbDriver
+	 * @returns {number} Current process counter value
+	 * @example
+	 * ```javascript
+	 * console.log('Active processes:', driver.process);
+	 * ```
+	 */
 	get process() {
 		return this._process;
 	}

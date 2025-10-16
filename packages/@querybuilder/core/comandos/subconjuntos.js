@@ -1,3 +1,14 @@
+/**
+ * @module comandos/subconjuntos
+ * @description Define los subconjuntos de comandos SQL y sus descripciones.
+ * 
+ * @version 1.0.0
+ */
+/**
+ * Descripciones de los subconjuntos de comandos SQL.
+ * @name conjuntos
+ * @description Cada clave representa un subconjunto de comandos SQL y su valor es una breve descripción del mismo.
+
 export const conjuntos = {
 	DDL: "Define o modifica la estructura de la base de datos.",
 	DML: "Manipula los datos almacenados en las tablas.",
@@ -8,6 +19,11 @@ export const conjuntos = {
 };
 
 //Definen y modifican la estructura de la base de datos.
+/**
+ * @name DDL
+ * @description Comandos que definen o modifican la estructura de la base de datos.
+ * @type {Array<string>}
+ */
 export const DDL = [
 	"CREATE",
 	"ALTER",
@@ -29,6 +45,11 @@ export const DDL = [
 	"CITEXT",
 ];
 //Manipulan los datos almacenados en las tablas.
+/**
+ * @name DML
+ * @description Comandos que manipulan los datos almacenados en las tablas.
+ * @type {Array<string>}
+ */
 export const DML = [
 	"INSERT",
 	"UPDATE",
@@ -45,6 +66,11 @@ export const DML = [
 	"COPY",
 ];
 //Controlan el acceso y permisos en la base de datos.
+/**
+ * @name DCL
+ * @description Comandos que controlan el acceso y permisos en la base de datos.
+ * @type {Array<string>}
+ */
 export const DCL = [
 	"GRANT",
 	"REVOKE",
@@ -55,6 +81,11 @@ export const DCL = [
 	"SET ROLE",
 ];
 //Gestionan las transacciones en la base de datos.
+/**
+ * @name TLC
+ * @description Comandos que gestionan las transacciones en la base de datos.
+ * @type {Array<string>}
+ */
 export const TLC = [
 	"COMMIT",
 	"ROLLBACK",
@@ -68,9 +99,19 @@ export const TLC = [
 ];
 
 //Consultan y recuperan datos de una o varias tablas.
+/** 
+ * @name DQL
+ * @description Comandos que consultan y recuperan datos de una o varias tablas.
+ * @type {Array<string>}
+ */
 export const DQL = ["SELECT", "SHOW", "DESCRIBE", "EXPLAIN", "WITH RECURSIVE"];
 
 //Comandos auxiliares para gestión y mantenimiento de la base de datos.
+/**
+ * @name utility
+ * @description Comandos auxiliares para gestión y mantenimiento de la base de datos.
+ * @type {Array<string>}
+ */
 export const utility = [
 	"USE",
 	"SOURCE",

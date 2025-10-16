@@ -3,7 +3,7 @@
  * ==================================
  * 
  * Copy this file to 'config.js' and update with your real credentials.
- * The real 'config.js' file is ignored by git for security.
+ *
  */
 
 import { MySqlDriver } from "@querybuilder/mysql";

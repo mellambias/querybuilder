@@ -1,9 +1,52 @@
 /**
+ * @fileoverview Mapeo de tipos de datos SQL2006 a implementaciones específicas
+ * @description Diccionario completo que mapea tipos de datos SQL estándar (SQL2006) 
+ * a sus equivalentes específicos en diferentes SGBDs (MySQL, PostgreSQL, MongoDB, etc.).
+ * La clave principal es el tipo soportado por SQL2006, las secundarias son las variaciones de cada implementación.
+ * Todas las claves están en minúscula para consistencia.
+ * @version 2.0.0
+ * @author QueryBuilder Team
+ * @license MIT
+ * @since 1.0.0
+ * @example
+ * import { dataTypes } from './dataTypes.js';
+ * 
+ * // Obtener tipo específico para MySQL
+ * const mysqlType = dataTypes.VARCHAR.mysql; // 'VARCHAR'
+ * const mongoType = dataTypes.VARCHAR.mongobd; // 'string'
+ * 
+ * // Usar con String.prototype.toDataType()
+ * const converted = 'INTEGER'.toDataType('postgresql'); // 'INTEGER'
+ */
+
+/**
  * La clave principal es el tipo soportado por SQL2006
  * las secundarias son las variaciones de cada implementacion
  * las claves siempre en minuscula.
  */
 
+/**
+ * Mapeo completo de tipos de datos SQL2006 a implementaciones específicas
+ * @namespace dataTypes
+ * @description Objeto que contiene el mapeo de tipos de datos SQL estándar a sus equivalentes
+ * en diferentes sistemas de gestión de bases de datos.
+ * 
+ * @example
+ * // Tipos de caracteres
+ * dataTypes.VARCHAR.mysql      // 'VARCHAR'
+ * dataTypes.VARCHAR.postgresql // 'VARCHAR' 
+ * dataTypes.VARCHAR.mongobd    // 'string'
+ * 
+ * // Tipos numéricos
+ * dataTypes.INTEGER.mysql      // 'INT'
+ * dataTypes.INTEGER.postgresql // 'INTEGER'
+ * dataTypes.INTEGER.mongobd    // 'int'
+ * 
+ * // Tipos de fecha
+ * dataTypes.DATE.mysql         // 'DATE'
+ * dataTypes.DATE.postgresql    // 'DATE'
+ * dataTypes.DATE.mongobd       // 'date'
+ */
 const dataTypes = {
 	CHARACTER: {
 		mysql: "CHAR",

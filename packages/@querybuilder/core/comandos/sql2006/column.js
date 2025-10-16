@@ -1,3 +1,21 @@
+/**
+ * @file Comando SQL2006 COLUMN
+ * @module comandos/sql2006/column
+ * @description Objeto que representa el comando COLUMN del estándar SQL2006.
+ */
+
+/**
+ * @name column
+ * @description Objeto que representa el comando COLUMN del estándar SQL2006.
+ * Permite construir definiciones de columnas para sentencias SQL.
+ * @property {String} name - el nombre de la columna y su tipo de datos.
+ * @property {String} type - el tipo de datos de la columna.
+ * @property {String} values=NOT NULL|UNIQUE|PRIMARY KEY - valores como NOT NULL, UNIQUE o PRIMARY KEY.
+ * @property {ANY} default - el valor por defecto de la columna.
+ * @property {Array<object>} foreingKey - una clave foránea que referencia a otra tabla.
+ * @property {String} check - una restricción CHECK para la columna.
+ *
+ */
 export const column = {
 	name: function (name, self) {
 		if (typeof self._values.options === "string") {

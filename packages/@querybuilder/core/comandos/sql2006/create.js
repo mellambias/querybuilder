@@ -1,5 +1,22 @@
+/**
+ * @fileoverview Comandos para crear objetos (CREATE).
+ * @module comandos/sql2006/create
+ * @description Módulo que implementa comandos CREATE del estándar SQL2006 (ISO/IEC 9075).
+ * Permite crear esquemas, tablas, tipos de datos, dominios, vistas y cursores en una base de datos.
+ * @version 2.0.0
+ */
+
 import QueryBuilder from "../../querybuilder.js";
-import { log } from "../../utils/utils.js";
+
+
+/**
+ * @name createSchema
+ * @description Objeto que representa el comando CREATE SCHEMA del estándar SQL2006.
+ * Permite construir sentencias SQL para crear esquemas en una base de datos.
+ * @property {String} name - El nombre del esquema.
+ * @property {String} authorization - el usuario que autoriza el esquema.
+ * @property {String} charset - el conjunto de caracteres por defecto del esquema.
+ */
 export const createSchema = {
 	name: (name) => name,
 	authorization: (authorization) => `AUTHORIZATION ${authorization}`,
@@ -7,6 +24,15 @@ export const createSchema = {
 	orden: ["name", "authorization", "charset"],
 };
 
+/**
+ * @name createTable
+ * @description Objeto que representa el comando CREATE TABLE del estándar SQL2006.
+ * Permite construir sentencias SQL para crear tablas en una base de datos.
+ * @property {String} name - el nombre de la tabla.
+ * @property {String} [temporary=GLOBAL|LOCAL] - parte de la sentencia si la tabla es temporal.
+ * @property {Array<Object>} cols=Array<{name:String,options:Object}> - las columnas de la tabla.
+ * @property {String} [onCommit=PRESERVE|DELETE] - la acción ON COMMIT.
+ */
 export const createTable = {
 	name: (name) => `TABLE ${name}`,
 	temporary: (temporary) =>
@@ -32,6 +58,14 @@ export const createTable = {
 	orden: ["temporary", "name", "cols", "onCommit"],
 };
 
+/**
+ * @name createType
+ * @description Objeto que representa el comando CREATE TYPE del estándar SQL2006.
+ * Permite construir sentencias SQL para crear tipos de datos definidos por el usuario en una base de datos.
+ * @property {String} name - el nombre del tipo.
+ * @property {boolean} as - la definición del tipo.
+ * @property {boolean} final - Tipo es FINAL o NOT FINAL.
+ */
 export const createType = {
 	name: (name) => `TYPE ${name}`,
 	as: (as) => `AS ${as}`,
@@ -39,6 +73,15 @@ export const createType = {
 	orden: ["name", "as", "final"],
 };
 
+/**
+ * @name createDomain
+ * @description Objeto que representa el comando CREATE DOMAIN del estándar SQL2006.
+ * Permite construir sentencias SQL para crear dominios en una base de datos.
+ * @property {String} name - el nombre del dominio.
+ * @property {String} as - el tipo de datos del dominio.
+ * @property {ANY} default - el valor por defecto del dominio.
+ * @property {object} [constraint={name: String, check: String}] - una restricción CHECK para el dominio.
+ */
 export const createDomain = {
 	name: (name) => name,
 	as: function (sqlType) {
@@ -49,6 +92,15 @@ export const createDomain = {
 	orden: ["name", "as", "default", "constraint"],
 };
 
+/**
+ * @name createView
+ * @description Objeto que representa el comando CREATE VIEW del estándar SQL2006.
+ * Permite construir sentencias SQL para crear vistas en una base de datos.
+ * @property {String} name - el nombre de la vista.
+ * @property {Array<String>} cols - las columnas de la vista.
+ * @property {String | QueryBuilder} as - la consulta que define la vista.
+ * @property {Boolean} check - Si la vista tiene WITH CHECK OPTION.
+ */
 export const createView = {
 	name: (name) => `VIEW ${name}`,
 	cols: (cols) => `( ${cols.join(", ")} )`,
@@ -63,6 +115,21 @@ export const createView = {
 	orden: ["name", "cols", "as", "check"],
 };
 
+/**
+ * @name createCursor
+ * @description Objeto que representa el comando CREATE CURSOR del estándar SQL2006.
+ * Permite construir sentencias SQL para crear cursores en una base de datos.
+ * @property {string} name - el nombre del cursor.
+ * @property {string} [changes=SENSITIVE|INSENSITIVE|ASENSITIVE] - la sensibilidad a cambios del cursor.
+ * @property {string} [cursor=SCROLL|NO SCROLL] - Construye la parte de la sentencia si el cursor es desplazable o no.
+ * @property {string} [hold=WITH|WITHOUT] - Construye la parte de la sentencia indicando si el cursor se mantiene abierto
+ * después de una transacción.
+ * @property {string} [return=WITH|WITHOUT] - Construye la parte de la sentencia indicando si el cursor devuelve filas.
+ * @property {string|QueryBuilder} expresion - la consulta que define el cursor.
+ * @property {Function} orderBy - el orden de los resultados del cursor.
+ * @property {boolean} readOnly - Construye la parte de la sentencia si el cursor es de solo lectura.
+ * @property {string|Array<string>|boolean} update - Construye la parte de la sentencia si el cursor permite actualizaciones.
+ */
 export const createCursor = {
 	name: (name) => name,
 	changes: (changes) =>
@@ -110,4 +177,9 @@ export const createCursor = {
 		"readOnly",
 		"update",
 	],
+};
+
+
+const createUsers = {
+	name: (name) => name,
 };

@@ -1,14 +1,115 @@
+/**
+ * @fileoverview MySQL Database Driver Implementation
+ * @description MySQL driver extending base Driver class with mysql2 library
+ * @version 2.0.0
+ * @author Miguel E. Llambías Llansó
+ * @license MPL-2.0
+ */
+
 import { Driver } from "@querybuilder/core";
 import MysqlResult from "../results/MysqlResult.js";
 import mysql from "mysql2/promise";
+
+/**
+ * MySQL database driver implementation
+ * Extends base Driver class to provide MySQL-specific connection and query capabilities
+ * Uses mysql2/promise library for async operations
+ * 
+ * @class MySqlDriver
+ * @extends Driver
+ * @version 2.0.0
+ * @example
+ * ```javascript
+ * import MySqlDriver from '@querybuilder/mysql/drivers/MySqlDriver';
+ * 
+ * const driver = new MySqlDriver({
+ *   host: 'localhost',
+ *   port: 3306,
+ *   username: 'root',
+ *   password: 'password',
+ *   database: 'myapp'
+ * });
+ * 
+ * await driver.connect();
+ * const result = await driver.execute('SELECT * FROM users');
+ * ```
+ */
 class MySqlDriver extends Driver {
+	/**
+	 * Creates a new MySQL driver instance
+	 * Initializes MySQL connection parameters and state
+	 * 
+	 * @constructor
+	 * @memberof MySqlDriver
+	 * @param {Object} params - MySQL connection parameters
+	 * @param {string} [params.host='localhost'] - MySQL server host
+	 * @param {number} [params.port=3306] - MySQL server port
+	 * @param {string} params.username - MySQL username
+	 * @param {string} params.password - MySQL password
+	 * @param {string} [params.database] - Default database name
+	 * @example
+	 * ```javascript
+	 * const driver = new MySqlDriver({
+	 *   host: 'localhost',
+	 *   port: 3306,
+	 *   username: 'root',
+	 *   password: 'mypassword',
+	 *   database: 'mydb'
+	 * });
+	 * ```
+	 */
 	constructor(params) {
 		super(mysql, params);
+		/**
+		 * MySQL connection instance
+		 * @type {mysql.Connection|null}
+		 * @private
+		 */
 		this.connection = null;
+
+		/**
+		 * Query execution results
+		 * @type {Array}
+		 * @private
+		 */
 		this.queyResult = [];
+
+		/**
+		 * Current query string
+		 * @type {string|null}
+		 * @private
+		 */
 		this.query = null;
+
+		/**
+		 * Server response data
+		 * @type {*}
+		 * @private
+		 */
 		this.serverResponse = null;
 	}
+
+	/**
+	 * Establishes connection to MySQL database
+	 * Creates connection with proper MySQL-specific configuration
+	 * 
+	 * @method connect
+	 * @memberof MySqlDriver
+	 * @async
+	 * @override
+	 * @returns {Promise<Object>} Connection result with success status and error details
+	 * @returns {boolean} returns.success - Whether connection was successful
+	 * @returns {string|null} returns.error - Error message if connection failed
+	 * @example
+	 * ```javascript
+	 * const result = await driver.connect();
+	 * if (result.success) {
+	 *   console.log('Connected to MySQL');
+	 * } else {
+	 *   console.error('Connection failed:', result.error);
+	 * }
+	 * ```
+	 */
 	async connect() {
 		try {
 			this.connection = await this.library.createConnection({
@@ -32,6 +133,32 @@ class MySqlDriver extends Driver {
 		}
 	}
 
+	/**
+	 * Executes SQL query or multiple queries on MySQL database
+	 * Handles both simple queries and prepared statements with parameters
+	 * Supports multiple statements execution when separated by semicolons
+	 * 
+	 * @method execute
+	 * @memberof MySqlDriver
+	 * @async
+	 * @override
+	 * @param {string} query - SQL query or queries to execute
+	 * @param {Array} [values=null] - Parameter values for prepared statements
+	 * @param {Object} [options] - Execution options
+	 * @returns {Promise<void>} Resolves when execution completes
+	 * @throws {Error} When query execution fails
+	 * @example
+	 * ```javascript
+	 * // Simple query
+	 * await driver.execute('SELECT * FROM users');
+	 * 
+	 * // Prepared statement
+	 * await driver.execute('SELECT * FROM users WHERE id = ?', [1]);
+	 * 
+	 * // Multiple statements
+	 * await driver.execute('INSERT INTO users (name) VALUES ("John"); SELECT LAST_INSERT_ID();');
+	 * ```
+	 */
 	async execute(query, values = null, options) {
 		this.queyResult = [];
 		this.queryFields = [];

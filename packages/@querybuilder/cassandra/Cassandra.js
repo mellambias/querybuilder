@@ -1,22 +1,85 @@
+/**
+ * @fileoverview Cassandra QueryBuilder - Integración para Apache Cassandra
+ * @description Clase especializada para Apache Cassandra que extiende Core con funcionalidades NoSQL distribuidas.
+ * Soporta CQL operations, keyspaces, tablas, UDT, colecciones y características específicas de Cassandra.
+ * @version 2.0.0
+ * @author QueryBuilder Team
+ * @license MIT
+ * @since 1.0.0
+ * @example
+ * // Crear instancia Cassandra
+ * const cassandra = new Cassandra({
+ *   contactPoints: ['127.0.0.1'],
+ *   localDataCenter: 'datacenter1',
+ *   keyspace: 'myapp'
+ * });
+ * 
+ * // Crear keyspace
+ * const keyspaceSQL = cassandra.createKeyspace('myapp', {
+ *   replication: {
+ *     class: 'SimpleStrategy',
+ *     replication_factor: 3
+ *   }
+ * });
+ */
 import cassandra from 'cassandra-driver';
 import Core from '@querybuilder/core/core.js';
 import cassandraCommands from './comandos/cassandra.js';
 import { log, Types } from '@querybuilder/core/utils/utils.js';
 
 /**
- * Cassandra integration for QueryBuilder
- * Distributed NoSQL database for Big Data applications
- * Supports CQL operations, keyspaces, tables, UDT, collections
+ * Clase Cassandra QueryBuilder para operaciones específicas de Apache Cassandra
+ * @class Cassandra
+ * @extends Core
+ * @description Integración de Apache Cassandra para aplicaciones Big Data distribuidas.
+ * Soporta operaciones CQL, keyspaces, tablas, tipos definidos por usuario y colecciones.
+ * @since 1.0.0
  */
 class Cassandra extends Core {
+  /**
+   * Constructor de la clase Cassandra
+   * @description Inicializa una nueva instancia del QueryBuilder para Cassandra
+   * @constructor
+   * @param {Object} [options={}] - Opciones de configuración para Cassandra
+   * @param {Array<string>} [options.contactPoints=['127.0.0.1']] - Puntos de contacto del cluster
+   * @param {string} [options.localDataCenter='datacenter1'] - Datacenter local
+   * @param {string} [options.keyspace] - Keyspace por defecto
+   * @param {Object} [options.credentials] - Credenciales de autenticación
+   * @since 1.0.0
+   * @example
+   * const cassandra = new Cassandra({
+   *   contactPoints: ['192.168.1.100', '192.168.1.101'],
+   *   localDataCenter: 'datacenter1',
+   *   keyspace: 'production'
+   * });
+   */
   constructor(options = {}) {
     super();
+    /**
+     * Tipo de base de datos - siempre 'cassandra'
+     * @type {string}
+     */
     this.dataType = "cassandra";
+    /**
+     * Cliente Cassandra
+     * @type {Object|null}
+     */
     this.client = null;
+    /**
+     * Keyspace actual
+     * @type {string|null}
+     */
     this.keyspace = null;
+    /**
+     * Nivel de consistencia por defecto
+     * @type {number}
+     */
     this.consistencyLevel = cassandra.types.consistencies.quorum;
 
-    // Cassandra-specific configurations
+    /**
+     * Configuración Cassandra específica
+     * @type {Object}
+     */
     this.config = {
       contactPoints: options.contactPoints || ['127.0.0.1'],
       localDataCenter: options.localDataCenter || 'datacenter1',

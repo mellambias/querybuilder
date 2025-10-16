@@ -1,0 +1,97 @@
+{
+  "source": {
+    "include": [
+      "./packages/@querybuilder/core/",
+
+      "./README.md"
+    ],
+    "sourceType": "module",
+    "tags": {
+    "allowUnknownTags": false,
+    "dictionaries": ["jsdoc", "closure"]
+    },
+    "exclude": [
+      "./node_modules/",
+      "./dist/",
+      "./docs/",
+      "./test/",
+      "**/test/**",
+      "**/node_modules/**",
+      "**/tests/**",
+      "**/*.test.js",
+      "**/*.spec.js", 
+      "**/debug*.js",
+      "**/*.d.ts",
+      "**/*.ts",
+      "**/*.tsx",
+      "**/typings/**",
+      "**/types/**",
+      "**/@types/**",
+      "**/src/**",
+      "**/lib/**/*.ts",
+      "**/lib/**/*.d.ts",
+      "**/mongodb/**",
+      "**/mysql2/**",
+      "**/pg/**",
+      "**/bson/**",
+      "**/utils-webcrypto.js",
+      "**/*.min.js",
+      "**/promise.d.ts",
+      "**/beta.d.ts",
+      "**/mongodb.d.ts",
+      "./packages/@querybuilder/postgresql/",
+      "./packages/@querybuilder/mysql/",
+      "./packages/@querybuilder/mongodb/",
+      "./packages/@querybuilder/sqlite/",
+      "./packages/@querybuilder/cassandra/",
+      "./packages/@querybuilder/redis/",
+      "./packages/@querybuilder/chroma/"
+    ],
+    "includePattern": "\\.(js|jsx)$",
+    "excludePattern": "(test|spec|debug|\\.d|\\.ts|\\.tsx)\\.(ts|tsx)$"
+  },
+  "opts": {
+    "destination": "./docs/api/",
+    "recurse": true,
+    "readme": "./README.md", 
+    "package": "./package.json",
+    "template": "node_modules/jaguarjs-jsdoc",
+    "theme_opts": {
+      "systemName": "QueryBuilder",
+      "footer": "QueryBuilder &copy; 2024 - Full Stack Developed",
+      "navType": "vertical",
+      "linenums": true,
+      "collapseSymbols": false,
+      "inverseNav": false,
+      "highlightTutorialCode": true,
+      "syntaxTheme": "default",
+      "sort": true,
+      "default_theme": "dark"
+    },
+    "encoding": "utf8",
+    "lenient": true,
+    "private": false,
+    "parser": {
+      "lenient": true,
+      "strict": false
+    }
+  },
+  "plugins": [
+    "plugins/markdown",
+    "plugins/summarize",
+    "jsdoc-plugin-typescript"
+  ],
+  "templates": {
+    "cleverLinks": true,
+    "monospaceLinks": true,
+    "useLongnameInNav": true,
+    "showInheritedInNav": true
+  },
+  "typescript": {
+    "moduleRoot": "./packages/@querybuilder"
+  },
+  "markdown": {
+    "hardwrap": false,
+    "idInHeadings": true
+  }
+}

@@ -4,12 +4,12 @@
 [![License](https://img.shields.io/badge/license-MPL--2.0-blue?style=flat-square)](https://www.mozilla.org/en-US/MPL/2.0/)
 [![Build Status](https://img.shields.io/github/workflow/status/mellambias/querybuilder/CI?style=flat-square)](https://github.com/mellambias/querybuilder/actions)
 
-Un **QueryBuilder multi-paradigma** que soporta bases de datos **SQL**, **NoSQL**, **Vector DB**, **In-Memory** y **Distribuidas** con una API unificada y elegante.
+Libreria **QueryBuilder multi-paradigma** con soporte para bases de datos **SQL**, **NoSQL**, **Vector DB**, **In-Memory** y **Distribuidas** usando una API fluida unificada y elegante.
 
 ## 🎯 **Características Principales**
 
 ✅ **Multi-Database**: MySQL, PostgreSQL, MongoDB, Cassandra, Redis, SQLite, Chroma  
-✅ **Multi-Paradigm**: SQL, NoSQL, Vector DB, In-Memory, Distributed  
+✅ **Multi-Paradigma**: SQL, NoSQL, Vector DB, In-Memory, Distributed  
 ✅ **API Unificada**: Misma sintaxis para diferentes paradigmas  
 ✅ **Modular**: Instala solo lo que necesitas  
 ✅ **TypeScript Ready**: Soporte completo para tipos  
@@ -51,7 +51,6 @@ npm install @querybuilder/core @querybuilder/mysql @querybuilder/postgresql @que
 copy config.example.js config.js
 
 # 2. Editar config.js con tus credenciales
-# (El archivo config.js está en .gitignore por seguridad)
 ```
 
 📋 Ver [CONFIG.md](./CONFIG.md) para instrucciones detalladas de configuración.
@@ -367,19 +366,10 @@ npm run publish:all   # Publicar a NPM
 4. Push a la rama (`git push origin feature/nueva-caracteristica`)
 5. Abre un Pull Request
 
-## 📄 **Licencia**
-
-Este proyecto está bajo licencia **PROPRIETARY**. Ver [LICENSE](./LICENSE) para términos y condiciones.
-
-**⚠️ IMPORTANTE**: Este software es propietario. No está permitido copiar, modificar, distribuir o crear trabajos derivados sin autorización explícita por escrito.
-
 ## 👤 **Autor**
 
 **mellambias** - [mellambias](https://github.com/mellambias)
 
-## 🏆 **Agradecimientos**
-
-Agradecemos a todos los contribuidores que han hecho posible este proyecto.
 
 ---
 

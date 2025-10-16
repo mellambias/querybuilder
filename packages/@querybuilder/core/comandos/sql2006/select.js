@@ -1,7 +1,27 @@
+/**
+ * @fileoverview Comandos para la cláusula SELECT.
+ * @module comandos/sql2006/select
+ * @description Módulo que implementa el comando SELECT del estándar SQL2006 (ISO/IEC 9075).
+ * Permite construir sentencias SQL para consultar datos de una o más tablas en una base de datos.
+ * @version 2.0.0
+ */
 import Column from "../../column.js";
 import Expresion from "../../expresion.js";
 import QueryBuilder from "../../querybuilder.js";
 import { log } from "../../utils/utils.js";
+
+/**
+ * @namespace select
+ * @description Objeto que representa el comando SELECT del estándar SQL2006.
+ * Permite construir sentencias SQL para consultar datos de una o más tablas en una base de datos.
+ * @property {boolean} unique - Si es true, incluye "DISTINCT" en la sentencia.
+ * @property {boolean} all - Si es true, incluye "ALL" en la sentencia.
+ * @property {String|Column|Expresion|QueryBuilder|Array<String|Column|Expresion|QueryBuilder>} columns - Las columnas a seleccionar.
+ * Puede ser una cadena, una instancia de Column, Expresion, QueryBuilder, o un array de estos tipos.
+ * Si es un QueryBuilder, se trata como una subconsulta.
+ * Si es un array, se unen las columnas con comas.
+ * Si es un objeto plano, se puede usar { col: "NOMBRE_COLUMNA", as: "ALIAS" } para alias.
+ */
 export const select = {
 	unique: (unique) => (unique === true ? "DISTINCT" : undefined),
 	all: (all) => (all === true ? "ALL" : undefined),

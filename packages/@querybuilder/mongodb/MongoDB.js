@@ -1,18 +1,82 @@
-/*
-Implementa las variaciones al SQL2006 propias de los NoSQL
-*/
+/**
+ * @fileoverview MongoDB QueryBuilder - Implementa las variaciones NoSQL para MongoDB
+ * @description Clase especializada para MongoDB que extiende Core con funcionalidades específicas del SGBD NoSQL.
+ * Incluye soporte para operaciones CRUD, agregaciones, índices, colecciones y características específicas de MongoDB.
+ * @version 2.0.0
+ * @author QueryBuilder Team
+ * @license MIT
+ * @since 1.0.0
+ * @example
+ * // Crear instancia MongoDB
+ * const qb = new QueryBuilder();
+ * const mongo = new MongoDB(qb);
+ * 
+ * // Crear base de datos MongoDB
+ * const createDb = await mongo.createDatabase('myapp_db');
+ * 
+ * // Crear colección con opciones
+ * const createCollection = mongo.createTable('users', {
+ *   validator: {
+ *     $jsonSchema: {
+ *       bsonType: 'object',
+ *       required: ['name', 'email'],
+ *       properties: {
+ *         name: { bsonType: 'string' },
+ *         email: { bsonType: 'string' }
+ *       }
+ *     }
+ *   }
+ * });
+ */
 import Core from "../core/core.js";
 import mongo from "./comandos/mongoDB.js";
 import Command from "./Command.js";
 import QueryBuilder from "../core/querybuilder.js";
 
+/**
+ * Clase MongoDB QueryBuilder para operaciones específicas de MongoDB
+ * @class MongoDB
+ * @extends Core
+ * @description Implementa las operaciones NoSQL específicas de MongoDB.
+ * Incluye soporte para documentos, colecciones, agregaciones, índices y características de MongoDB.
+ * @since 1.0.0
+ */
 class MongoDB extends Core {
+	/**
+	 * Constructor de la clase MongoDB
+	 * @description Inicializa una nueva instancia del QueryBuilder para MongoDB
+	 * @constructor
+	 * @param {QueryBuilder} qbuilder - Instancia del QueryBuilder principal
+	 * @since 1.0.0
+	 * @example
+	 * const qb = new QueryBuilder();
+	 * const mongo = new MongoDB(qb);
+	 * console.log(mongo.dataType); // 'mongobd'
+	 */
 	constructor(qbuilder) {
 		super();
+		/**
+		 * Tipo de base de datos - siempre 'mongobd'
+		 * @type {string}
+		 */
 		this.dataType = "mongobd"; // especifica el tipo de datos usado
+		/**
+		 * Referencia al QueryBuilder principal
+		 * @type {QueryBuilder}
+		 */
 		this.qb = qbuilder;
 	}
 
+	/**
+	 * Generar statement MongoDB
+	 * @method getStatement
+	 * @override
+	 * @param {Object} scheme - Esquema de comandos MongoDB
+	 * @param {Object} params - Parámetros para el comando
+	 * @returns {Object} Comando MongoDB construido
+	 * @since 1.0.0
+	 * @description Construye comandos MongoDB siguiendo el esquema definido
+	 */
 	getStatement(scheme, params) {
 		const values = params?.options ? { ...params, ...params.options } : params;
 		scheme._options = { ...params?.options };
@@ -44,6 +108,20 @@ class MongoDB extends Core {
 			}, {});
 		return commandArray;
 	}
+	/**
+	 * Crear base de datos MongoDB
+	 * @method createDatabase
+	 * @override
+	 * @async
+	 * @param {string} name - Nombre de la base de datos
+	 * @param {Object} [options] - Opciones adicionales
+	 * @returns {Promise<Command>} Comando para crear la base de datos
+	 * @since 1.0.0
+	 * @description MongoDB crea la base de datos automáticamente cuando insertas el primer documento.
+	 * Este método establece el nombre de la base de datos y crea el esquema inicial.
+	 * @example
+	 * const createDbCmd = await mongo.createDatabase('myapp_db');
+	 */
 	async createDatabase(name, options) {
 		/**
 		 * MongoDB crea la base de datos automáticamente cuando insertas el primer documento en una colección.

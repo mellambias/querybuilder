@@ -65,3 +65,6 @@ src/
 # Debug files
 debug*.js
 manual-test.js
+
+# Documentation
+docs/api/

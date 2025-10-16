@@ -1,20 +1,70 @@
-/*
-Chroma QueryBuilder - Implementa operaciones vectoriales para AI/ML
-Chroma es una base de datos vectorial especializada en embeddings y búsqueda por similitud
-*/
+/**
+ * @fileoverview Chroma QueryBuilder - Implementa operaciones vectoriales para AI/ML
+ * @description Clase especializada para Chroma que extiende Core con funcionalidades de base de datos vectorial.
+ * Chroma es una base de datos vectorial especializada en embeddings y búsqueda por similitud para aplicaciones AI/ML.
+ * @version 2.0.0
+ * @author QueryBuilder Team
+ * @license MIT
+ * @since 1.0.0
+ * @example
+ * // Crear instancia Chroma
+ * const chroma = new Chroma();
+ * 
+ * // Crear cliente Chroma
+ * const client = chroma.createClient({
+ *   path: "http://localhost:8000",
+ *   tenant: "my_tenant",
+ *   database: "my_database"
+ * });
+ * 
+ * // Crear colección con embedding function
+ * const collection = chroma.createCollection('documents', {
+ *   embeddingFunction: 'sentence-transformers',
+ *   metadata: { description: 'Document embeddings' }
+ * });
+ */
 import Core from "../core/core.js";
 
 /**
- * Chroma QueryBuilder - Implementación para base de datos vectorial
+ * Clase Chroma QueryBuilder para operaciones vectoriales específicas de Chroma
  * @class Chroma  
  * @extends Core
+ * @description Implementación para base de datos vectorial Chroma especializada en AI/ML.
+ * Soporta embeddings, búsqueda por similitud, colecciones vectoriales y operaciones específicas de Chroma.
+ * @since 1.0.0
  */
 class Chroma extends Core {
+  /**
+   * Constructor de la clase Chroma
+   * @description Inicializa una nueva instancia del QueryBuilder para Chroma
+   * @constructor
+   * @since 1.0.0
+   * @example
+   * const chroma = new Chroma();
+   * console.log(chroma.dataType); // 'chroma'
+   * console.log(chroma.version); // '1.8+'
+   */
   constructor() {
     super();
+    /**
+     * Tipo de base de datos - siempre 'chroma'
+     * @type {string}
+     */
     this.dataType = "chroma";
+    /**
+     * Versión soportada de Chroma
+     * @type {string}
+     */
     this.version = "1.8+";
+    /**
+     * Función de embedding por defecto
+     * @type {Function|null}
+     */
     this.embeddingFunction = null;
+    /**
+     * Cliente Chroma
+     * @type {Object|null}
+     */
     this.client = null;
   }
 

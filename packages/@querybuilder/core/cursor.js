@@ -1,5 +1,19 @@
 import QueryBuilder from "./querybuilder.js";
 import { log } from "./utils/utils.js";
+
+/**
+ * Clase para manejar cursores en consultas SQL.
+ * Permite declarar, abrir, cerrar y realizar operaciones de fetch en cursores.
+ * Soporta cursores con opciones como SCROLL.
+ * Delega la generación de comandos SQL a un objeto de lenguaje pasado como builder.
+ * Delega la ejecución de comandos SQL a una función pasada como builder.
+ * @class Cursor
+ * @param {string} name - Nombre del cursor.
+ * @param {Expresion} expresion - Expresión asociada al cursor.
+ * @param {Object} options - Opciones del cursor.
+ * @param {QueryBuilder} builder - Instancia del QueryBuilder.
+ * @param {Function} next - Función para obtener el siguiente valor.
+ */
 class Cursor {
 	constructor(name, expresion, options, builder, next) {
 		this.name = name;
@@ -15,11 +29,20 @@ class Cursor {
 		}
 	}
 
+	/**
+	 * Abre el cursor.
+	 * @returns {Cursor} - La instancia del cursor.
+	 */
 	open() {
 		this.status = "opened";
 		this.cursor.push(this.lang.openCursor(this.name));
 		return this;
 	}
+	/**
+	 * Cierra el cursor.
+	 * @param {Object} next - Objeto con la propiedad 'q' para agregar comandos adicionales.
+	 * @returns {Cursor} - La instancia del cursor.
+	 */
 	close(next) {
 		this.status = "closed";
 		if (next?.q) {
@@ -29,6 +52,10 @@ class Cursor {
 		this.cursor.push(response);
 		return this;
 	}
+	/**
+	 * Genera métodos de fetch para diferentes direcciones.
+	 * Soporta NEXT, PRIOR, FIRST, LAST, ABSOLUTE y RELATIVE.
+	 */
 	fetches() {
 		const directions = ["NEXT", "PRIOR", "FIRST", "LAST"];
 		const directionsWithValue = ["ABSOLUTE", "RELATIVE"];
@@ -61,6 +88,12 @@ class Cursor {
 		}
 	}
 
+	/**
+	 * Realiza un fetch en el cursor.
+	 * @param {Object} hostVars - Variables de host para la consulta.
+	 * @returns {string} - Comando SQL generado para el fetch.
+	 */
+
 	fetch(hostVars) {
 		if (this.status === "opened") {
 			const fetch = this.lang.fetch(this.name, hostVars);
@@ -69,7 +102,11 @@ class Cursor {
 		}
 		throw new Error("El cursor debe estar abierto");
 	}
-
+	/** 
+	 * Agrega un comando al cursor.
+	 * @param {string|QueryBuilder} command - Comando SQL o instancia de QueryBuilder.
+	 * @returns {Cursor} - La instancia del cursor.
+	 */
 	async add(command) {
 		if (this.status === "opened") {
 			if (command instanceof QueryBuilder) {
@@ -81,7 +118,10 @@ class Cursor {
 		}
 		throw new Error("El cursor debe estar abierto");
 	}
-
+	/**
+	 * Convierte el cursor a una cadena de texto SQL.
+	 * @returns {string} - Comando SQL completo del cursor.
+	 */
 	toString() {
 		const toText = this.cursor.join(";\n").concat(";").replaceAll(";;", ";");
 		log(
@@ -92,6 +132,10 @@ class Cursor {
 		);
 		return toText;
 	}
+	/**
+	 * Ejecuta el cursor utilizando la función de ejecución del builder.
+	 * @returns {Promise} - Resultado de la ejecución del cursor.
+	 */
 	execute() {
 		return this.builderExecute();
 	}

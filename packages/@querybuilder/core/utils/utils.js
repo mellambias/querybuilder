@@ -1,3 +1,23 @@
+/**
+ * @fileoverview Utilidades centrales para QueryBuilder
+ * @description Funciones de utilidad, extensiones de String.prototype, validaciones de tipos,
+ * formateo de fechas y funciones auxiliares para el funcionamiento del QueryBuilder.
+ * @version 2.0.0
+ * @author QueryBuilder Team
+ * @license MIT
+ * @since 1.0.0
+ * @example
+ * import { dataTypes, Types, check, formatDate, log } from './utils.js';
+ * 
+ * // Convertir tipo de datos
+ * const postgresType = 'VARCHAR(255)'.toDataType('postgresql');
+ * 
+ * // Validar palabra reservada
+ * const isReserved = 'SELECT'.isReserved(); // true
+ * 
+ * // Formatear fecha
+ * const formatted = formatDate(new Date(), 'YYYY-MM-DD HH:mm:ss');
+ */
 import { dataTypes } from "../types/dataTypes.js";
 import Types from "../types/Type.js";
 import sqlReservedWords from "../types/reservedWords.js";
@@ -5,6 +25,16 @@ import { privilegios, objectTypes } from "../types/privilegios.js";
 import QueryBuilder from "../querybuilder.js";
 import Command from "../noSql/Command.js";
 
+/**
+ * Divide un comando SQL extrayendo la parte principal y los parámetros
+ * @function splitCommand
+ * @param {string} value - Comando SQL con posibles parámetros entre paréntesis
+ * @returns {Array<string>} Array con [comando_principal, parámetros_completos]
+ * @since 1.0.0
+ * @example
+ * const [command, params] = splitCommand('VARCHAR(255)');
+ * // command: 'VARCHAR', params: 'VARCHAR(255)'
+ */
 function splitCommand(value) {
 	const match = value.match(/\(([^)]+)\)/);
 	let length = "";
@@ -16,9 +46,17 @@ function splitCommand(value) {
 	return [commandToFind, length];
 }
 /**
- * devuelve el tipo de dato correspondiente al lenguaje
- * @param {string} target - nombre del lenguaje
- * @returns
+ * Convierte un tipo de datos a su equivalente en el lenguaje especificado
+ * @function String.prototype.toDataType
+ * @param {string} target - Nombre del lenguaje objetivo ('mysql', 'postgresql', 'mongodb', etc.)
+ * @returns {string|Error} Tipo de datos convertido o Error si no se encuentra
+ * @since 1.0.0
+ * @description Extensión de String que permite convertir tipos de datos SQL estándar
+ * a sus equivalentes específicos de cada SGBD.
+ * @example
+ * const mysqlType = 'VARCHAR(255)'.toDataType('mysql');
+ * const postgresType = 'INTEGER'.toDataType('postgresql'); 
+ * const mongoType = 'STRING'.toDataType('mongodb');
  */
 String.prototype.toDataType = function (target) {
 	const [command] = splitCommand(this.toString());
@@ -55,6 +93,18 @@ String.prototype.toDataType = function (target) {
 	);
 };
 
+/**
+ * Verifica si una palabra es reservada en SQL
+ * @function String.prototype.isReserved
+ * @returns {boolean} true si la palabra es reservada, false en caso contrario
+ * @since 1.0.0
+ * @description Extensión de String que verifica si una cadena es una palabra reservada SQL.
+ * La verificación es case-insensitive.
+ * @example
+ * const isReserved1 = 'SELECT'.isReserved(); // true
+ * const isReserved2 = 'mycolumn'.isReserved(); // false
+ * const isReserved3 = 'where'.isReserved(); // true
+ */
 String.prototype.isReserved = function () {
 	const wordToSearch = this.toString().toUpperCase();
 	return (
@@ -62,9 +112,32 @@ String.prototype.isReserved = function () {
 	);
 };
 
+/**
+ * Convierte la primera letra a mayúscula y el resto a minúscula
+ * @function String.prototype.toCapital
+ * @returns {string} Cadena con formato Capital Case
+ * @since 1.0.0
+ * @description Extensión de String para formatear texto en Capital Case.
+ * @example
+ * const formatted1 = 'hello world'.toCapital(); // 'Hello world'
+ * const formatted2 = 'JAVASCRIPT'.toCapital(); // 'Javascript'
+ */
 String.prototype.toCapital = function () {
 	return `${this.toString().charAt(0).toUpperCase()}${this.toString().slice(1).toLowerCase()}`;
 };
+/**
+ * Valida tipos de datos según un formato específico
+ * @function check
+ * @param {string} format - Formato de validación con sintaxis especial
+ * @param {Array} values - Valores a validar
+ * @returns {boolean} true si todos los valores cumplen el formato, false en caso contrario
+ * @since 1.0.0
+ * @description Función de validación que verifica que los valores proporcionados
+ * cumplan con los tipos especificados en el formato.
+ * @example
+ * const isValid = check('(name:String, age:Number, items:Array)', ['John', 25, [1,2,3]]);
+ * // Valida que el primer valor sea String, segundo Number, tercero Array
+ */
 function check(format, values) {
 	const clasesPosibles = { QueryBuilder, Command };
 	const ini = format.indexOf("(") + 1;
@@ -113,18 +186,58 @@ function check(format, values) {
 	return errors.length > 1 ? errors.join("\n") : "";
 }
 
+/**
+ * Reemplazador JSON personalizado para serializar RegExp
+ * @function jsonReplacer
+ * @param {string} key - Clave del objeto
+ * @param {*} value - Valor a serializar
+ * @returns {*} Valor modificado para serialización JSON
+ * @since 1.0.0
+ * @description Función reemplazadora para JSON.stringify que maneja objetos RegExp
+ * convirtiéndolos en objetos serializables.
+ * @example
+ * const obj = { pattern: /test/gi };
+ * const json = JSON.stringify(obj, jsonReplacer);
+ */
 function jsonReplacer(key, value) {
 	if (value instanceof RegExp) {
 		return { __regex: true, pattern: value.source, flags: value.flags };
 	}
 	return value;
 }
+
+/**
+ * Reviver JSON personalizado para deserializar RegExp
+ * @function jsonReviver
+ * @param {string} key - Clave del objeto
+ * @param {*} value - Valor a deserializar
+ * @returns {*} Valor restaurado desde JSON
+ * @since 1.0.0
+ * @description Función reviver para JSON.parse que restaura objetos RegExp
+ * desde su representación serializable.
+ * @example
+ * const obj = JSON.parse(jsonString, jsonReviver);
+ * // Los objetos RegExp son restaurados correctamente
+ */
 function jsonReviver(key, value) {
 	if (value?.__regex) {
 		return new RegExp(value.pattern, value.flags);
 	}
 	return value;
 }
+
+/**
+ * Verifica si un valor es un objeto JavaScript puro
+ * @function isJSObject
+ * @param {*} target - Valor a verificar
+ * @returns {boolean} true si es un objeto JavaScript puro, false en caso contrario
+ * @since 1.0.0
+ * @description Determina si un valor es un objeto JavaScript puro (no array, null, etc.)
+ * @example
+ * const isObj1 = isJSObject({}); // true
+ * const isObj2 = isJSObject([]); // false
+ * const isObj3 = isJSObject(null); // false
+ */
 function isJSObject(target) {
 	if (typeof target !== "object") {
 		return false;
@@ -132,7 +245,26 @@ function isJSObject(target) {
 	return Object.prototype.toString(target) === "[object Object]";
 }
 
+/**
+ * Controla si se muestran los logs de depuración
+ * @type {boolean}
+ */
 const showLogs = false;
+
+/**
+ * Función de logging condicional para depuración
+ * @function log
+ * @param {string|Array<string>} command - Comando o array de comandos para el log
+ * @param {string} [text=""] - Texto adicional del log
+ * @param {...*} data - Datos adicionales para mostrar
+ * @returns {void}
+ * @since 1.0.0
+ * @description Función de logging que se activa solo cuando showLogs es true.
+ * Soporta múltiples comandos en array y formateo especial.
+ * @example
+ * log('SQL', 'Ejecutando query', { query: 'SELECT * FROM users' });
+ * log(['DB', 'CONN'], 'Conectando a base de datos');
+ */
 function log(command, text = "", ...data) {
 	if (!showLogs) {
 		return;
@@ -144,6 +276,48 @@ function log(command, text = "", ...data) {
 	return console.log(`[${command}] ${text}`, ...data);
 }
 
+/**
+ * Formatea una fecha según un patrón específico
+ * @function formatDate
+ * @param {Date} date - Objeto Date a formatear
+ * @param {string} format - Patrón de formato con tokens específicos
+ * @returns {string} Fecha formateada según el patrón
+ * @since 1.0.0
+ * @description Formatea fechas usando tokens de reemplazo similares a moment.js.
+ * Soporta tokens para año, mes, día, hora, minutos, segundos y zona horaria.
+ * @example
+ * const formatted1 = formatDate(new Date(), 'YYYY-MM-DD HH:mm:ss');
+ * // '2025-10-02 14:30:15'
+ * 
+ * const formatted2 = formatDate(new Date(), 'DD/MM/YYYY hh:mm A');
+ * // '02/10/2025 02:30 PM'
+ * 
+ * const formatted3 = formatDate(new Date(), 'dddd, MMMM D, YYYY');
+ * // 'Wednesday, October 2, 2025'
+ * 
+ * @description Tokens soportados:
+ * - YYYY: Año completo (2025)
+ * - YY: Año de 2 dígitos (25)
+ * - MMMM: Nombre completo del mes (October)
+ * - MMM: Nombre corto del mes (Oct)
+ * - MM: Mes con 2 dígitos (10)
+ * - M: Mes sin ceros (10)
+ * - DD: Día con 2 dígitos (02)
+ * - D: Día sin ceros (2)
+ * - dddd: Nombre completo del día (Wednesday)
+ * - ddd: Nombre corto del día (Wed)
+ * - HH: Hora 24h con 2 dígitos (14)
+ * - H: Hora 24h sin ceros (14)
+ * - hh: Hora 12h con 2 dígitos (02)
+ * - h: Hora 12h sin ceros (2)
+ * - mm: Minutos con 2 dígitos (30)
+ * - m: Minutos sin ceros (30)
+ * - ss: Segundos con 2 dígitos (15)
+ * - s: Segundos sin ceros (15)
+ * - A: AM/PM mayúscula
+ * - a: am/pm minúscula
+ * - Z: Zona horaria
+ */
 function formatDate(date, format) {
 	//'padStart' agrega a la izquierda si tiene menos de dos dígitos.
 	const components = {
