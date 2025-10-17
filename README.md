@@ -350,10 +350,29 @@ npm run publish:all   # Publicar a NPM
 
 ## 📚 **Documentación**
 
+### 📖 **Documentación API Interactiva**
+La documentación completa de la API se genera automáticamente usando **Documentation.js** con navegación limpia y URLs intuitivas:
+
+```bash
+# Generar y servir documentación
+pnpm run docs:build    # Genera documentación
+pnpm run docs:serve    # Sirve en http://localhost:3003
+pnpm run docs:dev      # Genera y sirve automáticamente
+pnpm run docs:validate # Valida comentarios JSDoc
+```
+
+### 📑 **Recursos Adicionales**
 - [**Guía de Inicio**](./docs/getting-started.md)
-- [**API Reference**](./docs/api-reference.md)
+- [**API Reference**](./docs/api-reference.md) 
 - [**Ejemplos Avanzados**](./examples/)
 - [**Migraciones**](./docs/migrations.md)
+
+**Características de la documentación:**
+- ✅ URLs limpias sin prefijos de módulo
+- ✅ Navegación intuitiva e interactiva
+- ✅ Búsqueda integrada
+- ✅ Enlaces directos a código fuente
+- ✅ Ejemplos de código con resaltado de sintaxis
 
 ## 🤝 **Contribuir**
 

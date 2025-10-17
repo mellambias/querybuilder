@@ -6,6 +6,44 @@ import Expresion from "./expresion.js";
 import Value from "./value.js";
 import Command from "./noSql/Command.js";
 
+/**
+ * @fileoverview QueryBuilder Core Package - API fluida para construir y ejecutar consultas de base de datos
+ * @version 2.0.0
+ * @author Miguel E. Llambías Llansó
+ * @license MPL-2.0
+ */
+
+/**
+ * @fileoverview QueryBuilder Core Package
+ * @description
+ * Paquete principal @QueryBuilder que proporciona una API fluida para construir y ejecutar consultas de base de datos.
+ * El core es **obligatorio** y contiene toda la funcionalidad base para SQL estándar.
+ * Los adaptadores de base de datos específicos (MySQL, PostgreSQL, MongoDB, etc.) son **opcionales**.
+ * 
+ * **Estructura del paquete:**
+ * - `@querybuilder/core` - **[OBLIGATORIO]** Funcionalidad base y API principal
+ * - `@querybuilder/mysql` - **[OPCIONAL]** Adaptador para MySQL
+ * - `@querybuilder/postgresql` - **[OPCIONAL]** Adaptador para PostgreSQL  
+ * - `@querybuilder/mongodb` - **[OPCIONAL]** Adaptador para MongoDB
+ * - `@querybuilder/sqlite` - **[OPCIONAL]** Adaptador para SQLite
+ * - `@querybuilder/redis` - **[OPCIONAL]** Adaptador para Redis
+ * - `@querybuilder/cassandra` - **[OPCIONAL]** Adaptador para Cassandra
+ * - `@querybuilder/chroma` - **[OPCIONAL]** Adaptador para ChromaDB
+ * 
+ * @example
+ * // Instalación básica (solo core)
+ * npm install @querybuilder/core
+ * 
+ * // Con adaptador específico
+ * npm install @querybuilder/core @querybuilder/mysql
+ * 
+ * // Uso básico
+ * import QueryBuilder from '@querybuilder/core';
+ * import MySQL from '@querybuilder/mysql';
+ * 
+ * const qb = new QueryBuilder(MySQL);
+ * qb.select('*').from('users').where('active = 1');
+ */
 
 /**
  * Clase principal QueryBuilder que proporciona una API fluida para construir y ejecutar consultas de base de datos.
@@ -130,7 +168,8 @@ class QueryBuilder {
 	}
 
 	/**
-	 * @method thread
+	 * @function thread
+	 * @category Utilities
 	 * @memberof QueryBuilder
 	 * @description
 	 * Gestiona la ejecución de hilos para operaciones de consulta concurrentes
@@ -166,7 +205,8 @@ class QueryBuilder {
 	}
 
 	/**
-	 * @method toNext
+	 * @function toNext
+	 * @category General
 	 * @memberof QueryBuilder
 	 * @description
 	 * Método interno para encadenar componentes de consulta y gestionar el estado de la consulta
@@ -276,7 +316,8 @@ class QueryBuilder {
 	}
 
 	/**
-	 * @method driver
+	 * @function driver
+	 * @category General
 	 * @memberof QueryBuilder
 	 * @description
 	 * Instancia y configura el Driver para la base de datos que ejecutara los comandos
@@ -305,7 +346,8 @@ class QueryBuilder {
 	 * Comandos auxiliares para gestión y mantenimiento de la base de datos.
 	 **************************************************************************/
 	/**
-	 * @method use
+	 * @function use
+	 * @category General
 	 * @memberof QueryBuilder
 	 * @description
 	 *	Gestiona el cambio de base de datos dentro del mismo servidor (SGBD)
@@ -328,7 +370,8 @@ class QueryBuilder {
 		Definen y modifican la estructura de la base de datos.
 	**************************************************************/
 	/**
-	 * @method createDatabase
+	 * @function createDatabase
+	 * @category DDL
 	 * @memberof QueryBuilder
 	 * @description
 	 *	Crea una base de datos dentro del servidor (SGBD)
@@ -353,7 +396,8 @@ class QueryBuilder {
 	}
 
 	/**
-	 * @method dropDatabase
+	 * @function dropDatabase
+	 * @category DDL
 	 * @memberof QueryBuilder
 	 * @description
 	 * Elimina una base de datos del servidor (SGBD)
@@ -377,7 +421,8 @@ class QueryBuilder {
 		}
 	}
 	/**
-	 * @method createSchema
+	 * @function createSchema
+	 * @category DDL
 	 * @memberof QueryBuilder
 	 * @description
 	 * Crea un "esquema" o "tabla" de nombres para organizar objetos de base de datos
@@ -401,7 +446,8 @@ class QueryBuilder {
 	}
 
 	/**
-	 * @method dropSchema
+	 * @function dropSchema
+	 * @category DDL
 	 * @memberof QueryBuilder
 	 * @description	
 	 * Elimina un esquema de la base de datos
@@ -416,7 +462,8 @@ class QueryBuilder {
 	}
 
 	/**
-	 * @method createTable
+	 * @function createTable
+	 * @category DDL
 	 * @memberof QueryBuilder
 	 * @description
 	 * Crea una nueva tabla con el nombre y las opciones especificadas en la base de datos actual.
@@ -445,7 +492,8 @@ class QueryBuilder {
 		}
 	}
 	/**
-	 *@method alterTable
+	 * @function alterTable
+	 * @category DDL
 	 * @memberof QueryBuilder
 	 * @description
 	 * Modifica una tabla existente
@@ -463,7 +511,8 @@ class QueryBuilder {
 		return this.toNext([command, next]);
 	}
 	/**
-	 * @method alterTableComands
+	 * @function alterTableComands
+	 * @category DDL
 	 * @memberof QueryBuilder
 	 * @description
 	 * Define los comandos que modifican la estructura de las columnas de la tabla actual.
@@ -526,7 +575,8 @@ class QueryBuilder {
 		}
 	}
 	/**
-	 * @method dropTable
+	 * @function dropTable
+	 * @category DDL
 	 * @memberof QueryBuilder
 	 * @description
 	 * Elimina una tabla de la base de datos actual
@@ -544,7 +594,8 @@ class QueryBuilder {
 		return this.toNext([command, next], ";");
 	}
 	/**
-	 * @method createType
+	 * @function createType
+	 * @category DDL
 	 * @memberof QueryBuilder
 	 * @description
 	 * Crea un tipo definido por el usuario en la base de datos actual
@@ -568,7 +619,8 @@ class QueryBuilder {
 		}
 	}
 	/**
-	 * @method dropType
+	 * @function dropType
+	 * @category DDL
 	 * @memberof QueryBuilder
 	 * @description
 	 * Elimina un tipo definido por el usuario
@@ -591,7 +643,8 @@ class QueryBuilder {
 		}
 	}
 	/**
-	 * @method createAssertion
+	 * @function createAssertion
+	 * @category DDL
 	 * @memberof QueryBuilder
 	 * @description
 	 * Permite crear una restricción a nivel de base de datos.
@@ -627,7 +680,8 @@ class QueryBuilder {
 		}
 	}
 	/**
-	 * @method createDomain
+	 * @function createDomain
+	 * @category DDL
 	 * @memberof QueryBuilder
 	 * @description
 	 * Permite definir tipos de datos personalizados con restricciones.
@@ -659,7 +713,8 @@ class QueryBuilder {
 		}
 	}
 	/**
-	 * @method createView
+	 * @function createView
+	 * @category DDL
 	 * @memberof QueryBuilder
 	 * @description
 	 * Permite definir una consulta almacenada como un objeto de la base de datos.
@@ -696,7 +751,8 @@ class QueryBuilder {
 		}
 	}
 	/**
-	 * @method dropView
+	 * @function dropView
+	 * @category DDL
 	 * @memberof QueryBuilder
 	 * @description
 	 * Elimina una vista creada previamente
@@ -724,7 +780,8 @@ class QueryBuilder {
 	 ********************************************************/
 
 	/**
-	 * @method createRoles
+	 * @function createRoles
+	 * @category DDL
 	 * @memberof QueryBuilder
 	 * @description
 	 * Crear un nuevo rol en la base de datos.
@@ -757,7 +814,8 @@ class QueryBuilder {
 		}
 	}
 	/**
-	 * @method dropRoles
+	 * @function dropRoles
+	 * @category DDL
 	 * @memberof QueryBuilder
 	 * @description
 	 * Elimina el rol o roles especificados de la base de datos.
@@ -781,7 +839,8 @@ class QueryBuilder {
 		}
 	}
 	/**
-	 * @method grant
+	 * @function grant
+	 * @category DCL
 	 * @memberof QueryBuilder
 	 * @description
 	 * Otorga permisos a usuarios o roles sobre objetos de la base de datos.
@@ -819,7 +878,8 @@ class QueryBuilder {
 		}
 	}
 	/**
-	 * @method revoke
+	 * @function revoke
+	 * @category DCL
 	 * @memberof QueryBuilder
 	 * @description
 	 * Revoca permisos previamente otorgados a usuarios o roles sobre objetos de la base de datos.
@@ -859,7 +919,8 @@ class QueryBuilder {
 	}
 
 	/**
-	 * @method grantRoles
+	 * @function grantRoles
+	 * @category DCL
 	 * @memberof QueryBuilder
 	 * @description
 	 * Como grant pero solo para roles
@@ -887,7 +948,8 @@ class QueryBuilder {
 		}
 	}
 	/**
-	 * @method revokeRoles
+	 * @function revokeRoles
+	 * @category DCL
 	 * @memberof QueryBuilder
 	 * @description
 	 * Como revoke, pero para roles
@@ -920,9 +982,9 @@ class QueryBuilder {
 	 **************************************************************************/
 
 	/**
-	 * @method select
+	 * @function select
+	 * @category DQL
 	 * @memberof QueryBuilder
-	 * @memberof utilidades
 	 * @description
 	 * Crea declaración SELECT para recuperación de datos
 	 * Genera cláusula SQL SELECT con columnas y opciones especificadas
@@ -954,7 +1016,8 @@ class QueryBuilder {
 		return this.toNext([null, next]);
 	}
 	/**
-	 * @method checkFrom
+	 * @function checkFrom
+	 * @category DQL
 	 * @memberof QueryBuilder
 	 * @description
 	 * Comprueba en tiempo de ejecucion que los tipos de "tables" corresponden con los de "alias"
@@ -995,7 +1058,8 @@ class QueryBuilder {
 		}
 	}
 	/**
-	 * @method from
+	 * @function from
+	 * @category DQL
 	 * @memberof QueryBuilder
 	 * @description
 	 * Especifica la tabla o vista de donde se van a obtener los datos.
@@ -1036,7 +1100,8 @@ class QueryBuilder {
 		}
 	}
 	/**
-	 * @method where
+	 * @function where
+	 * @category DQL
 	 * @memberof QueryBuilder
 	 * @description
 	 * Define la condición WHERE para filtrar registros en una consulta SQL.
@@ -1082,7 +1147,8 @@ class QueryBuilder {
 		return this.toNext([command, next]);
 	}
 	/**
-	 * @method whereCursor
+	 * @function whereCursor
+	 * @category DQL
 	 * @memberof QueryBuilder
 	 * Define la condición "WHERE CURRENT OF" para un cursor específico.
 	 * Esta cláusula se utiliza en sentencias SQL para referirse a la fila actual apuntada por un cursor.
@@ -1112,7 +1178,8 @@ class QueryBuilder {
 	}
 
 	/**
-	 * @method joins
+	 * @function joins
+	 * @category DQL
 	 * @memberof QueryBuilder
 	 * Define las funciones de JOIN entre tablas
 	 * Tipos de JOIN soportados:
@@ -1174,7 +1241,8 @@ class QueryBuilder {
 		}
 	}
 	/**
-	 * @method using
+	 * @function using
+	 * @category Predicates
 	 * @memberof QueryBuilder
 	 * @description
 	 * El comando USING se utiliza en SQL para especificar las columnas que se van a utilizar para combinar dos tablas en una operación JOIN.
@@ -1203,7 +1271,8 @@ class QueryBuilder {
 		return this.toNext([null, next]);
 	}
 	/**
-	 * @method on
+	 * @function on
+	 * @category General
 	 * @memberof QueryBuilder
 	 * @description
 	 * Especifica la condición de unión para un JOIN.
@@ -1230,7 +1299,8 @@ class QueryBuilder {
 		return this.toNext([null, next]);
 	}
 	/**
-	 * @method union
+	 * @function union
+	 * @category General
 	 * @memberof QueryBuilder
 	 * @description
 	 * SQL Server	✅ Sí	Soporta ambas opciones UNION y UNION ALL.
@@ -1258,7 +1328,8 @@ class QueryBuilder {
 		return this.toNext([response, next]);
 	}
 	/**
-	 * @method unionAll
+	 * @function unionAll
+	 * @category General
 	 * @memberof QueryBuilder
 	 * @description
 	 * Combinar los resultados de dos o más consultas SELECT.
@@ -1289,7 +1360,8 @@ class QueryBuilder {
 		return this.toNext([response, next]);
 	}
 	/**
-	 * @method intersect
+	 * @function intersect
+	 * @category Predicates
 	 * @memberof QueryBuilder
 	 * @description
 	 * El comando INTERSECT se utiliza en SQL para obtener los registros comunes entre dos consultas SELECT.
@@ -1318,7 +1390,8 @@ class QueryBuilder {
 		return this.toNext([response, next]);
 	}
 	/**
-	 * @method intersectAll
+	 * @function intersectAll
+	 * @category Predicates
 	 * @memberof QueryBuilder
 	 * @description
 	 * El comando INTERSECT ALL es similar a INTERSECT, pero mantiene los duplicados en el resultado.
@@ -1349,7 +1422,8 @@ class QueryBuilder {
 		return this.toNext([response, next]);
 	}
 	/**
-	 * @method except
+	 * @function except
+	 * @category General
 	 * @memberof QueryBuilder
 	 * @description
 	 * El comando EXCEPT se utiliza para obtener los registros que están en la primera consulta, pero no en la segunda.
@@ -1379,7 +1453,8 @@ class QueryBuilder {
 		return this.toNext([response, next]);
 	}
 	/**
-	 * @method exceptAll
+	 * @function exceptAll
+	 * @category General
 	 * @memberof QueryBuilder
 	 * @description
 	 * El comando EXCEPT ALL es una variante de EXCEPT que, a diferencia de EXCEPT,
@@ -1409,7 +1484,8 @@ class QueryBuilder {
 		return this.toNext([response, next]);
 	}
 	/**
-	 * @method on
+	 * @function on
+	 * @category General
 	 * @memberof QueryBuilder
 	 * @description
 	 * Operaciones de JOIN para especificar las condiciones de cómo se deben combinar las tablas.
@@ -1463,7 +1539,8 @@ class QueryBuilder {
 
 	/**
 	 * 
-	 * @method predicados
+	 * @function predicados
+	 * @category General
 	 * @memberof QueryBuilder
 	 * @private
 	 * @description 
@@ -1573,7 +1650,8 @@ class QueryBuilder {
 		}
 	}
 	/**
-	 * @method in
+	 * @function in
+	 * @category Predicates
 	 * @memberof QueryBuilder
 	 * @description
 	 * El operador IN en SQL se utiliza para comprobar si un valor está presente dentro de un conjunto de valores.
@@ -1595,7 +1673,8 @@ class QueryBuilder {
 		return this.toNext([result, next]);
 	}
 	/**
-	 * @method notIn
+	 * @function notIn
+	 * @category Predicates
 	 * @memberof QueryBuilder
 	 * @description
 	 * El operador NOT IN en SQL se utiliza para filtrar registros cuyo valor NO está presente en un conjunto de valores especificados.
@@ -1618,7 +1697,8 @@ class QueryBuilder {
 	}
 
 	/**
-	 * @method col
+	 * @function col
+	 * @category General
 	 * @memberof QueryBuilder
 	 * @description
 	 * Crea una instancia de Column para referenciar columnas en consultas SQL.
@@ -1656,7 +1736,8 @@ class QueryBuilder {
 		return columna;
 	}
 	/**
-	 * @method coltn
+	 * @function coltn
+	 * @category Predicates
 	 * @memberof QueryBuilder
 	 * @description
 	 * Crea una instancia de Column con el nombre de la tabla primero y luego el nombre de la columna.
@@ -1692,7 +1773,8 @@ class QueryBuilder {
 		return new Column(name, table, this.language.dataType);
 	}
 	/**
-	 * @method exp
+	 * @function exp
+	 * @category General
 	 * @memberof QueryBuilder
 	 * @description
 	 * Crea una instancia de expresion para usar en consultas SQL.
@@ -1714,7 +1796,8 @@ class QueryBuilder {
 		return new Expresion(expresion);
 	}
 	/**
-	 * @method groupBy
+	 * @function groupBy
+	 * @category DQL
 	 * @memberof QueryBuilder
 	 * @description
 	 * El comando GROUP BY en SQL se utiliza para agrupar filas que tienen el mismo valor en una o más columnas,
@@ -1761,7 +1844,8 @@ class QueryBuilder {
 		return next;
 	}
 	/**
-	 * @method having
+	 * @function having
+	 * @category DQL
 	 * @memberof QueryBuilder
 	 * @description
 	 * El comando HAVING en SQL se usa para filtrar los resultados después de aplicar GROUP BY,
@@ -1795,7 +1879,8 @@ class QueryBuilder {
 		return next;
 	}
 	/**
-	 * @method orderBy
+	 * @function orderBy
+	 * @category DQL
 	 * @memberof QueryBuilder
 	 * @description
 	 * El comando ORDER BY en SQL se utiliza para ordenar los resultados de una consulta según una o más columnas,
@@ -1827,7 +1912,8 @@ class QueryBuilder {
 	 */
 
 	/**
-	 * @method orderBy
+	 * @function orderBy
+	 * @category DQL
 	 * @memberof QueryBuilder
 	 * @description
 	 * El comando ORDER BY en SQL se utiliza para ordenar los resultados de una consulta según una o más columnas,
@@ -1865,7 +1951,8 @@ class QueryBuilder {
 		return next;
 	}
 	/**
-	 * @method limit
+	 * @function limit
+	 * @category DQL
 	 * @memberof QueryBuilder
 	 * @description
 	 * Se usa para restringir la cantidad de filas devueltas por una consulta.
@@ -1912,7 +1999,8 @@ class QueryBuilder {
 		}
 	}
 	/**
-	 * @method offset
+	 * @function offset
+	 * @category General
 	 * @memberof QueryBuilder
 	 * @description
 	 * Se usa para omitir un número específico de filas antes de comenzar a devolver resultados.
@@ -1964,7 +2052,8 @@ class QueryBuilder {
 	 ******************************************************************************/
 
 	/**
-	 * @method insert
+	 * @function insert
+	 * @category DML
 	 * @memberof QueryBuilder
 	 * @description
 	 * Inserta datos en una tabla especificada.
@@ -2020,7 +2109,8 @@ class QueryBuilder {
 	// Tiene sentido que update sea asincrona cuando devuelve un texto?
 
 	/**
-	 * @method update
+	 * @function update
+	 * @category DML
 	 * @memberof QueryBuilder
 	 * @description
 	 * Crea la sentencia UPDATE con cláusula SET para la tabla especificada
@@ -2059,7 +2149,8 @@ class QueryBuilder {
 	}
 
 	/**
-	 * @method delete
+	 * @function delete
+	 * @category DML
 	 * @memberof QueryBuilder
 	 * @description
 	 * Crea la sentencia DELETE FROM para eliminar datos
@@ -2093,8 +2184,9 @@ class QueryBuilder {
 	 * Funciones comunes de SQL
 	 ******************************************************************************/
 	/**
-	* @method functionOneParam
-	* @memberof QueryBuilder
+	* @function functionOneParam
+	* @category General
+	 * @memberof QueryBuilder
 	* @private
 	* @description Crea métodos para funciones SQL comunes que toman un parámetro
 	* Crea dinámicamente funciones agregadas y escalares con un solo parámetro
@@ -2133,8 +2225,9 @@ class QueryBuilder {
 	}
 
 	/** 
-		 * @method substr
-		 * @memberof QueryBuilder
+		 * @function substr
+		 * @category Functions
+	 * @memberof QueryBuilder
 		 * @description
 		 * Crea una función SQL SUBSTR para extraer una subcadena de una cadena dada.
 		 * Permite especificar la columna, posición inicial y longitud opcional de la subcadena.
@@ -2158,7 +2251,8 @@ class QueryBuilder {
 	}
 
 	/**
-	 * @method case
+	 * @function case
+	 * @category General
 	 * @memberof QueryBuilder
 	 * @description
 	 * Crea una expresión SQL CASE para evaluaciones condicionales.
@@ -2197,7 +2291,8 @@ class QueryBuilder {
 	}
 
 	/**
-	 * @method functionDate
+	 * @function functionDate
+	 * @category General
 	 * @memberof QueryBuilder
 	 * @description
 	 * Crea métodos para funciones comunes de fecha y hora en SQL.
@@ -2227,7 +2322,8 @@ class QueryBuilder {
 	}
 
 	/**
-	 * @method createCursor
+	 * @function createCursor
+	 * @category DDL
 	 * @memberof QueryBuilder
 	 * @description
 	 * Crea un nuevo cursor para la consulta actual.
@@ -2255,7 +2351,8 @@ class QueryBuilder {
 	}
 
 	/**
-	 * @method openCursor
+	 * @function openCursor
+	 * @category Predicates
 	 * @memberof QueryBuilder
 	 * @description
 	 * Abre un cursor existente.
@@ -2279,7 +2376,8 @@ class QueryBuilder {
 	}
 
 	/**
-	 * @method closeCursor
+	 * @function closeCursor
+	 * @category Predicates
 	 * @memberof QueryBuilder
 	 * @description
 	 * Cierra un cursor existente.
@@ -2302,7 +2400,8 @@ class QueryBuilder {
 		}
 	}
 	/**
-	 * @method setTransaction
+	 * @function setTransaction
+	 * @category Transactions
 	 * @memberof QueryBuilder
 	 * @description
 	 * Crea una nueva transacción para agrupar múltiples operaciones SQL.
@@ -2320,7 +2419,8 @@ class QueryBuilder {
 		return transaction;
 	}
 	/**
-	 * @method setConstraints
+	 * @function setConstraints
+	 * @category Predicates
 	 * @memberof QueryBuilder
 	 * @description
 	 * Establece restricciones o reglas en la base de datos.
@@ -2346,7 +2446,8 @@ class QueryBuilder {
 		}
 	}
 	/**
-	 * @method queryJoin
+	 * @function queryJoin
+	 * @category DQL
 	 * @memberof QueryBuilder
 	 * @async
 	 * @private
@@ -2380,7 +2481,8 @@ class QueryBuilder {
 	}
 
 	/**
-	 * @method dropQuery
+	 * @function dropQuery
+	 * @category DDL
 	 * @memberof QueryBuilder
 	 * @private
 	 * @description
@@ -2401,7 +2503,8 @@ class QueryBuilder {
 
 	/**
 
-	 * @method toString
+	 * @function toString
+	 * @category Predicates
 	 * @memberof QueryBuilder
 	 * @async
 	 * @description
@@ -2432,7 +2535,8 @@ class QueryBuilder {
 	}
 	/**
 	 * 
-	 * @method execute
+	 * @function execute
+	 * @category General
 	 * @memberof QueryBuilder
 	 * @async
 	 * @description
@@ -2490,7 +2594,6 @@ class QueryBuilder {
 			throw new Error(this.queryResultError);
 		}
 	}
-
 
 	/************************************************************************
 	 * 🔧 EXTENSIONES INTEGRADAS - Funciones Adicionales
@@ -2737,6 +2840,5 @@ class QueryBuilder {
 		};
 	}
 }
-// Exportaciones
+
 export default QueryBuilder;
-export { QueryBuilder };

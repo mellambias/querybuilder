@@ -27,6 +27,22 @@
  * // Gestionar permisos
  * const grantSQL = mysql.grant(['SELECT', 'INSERT'], 'users', 'app_user');
  */
+
+/**
+ * @namespace QueryBuilder.Adapters.MySQL
+ * @description Adaptador MySQL que extiende QueryBuilder con funcionalidades específicas de MySQL
+ * @memberof QueryBuilder.Adapters
+ * @example
+ * // Instalación del adaptador MySQL
+ * npm install @querybuilder/core @querybuilder/mysql
+ * 
+ * // Uso del adaptador MySQL
+ * import QueryBuilder from '@querybuilder/core';
+ * import MySQL from '@querybuilder/mysql';
+ * 
+ * const qb = new QueryBuilder(MySQL);
+ * qb.select('*').from('users').where('active = 1');
+ */
 import Core from "../core/core.js";
 import Mysql84 from "./comandos/Mysql.js";
 import Expresion from "../core/expresion.js";
@@ -34,6 +50,7 @@ import Expresion from "../core/expresion.js";
 /**
  * Clase MySQL QueryBuilder para operaciones específicas de MySQL
  * @class MySQL
+ * @memberof QueryBuilder.Adapters.MySQL
  * @extends Core
  * @description Implementa las variaciones específicas de MySQL al estándar SQL2006.
  * Incluye soporte para tipos de datos MySQL, transacciones, roles, permisos y limitaciones específicas.

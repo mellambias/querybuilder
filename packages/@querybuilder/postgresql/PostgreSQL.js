@@ -28,6 +28,22 @@
  *   ]
  * });
  */
+
+/**
+ * @namespace QueryBuilder.Adapters.PostgreSQL
+ * @description Adaptador PostgreSQL que extiende QueryBuilder con funcionalidades específicas de PostgreSQL
+ * @memberof QueryBuilder.Adapters
+ * @example
+ * // Instalación del adaptador PostgreSQL
+ * npm install @querybuilder/core @querybuilder/postgresql
+ * 
+ * // Uso del adaptador PostgreSQL
+ * import QueryBuilder from '@querybuilder/core';
+ * import PostgreSQL from '@querybuilder/postgresql';
+ * 
+ * const qb = new QueryBuilder(PostgreSQL);
+ * qb.select('*').from('users').where('active = true');
+ */
 import Core from "../core/core.js";
 import postgreSQL from "./comandos/postgreSQL.js";
 import Types from "../core/types/Type.js";
@@ -36,6 +52,7 @@ import "../core/utils/utils.js"; // Para toDataType
 /**
  * Clase PostgreSQL QueryBuilder para operaciones específicas de PostgreSQL
  * @class PostgreSQL
+ * @memberof QueryBuilder.Adapters.PostgreSQL
  * @extends Core
  * @description Implementa las variaciones específicas de PostgreSQL al estándar SQL2006.
  * Compatible con estructura original, optimizada y simplificada.

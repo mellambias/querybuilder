@@ -22,6 +22,22 @@
  *   }
  * });
  */
+
+/**
+ * @namespace QueryBuilder.Adapters.Cassandra
+ * @description Adaptador Cassandra que extiende QueryBuilder con funcionalidades específicas de Apache Cassandra
+ * @memberof QueryBuilder.Adapters
+ * @example
+ * // Instalación del adaptador Cassandra
+ * npm install @querybuilder/core @querybuilder/cassandra
+ * 
+ * // Uso del adaptador Cassandra
+ * import QueryBuilder from '@querybuilder/core';
+ * import Cassandra from '@querybuilder/cassandra';
+ * 
+ * const qb = new QueryBuilder(Cassandra);
+ * qb.select('*').from('users').where('user_id = ?');
+ */
 import cassandra from 'cassandra-driver';
 import Core from '@querybuilder/core/core.js';
 import cassandraCommands from './comandos/cassandra.js';
@@ -30,6 +46,7 @@ import { log, Types } from '@querybuilder/core/utils/utils.js';
 /**
  * Clase Cassandra QueryBuilder para operaciones específicas de Apache Cassandra
  * @class Cassandra
+ * @memberof QueryBuilder.Adapters.Cassandra
  * @extends Core
  * @description Integración de Apache Cassandra para aplicaciones Big Data distribuidas.
  * Soporta operaciones CQL, keyspaces, tablas, tipos definidos por usuario y colecciones.

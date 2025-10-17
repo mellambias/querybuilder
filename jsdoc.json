@@ -2,13 +2,12 @@
   "source": {
     "include": [
       "./packages/@querybuilder/core/",
-
       "./README.md"
     ],
     "sourceType": "module",
     "tags": {
-    "allowUnknownTags": false,
-    "dictionaries": ["jsdoc", "closure"]
+      "allowUnknownTags": true,
+      "dictionaries": ["jsdoc", "closure"]
     },
     "exclude": [
       "./node_modules/",
@@ -51,7 +50,7 @@
     "excludePattern": "(test|spec|debug|\\.d|\\.ts|\\.tsx)\\.(ts|tsx)$"
   },
   "opts": {
-    "destination": "./docs/api/",
+    "destination": "./docs/jsdoc/",
     "recurse": true,
     "readme": "./README.md", 
     "package": "./package.json",

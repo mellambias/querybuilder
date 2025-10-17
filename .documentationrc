@@ -1,0 +1,19 @@
+{
+  "theme": "default",
+  "name": "QueryBuilder Documentation", 
+  "version": "2.0.0",
+  "homepage": "https://github.com/mellambias/querybuilder",
+  "github": true,
+  "inferPrivate": "^_",
+  "parseExtension": ["js"],
+  "external": ["Promise", "Error"],
+  "shallow": true,
+  "excludePattern": [
+    "**/src/index.js",
+    "**/querybuilder-extensions.js",
+    "**/test/**",
+    "**/tests/**",
+    "**/*.test.js",
+    "**/*.spec.js"
+  ]
+}

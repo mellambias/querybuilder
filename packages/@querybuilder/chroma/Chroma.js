@@ -23,11 +23,29 @@
  *   metadata: { description: 'Document embeddings' }
  * });
  */
+
+/**
+ * @namespace QueryBuilder.Adapters.Chroma
+ * @description Adaptador Chroma que extiende QueryBuilder con funcionalidades específicas de base de datos vectorial
+ * @memberof QueryBuilder.Adapters
+ * @example
+ * // Instalación del adaptador Chroma
+ * npm install @querybuilder/core @querybuilder/chroma
+ * 
+ * // Uso del adaptador Chroma
+ * import QueryBuilder from '@querybuilder/core';
+ * import Chroma from '@querybuilder/chroma';
+ * 
+ * const qb = new QueryBuilder(Chroma);
+ * qb.query('documents', { embeddings: [0.1, 0.2, 0.3], n_results: 10 });
+ */
+
 import Core from "../core/core.js";
 
 /**
  * Clase Chroma QueryBuilder para operaciones vectoriales específicas de Chroma
  * @class Chroma  
+ * @memberof QueryBuilder.Adapters.Chroma
  * @extends Core
  * @description Implementación para base de datos vectorial Chroma especializada en AI/ML.
  * Soporta embeddings, búsqueda por similitud, colecciones vectoriales y operaciones específicas de Chroma.

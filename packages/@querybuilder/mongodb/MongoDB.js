@@ -28,6 +28,22 @@
  *   }
  * });
  */
+
+/**
+ * @namespace QueryBuilder.Adapters.MongoDB
+ * @description Adaptador MongoDB que extiende QueryBuilder con funcionalidades específicas de MongoDB NoSQL
+ * @memberof QueryBuilder.Adapters
+ * @example
+ * // Instalación del adaptador MongoDB
+ * npm install @querybuilder/core @querybuilder/mongodb
+ * 
+ * // Uso del adaptador MongoDB
+ * import QueryBuilder from '@querybuilder/core';
+ * import MongoDB from '@querybuilder/mongodb';
+ * 
+ * const qb = new QueryBuilder(MongoDB);
+ * qb.select('*').from('users').where('{ "active": true }');
+ */
 import Core from "../core/core.js";
 import mongo from "./comandos/mongoDB.js";
 import Command from "./Command.js";
@@ -36,6 +52,7 @@ import QueryBuilder from "../core/querybuilder.js";
 /**
  * Clase MongoDB QueryBuilder para operaciones específicas de MongoDB
  * @class MongoDB
+ * @memberof QueryBuilder.Adapters.MongoDB
  * @extends Core
  * @description Implementa las operaciones NoSQL específicas de MongoDB.
  * Incluye soporte para documentos, colecciones, agregaciones, índices y características de MongoDB.

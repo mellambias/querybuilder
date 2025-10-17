@@ -11,8 +11,25 @@
  */
 
 /**
+ * @namespace QueryBuilder.Adapters.Redis
+ * @description Adaptador Redis que extiende QueryBuilder con funcionalidades específicas de Redis
+ * @memberof QueryBuilder.Adapters
+ * @example
+ * // Instalación del adaptador Redis
+ * npm install @querybuilder/core @querybuilder/redis
+ * 
+ * // Uso del adaptador Redis
+ * import QueryBuilder from '@querybuilder/core';
+ * import Redis from '@querybuilder/redis';
+ * 
+ * const qb = new QueryBuilder(Redis);
+ * qb.set('user:1', '{"name":"John","email":"john@example.com"}');
+ */
+
+/**
  * Clase Redis QueryBuilder para operaciones específicas de Redis
  * @class Redis
+ * @memberof QueryBuilder.Adapters.Redis
  * @description Implementa operaciones específicas para Redis, almacén clave-valor en memoria.
  * @since 1.0.0
  * @todo Implementar operaciones Redis (SET, GET, HSET, etc.)

@@ -1,0 +1,22 @@
+{
+  "watch": [
+    "src/**/*.js",
+    "packages/@querybuilder/*/src/**/*.js",
+    "packages/@querybuilder/*/index.js"
+  ],
+  "ext": "js",
+  "ignore": [
+    "node_modules/**/*",
+    "dist/**/*",
+    "docs/**/*",
+    "docs-vitepress/.vitepress/dist/**/*",
+    "test/**/*",
+    "*.test.js"
+  ],
+  "exec": "npm run docs:update",
+  "delay": 2000,
+  "env": {
+    "NODE_ENV": "development"
+  },
+  "verbose": true
+}
