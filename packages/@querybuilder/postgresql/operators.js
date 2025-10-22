@@ -1,10 +1,68 @@
 /**
- * Operadores específicos de PostgreSQL
- * Consolidado de JSON, Arrays, Texto, Rangos, etc.
+ * @fileoverview PostgreSQL Operators - Operadores SQL de PostgreSQL
+ * @module @querybuilder/postgresql/operators
+ * @description Colección completa de operadores específicos de PostgreSQL 12+,
+ * incluyendo operadores para JSON/JSONB, Arrays, texto con regex, rangos, búsqueda
+ * de texto completo, tipos de red, y operadores geométricos.
+ * @version 2.0.0
+ * @author QueryBuilder Team
+ * @license MPL-2.0
+ * @since 1.0.0
+ * 
+ * @example
+ * // Usar operadores JSONB
+ * import { JsonOperators } from '@querybuilder/postgresql/operators';
+ * 
+ * qb.select('*')
+ *   .from('users')
+ *   .whereRaw(`data ${JsonOperators.CONTAINS} '{"active": true}'::jsonb`);
+ * 
+ * @example
+ * // Operadores de arrays
+ * import { ArrayOperators } from '@querybuilder/postgresql/operators';
+ * 
+ * qb.select('*')
+ *   .from('posts')
+ *   .whereRaw(`tags ${ArrayOperators.OVERLAP} ARRAY['javascript', 'nodejs']`);
+ * 
+ * @example
+ * // Búsqueda de texto completo
+ * import { TextSearchOperators } from '@querybuilder/postgresql/operators';
+ * 
+ * qb.select('*')
+ *   .from('articles')
+ *   .whereRaw(`to_tsvector('english', content) ${TextSearchOperators.MATCH} to_tsquery('postgresql')`);
  */
 
 /**
- * Operadores JSON/JSONB
+ * Operadores JSON/JSONB de PostgreSQL
+ * @namespace JsonOperators
+ * @memberof module:@querybuilder/postgresql/operators
+ * @description Operadores para trabajar con tipos JSON y JSONB.
+ * JSONB soporta indexación y es más eficiente.
+ * 
+ * @property {string} CONTAINS - Contiene JSON (@>)
+ * @property {string} CONTAINED_BY - Contenido por JSON (<@)
+ * @property {string} EXISTS_KEY - Existe clave (?)
+ * @property {string} EXTRACT_PATH - Extraer ruta como JSON (#>)
+ * @property {string} EXTRACT_PATH_TEXT - Extraer ruta como texto (#>>)
+ * 
+ * @example
+ * // Buscar documentos que contienen un valor
+ * qb.select('*')
+ *   .from('logs')
+ *   .whereRaw("data @> '{\"level\": \"error\"}'::jsonb");
+ * 
+ * @example
+ * // Verificar existencia de clave
+ * qb.select('*')
+ *   .from('users')
+ *   .whereRaw("preferences ? 'theme'");
+ * 
+ * @example
+ * // Extraer valor de ruta
+ * qb.select("data #>> '{user,name}' as username")
+ *   .from('events');
  */
 export const JsonOperators = {
   CONTAINS: '@>',              // JSON contains

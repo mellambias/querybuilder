@@ -1,10 +1,60 @@
 /**
- * Tipos de datos específicos de PostgreSQL
- * Consolidado de todas las características de tipos
+ * @fileoverview PostgreSQL Data Types - Tipos de datos SQL de PostgreSQL
+ * @module @querybuilder/postgresql/types
+ * @description Definiciones completas de todos los tipos de datos soportados por PostgreSQL 12+,
+ * incluyendo tipos estándar SQL y tipos específicos de PostgreSQL como JSONB, ARRAY, SERIAL,
+ * tipos de red (INET, CIDR), tipos geométricos, rangos, UUID, y tipos de búsqueda de texto completo.
+ * @version 2.0.0
+ * @author QueryBuilder Team
+ * @license MPL-2.0
+ * @since 1.0.0
+ * 
+ * @example
+ * // Usar tipos en definición de columnas
+ * import { JsonTypes, SerialTypes, ArrayTypes } from '@querybuilder/postgresql/types';
+ * 
+ * qb.createTable('users')
+ *   .addColumn('id', SerialTypes.BIGSERIAL, { primaryKey: true })
+ *   .addColumn('data', JsonTypes.JSONB)
+ *   .addColumn('tags', 'TEXT[]');
+ * 
+ * @example
+ * // Tipos de red
+ * import { NetworkTypes } from '@querybuilder/postgresql/types';
+ * 
+ * qb.createTable('connections')
+ *   .addColumn('ip_address', NetworkTypes.INET)
+ *   .addColumn('subnet', NetworkTypes.CIDR)
+ *   .addColumn('mac', NetworkTypes.MACADDR);
+ * 
+ * @example
+ * // Tipos UUID y timestamp
+ * import { UuidTypes, DateTimeTypes } from '@querybuilder/postgresql/types';
+ * 
+ * qb.createTable('sessions')
+ *   .addColumn('id', UuidTypes.UUID, { default: 'gen_random_uuid()' })
+ *   .addColumn('created_at', 'TIMESTAMP WITH TIME ZONE', { default: 'CURRENT_TIMESTAMP' });
  */
 
 /**
  * Tipos JSON de PostgreSQL
+ * @namespace JsonTypes
+ * @memberof module:@querybuilder/postgresql/types
+ * @description Tipos para almacenar datos JSON. JSONB es binario y más eficiente.
+ * 
+ * @property {string} JSON - Tipo JSON textual (sin indexación eficiente)
+ * @property {string} JSONB - Tipo JSON binario (soporta indexación GIN/GiST)
+ * 
+ * @example
+ * // Usar JSONB para datos indexables
+ * qb.createTable('documents')
+ *   .addColumn('metadata', JsonTypes.JSONB)
+ *   .addIndex(['metadata'], { using: 'GIN' });
+ * 
+ * @example
+ * // JSON para preservar orden y duplicados
+ * qb.createTable('logs')
+ *   .addColumn('raw_data', JsonTypes.JSON);
  */
 export const JsonTypes = {
   JSON: 'JSON',

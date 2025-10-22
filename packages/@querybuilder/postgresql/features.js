@@ -1,12 +1,68 @@
 /**
- * Características avanzadas específicas de PostgreSQL
- * Consolidado de CTEs, UPSERT, Window Functions, Full-Text Search, etc.
+ * @fileoverview PostgreSQL Features - Características avanzadas de PostgreSQL
+ * @module @querybuilder/postgresql/features
+ * @description Clases y utilidades para características avanzadas de PostgreSQL 12+,
+ * incluyendo CTEs (Common Table Expressions), UPSERT (INSERT ... ON CONFLICT),
+ * Window Functions, Full-Text Search, y otras capacidades específicas de PostgreSQL.
+ * @version 2.0.0
+ * @author QueryBuilder Team
+ * @license MPL-2.0
+ * @since 1.0.0
+ * 
+ * @example
+ * // Usar CTEs (Common Table Expressions)
+ * import { CTEBuilder } from '@querybuilder/postgresql/features';
+ * 
+ * const cte = new CTEBuilder()
+ *   .with('dept_avg', 'SELECT department, AVG(salary) FROM employees GROUP BY department')
+ *   .build();
+ * 
+ * @example
+ * // UPSERT con ON CONFLICT
+ * import { UpsertBuilder } from '@querybuilder/postgresql/features';
+ * 
+ * const upsert = new UpsertBuilder()
+ *   .onConflict('email')
+ *   .doUpdate({ name: 'EXCLUDED.name', updated_at: 'NOW()' })
+ *   .build();
+ * 
+ * @example
+ * // Window Functions
+ * import { WindowBuilder } from '@querybuilder/postgresql/features';
+ * 
+ * const window = new WindowBuilder()
+ *   .partitionBy('department')
+ *   .orderBy('salary', 'DESC')
+ *   .build();
  */
 
 /**
  * Builder para Common Table Expressions (CTE)
+ * @class CTEBuilder
+ * @memberof module:@querybuilder/postgresql/features
+ * @description Constructor para CTEs simples y recursivos en PostgreSQL.
+ * Los CTEs permiten definir subconsultas temporales que pueden ser referenciadas
+ * múltiples veces en la consulta principal.
+ * 
+ * @example
+ * // CTE simple
+ * const cte = new CTEBuilder()
+ *   .with('active_users', 'SELECT * FROM users WHERE active = true')
+ *   .with('recent_orders', 'SELECT * FROM orders WHERE created_at > NOW() - INTERVAL \'7 days\'');
+ * 
+ * @example
+ * // CTE recursivo para jerarquías
+ * const recursive = new CTEBuilder()
+ *   .withRecursive('org_tree',
+ *     'SELECT id, name, manager_id, 1 as level FROM employees WHERE manager_id IS NULL',
+ *     'SELECT e.id, e.name, e.manager_id, t.level + 1 FROM employees e JOIN org_tree t ON e.manager_id = t.id'
+ *   );
  */
 export class CTEBuilder {
+  /**
+   * Crea una nueva instancia de CTEBuilder
+   * @constructor
+   */
   constructor() {
     this.ctes = [];
     this.isRecursive = false;
@@ -14,9 +70,14 @@ export class CTEBuilder {
 
   /**
    * Añade un CTE simple
+   * @method with
+   * @memberof CTEBuilder
    * @param {string} name - Nombre del CTE
-   * @param {string|object} query - Query del CTE
-   * @returns {CTEBuilder}
+   * @param {string|Object} query - Query del CTE (string SQL o objeto query)
+   * @returns {CTEBuilder} Instancia para encadenamiento
+   * 
+   * @example
+   * cte.with('users_summary', 'SELECT department, COUNT(*) as total FROM users GROUP BY department');
    */
   with(name, query) {
     const queryString = typeof query === 'string' ? query : query.toString();

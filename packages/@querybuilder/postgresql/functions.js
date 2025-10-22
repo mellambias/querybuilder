@@ -1,10 +1,69 @@
 /**
- * Funciones específicas de PostgreSQL
- * Consolidado de JSON, Arrays, Window, Text Search, Math, etc.
+ * @fileoverview PostgreSQL Functions - Funciones SQL nativas de PostgreSQL
+ * @module @querybuilder/postgresql/functions
+ * @description Colección completa de funciones SQL nativas soportadas por PostgreSQL 12+,
+ * organizadas por categorías: JSON/JSONB, Arrays, Window, Full-Text Search, Math, String,
+ * Date/Time, Aggregation, y funciones específicas de PostgreSQL.
+ * @version 2.0.0
+ * @author QueryBuilder Team
+ * @license MPL-2.0
+ * @since 1.0.0
+ * 
+ * @example
+ * // Usar funciones JSONB en consultas
+ * import { JsonFunctions } from '@querybuilder/postgresql/functions';
+ * 
+ * qb.select([
+ *   JsonFunctions.JSONB_BUILD_OBJECT + "('name', name, 'email', email) as user_data"
+ * ]).from('users');
+ * 
+ * @example
+ * // Funciones de arrays
+ * import { ArrayFunctions } from '@querybuilder/postgresql/functions';
+ * 
+ * qb.select([
+ *   ArrayFunctions.ARRAY_AGG + '(tag) as tags',
+ *   ArrayFunctions.ARRAY_LENGTH + '(categories, 1) as category_count'
+ * ]).from('posts').groupBy('id');
+ * 
+ * @example
+ * // Window functions
+ * import { WindowFunctions } from '@querybuilder/postgresql/functions';
+ * 
+ * qb.select([
+ *   '*',
+ *   WindowFunctions.ROW_NUMBER + ' OVER (PARTITION BY department ORDER BY salary DESC) as rank'
+ * ]).from('employees');
  */
 
 /**
- * Funciones JSON/JSONB
+ * Funciones JSON/JSONB de PostgreSQL
+ * @namespace JsonFunctions
+ * @memberof module:@querybuilder/postgresql/functions
+ * @description Funciones para manipular datos JSON y JSONB en PostgreSQL 12+.
+ * JSONB es binario y más eficiente que JSON para operaciones.
+ * 
+ * @property {string} JSON_BUILD_OBJECT - Construye objeto JSON desde pares clave-valor
+ * @property {string} JSONB_BUILD_OBJECT - Construye objeto JSONB desde pares clave-valor
+ * @property {string} JSON_AGG - Agrega valores en un array JSON
+ * @property {string} JSONB_SET - Establece valor en ruta JSONB
+ * @property {string} JSONB_EXTRACT_PATH - Extrae valor de ruta JSONB
+ * 
+ * @example
+ * // Construir objeto JSONB
+ * qb.select("jsonb_build_object('id', id, 'name', name) as data").from('users');
+ * 
+ * @example
+ * // Agregar en JSON array
+ * qb.select(['category', 'json_agg(name) as products'])
+ *   .from('products')
+ *   .groupBy('category');
+ * 
+ * @example
+ * // Actualizar campo JSONB
+ * qb.update('users')
+ *   .set({ data: "jsonb_set(data, '{address,city}', '\"Madrid\"')" })
+ *   .where('id', 1);
  */
 export const JsonFunctions = {
   // Construction functions
