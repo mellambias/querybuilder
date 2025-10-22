@@ -2,6 +2,7 @@
   "watch": [
     "src/**/*.js",
     "packages/@querybuilder/*/src/**/*.js",
+    "packages/@querybuilder/*/*.js",
     "packages/@querybuilder/*/index.js"
   ],
   "ext": "js",
@@ -13,7 +14,7 @@
     "test/**/*",
     "*.test.js"
   ],
-  "exec": "npm run docs:update",
+  "exec": "node scripts/update-jsdoc-status.mjs",
   "delay": 2000,
   "env": {
     "NODE_ENV": "development"

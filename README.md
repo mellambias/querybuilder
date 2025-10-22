@@ -351,28 +351,38 @@ npm run publish:all   # Publicar a NPM
 ## 📚 **Documentación**
 
 ### 📖 **Documentación API Interactiva**
-La documentación completa de la API se genera automáticamente usando **Documentation.js** con navegación limpia y URLs intuitivas:
+La documentación completa de la API se genera automáticamente usando **JSDoc + Docdash**:
 
 ```bash
-# Generar y servir documentación
-pnpm run docs:build    # Genera documentación
-pnpm run docs:serve    # Sirve en http://localhost:3003
-pnpm run docs:dev      # Genera y sirve automáticamente
-pnpm run docs:validate # Valida comentarios JSDoc
+# Modo desarrollo: Servidor + Auto-regeneración
+pnpm run docs:dev       # Recomendado para desarrollo
+
+# O comandos individuales:
+pnpm run docs:jsdoc     # Generar documentación
+pnpm run docs:serve     # Servir en http://localhost:3000
 ```
 
+Abre tu navegador en **http://localhost:3000** para ver la documentación completa.
+
+**Comandos disponibles:**
+- `docs:dev` - Servidor + auto-regeneración (modo desarrollo completo)
+- `docs:jsdoc` - Generar documentación una vez
+- `docs:serve` - Solo servidor HTTP (sin regeneración)
+- `docs:jsdoc-watch` - Solo watch (regenera pero no sirve)
+
 ### 📑 **Recursos Adicionales**
-- [**Guía de Inicio**](./docs/getting-started.md)
-- [**API Reference**](./docs/api-reference.md) 
-- [**Ejemplos Avanzados**](./examples/)
-- [**Migraciones**](./docs/migrations.md)
+- **Documentación JSDoc**: `docs/jsdoc/index.html` - Documentación completa del API
+- **Configuración**: [CONFIG.md](./CONFIG.md) - Guía de configuración de bases de datos
+- **Ejemplos**: [examples/](./examples/) - Ejemplos de uso
+- **Desarrollo Local**: [LOCAL_PUBLISHING.md](./LOCAL_PUBLISHING.md) - Testing local de paquetes
 
 **Características de la documentación:**
-- ✅ URLs limpias sin prefijos de módulo
-- ✅ Navegación intuitiva e interactiva
-- ✅ Búsqueda integrada
-- ✅ Enlaces directos a código fuente
-- ✅ Ejemplos de código con resaltado de sintaxis
+- ✅ Búsqueda integrada y rápida
+- ✅ Navegación lateral interactiva
+- ✅ Syntax highlighting en ejemplos de código
+- ✅ Enlaces cruzados entre clases y métodos
+- ✅ Información completa de tipos y parámetros
+- ✅ Ejemplos de código en cada método
 
 ## 🤝 **Contribuir**
 

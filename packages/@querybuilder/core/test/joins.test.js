@@ -157,6 +157,23 @@ WHERE s.INVENTARIO > 15;`,
     );
   });
 
+  test("Join con using - objeto Column único", { only: false }, async () => {
+    const result = await qb
+      .select(["TITULO_CD", qb.col("TIPO_CD", "s"), qb.col("MENUDEO", "c")])
+      .join(["TITULOS_EN_EXISTENCIA", "COSTOS_TITULO"], ["s", "c"])
+      .using(qb.col("TITULO_CD"))
+      .where(qb.gt(qb.col("INVENTARIO", "s"), 15))
+      .toString();
+
+    assert.equal(
+      result,
+      `SELECT TITULO_CD, s.TIPO_CD, c.MENUDEO
+FROM TITULOS_EN_EXISTENCIA s JOIN COSTOS_TITULO c
+USING (TITULO_CD)
+WHERE s.INVENTARIO > 15;`,
+    );
+  });
+
   test("INNER JOIN y la clausula ON", { only: false }, async () => {
     const result = await qb
       .select([qb.col("TITULO", "t"), qb.col("ARTISTA", "a")])

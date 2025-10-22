@@ -10,7 +10,6 @@
   "shallow": true,
   "excludePattern": [
     "**/src/index.js",
-    "**/querybuilder-extensions.js",
     "**/test/**",
     "**/tests/**",
     "**/*.test.js",

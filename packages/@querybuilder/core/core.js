@@ -519,8 +519,8 @@ class Core {
 	 * 
 	 * @method createTable
 	 * @memberof Core
-	 * @param {string} name - Name of the table to create
-	 * @param {Object} [options={}] - Table creation options (temporary, constraints, etc.)
+	 * @param {table} name - Name of the table to create
+	 * @param {createTableOptions} [options={}] - Table creation options (temporary, constraints, etc.)
 	 * @returns {string} CREATE TABLE SQL statement
 	 * @example
 
@@ -1175,11 +1175,31 @@ class Core {
 		}
 	}
 
+	/**
+	 * Genera cláusula USING para JOIN con columnas comunes
+	 * @param {string|Column|Array<string|Column>} columnsInCommon - Columna(s) común(es) entre tablas
+	 * @returns {string} Cláusula USING formateada
+	 * @example
+	 * using('id') // USING (id)
+	 * using(['id', 'tipo']) // USING (id, tipo)
+	 * using(qb.col('id')) // USING (id)
+	 * using([qb.col('id'), qb.col('tipo')]) // USING (id, tipo)
+	 */
 	using(columnsInCommon) {
-		if (Array.isArray(columnsInCommon)) {
-			return `USING (${columnsInCommon.join(", ")})`;
-		}
-		return `USING (${columnsInCommon})`;
+		// Convertir a array si no lo es
+		const columns = Array.isArray(columnsInCommon) ? columnsInCommon : [columnsInCommon];
+
+		// Procesar cada columna: si es Column, llamar a toString(), si no, usar directamente
+		const processedColumns = columns.map(col => {
+			if (col instanceof Column) {
+				// Para Column, obtener solo el nombre sin alias ni tabla
+				// Si tiene tabla, usar tabla.nombre, si no, solo nombre
+				return col.name;
+			}
+			return col;
+		});
+
+		return `USING (${processedColumns.join(", ")})`;
 	}
 	/**
 	 * Recibe una lista de select y los encadena usando el valor de optios.command
@@ -2130,42 +2150,52 @@ class Core {
 	 * Genera una expresión SQL para concatenar columnas.
 	 * @method concat
 	 * @memberof Core
-	 * @param {Array<string>} columns - Columnas a concatenar
-	 * @param {string} [alias] - Alias para la expresión resultante
+	 * @param {columnName|Array<columnName>} columns - Columnas a concatenar
+	 * @param {alias} [alias] - Alias para la expresión resultante
 	 * @returns {string} - Expresión SQL para concatenar columnas
 	 */
 	concat(columns, alias) {
 		if (Array.isArray(columns)) {
-			return `CONCAT(${columns.join(', ')})${alias ? ` AS ${alias}` : ''}`;
+			const processedColumns = columns.map(col =>
+				col instanceof Column ? col.toString() : col
+			);
+			return `CONCAT(${processedColumns.join(', ')})${alias ? ` AS ${alias}` : ''}`;
 		}
-		return `CONCAT(${columns})${alias ? ` AS ${alias}` : ''}`;
+		const processedColumn = columns instanceof Column ? columns.toString() : columns;
+		return `CONCAT(${processedColumn})${alias ? ` AS ${alias}` : ''}`;
 	}
 
 	/**
 	 * Genera una expresión SQL para manejar valores nulos.
 	 * @method coalesce
 	 * @memberof Core
-	 * @param {Array<string>} columns - Columnas a evaluar
-	 * @param {string} [alias] - Alias para la expresión resultante
+	 * @param {columnName|Array<columnName>} columns - Columnas a evaluar
+	 * @param {alias} [alias] - Alias para la expresión resultante
 	 * @returns {string} - Expresión SQL para manejar valores nulos
 	 */
 	coalesce(columns, alias) {
 		if (Array.isArray(columns)) {
-			return `COALESCE(${columns.join(', ')})${alias ? ` AS ${alias}` : ''}`;
+			const processedColumns = columns.map(col =>
+				col instanceof Column ? col.toString() : col
+			);
+			return `COALESCE(${processedColumns.join(', ')})${alias ? ` AS ${alias}` : ''}`;
 		}
-		return `COALESCE(${columns})${alias ? ` AS ${alias}` : ''}`;
+		const processedColumn = columns instanceof Column ? columns.toString() : columns;
+		return `COALESCE(${processedColumn})${alias ? ` AS ${alias}` : ''}`;
 	}
 	/**
 	 * Genera una expresión SQL para manejar valores nulos.
 	 * @method nullif
 	 * @memberof Core
-	 * @param {string} expr1 - Primera expresión a evaluar
-	 * @param {string} expr2 - Segunda expresión a evaluar
-	 * @param {string} [alias] - Alias para la expresión resultante
+	 * @param {columnName} expr1 - Primera expresión a evaluar
+	 * @param {columnName} expr2 - Segunda expresión a evaluar
+	 * @param {alias} [alias] - Alias para la expresión resultante
 	 * @returns {string} - Expresión SQL para manejar valores nulos
 	 */
 	nullif(expr1, expr2, alias) {
-		return `NULLIF(${expr1}, ${expr2})${alias ? ` AS ${alias}` : ''}`;
+		const processedExpr1 = expr1 instanceof Column ? expr1.toString() : expr1;
+		const processedExpr2 = expr2 instanceof Column ? expr2.toString() : expr2;
+		return `NULLIF(${processedExpr1}, ${processedExpr2})${alias ? ` AS ${alias}` : ''}`;
 	}
 	/**
 	 * Genera una expresión SQL para recortar espacios en blanco o caracteres específicos.

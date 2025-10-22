@@ -66,5 +66,6 @@ src/
 debug*.js
 manual-test.js
 
-# Documentation
-docs/api/
+# Documentation (generated files only)
+docs/jsdoc/
+!docs/README.md

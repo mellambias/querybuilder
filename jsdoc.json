@@ -77,8 +77,7 @@
   },
   "plugins": [
     "plugins/markdown",
-    "plugins/summarize",
-    "jsdoc-plugin-typescript"
+    "plugins/summarize"
   ],
   "templates": {
     "cleverLinks": true,

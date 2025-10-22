@@ -1,0 +1,65 @@
+{
+  "source": {
+    "include": [
+      "packages/@querybuilder/core"
+    ],
+    "includePattern": ".+\\.js(doc|x)?$",
+    "excludePattern": "(node_modules|docs|test|dist)"
+  },
+  "plugins": [
+    "plugins/markdown"
+  ],
+  "opts": {
+    "template": "node_modules/docdash",
+    "encoding": "utf8",
+    "destination": "docs/jsdoc",
+    "recurse": true,
+    "verbose": true,
+    "readme": "README.md"
+  },
+  "templates": {
+    "cleverLinks": true,
+    "monospaceLinks": true,
+    "default": {
+      "outputSourceFiles": true,
+      "includeDate": false
+    }
+  },
+  "docdash": {
+    "static": true,
+    "sort": true,
+    "search": true,
+    "collapse": true,
+    "wrap": true,
+    "typedefs": true,
+    "removeQuotes": "none",
+    "scripts": [],
+    "menu": {
+      "Repositorio GitHub": {
+        "href": "https://github.com/mellambias/querybuilder",
+        "target": "_blank",
+        "class": "menu-item",
+        "id": "github-link"
+      },
+      "Documentación": {
+        "href": "/index.html",
+        "target": "_self"
+      }
+    },
+    "meta": {
+      "title": "QueryBuilder API Documentation",
+      "description": "Documentación completa de la API QueryBuilder",
+      "keyword": "querybuilder, sql, database, javascript, nosql, mongodb, mysql, postgresql"
+    },
+    "openGraph": {
+      "title": "QueryBuilder API",
+      "type": "website",
+      "site_name": "QueryBuilder Documentation",
+      "url": ""
+    }
+  },
+  "markdown": {
+    "hardwrap": false,
+    "idInHeadings": true
+  }
+}

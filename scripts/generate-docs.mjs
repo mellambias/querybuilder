@@ -2,7 +2,6 @@
 
 import fs from 'fs';
 import { execSync } from 'child_process';
-import { join } from 'path';
 
 /**
  * Genera documentación desde JSDoc y la limpia para VitePress

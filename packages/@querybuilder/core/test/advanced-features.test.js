@@ -173,24 +173,24 @@ FROM VENTAS;`
 
   describe("Advanced Transactions", () => {
     test("crear y limpiar savepoint", { only: false }, async () => {
-      assert.equal(qb.setSavePoint("punto1"), "SAVEPOINT punto1");
-      assert.equal(qb.clearSavePoint("punto1"), "RELEASE SAVEPOINT punto1");
+      assert.equal(qb.language.setSavePoint("punto1"), "SAVEPOINT punto1");
+      assert.equal(qb.language.clearSavePoint("punto1"), "RELEASE SAVEPOINT punto1");
     });
 
     test("rollback con savepoint", { only: false }, async () => {
-      assert.equal(qb.rollback("punto1"), "ROLLBACK TO SAVEPOINT punto1");
+      assert.equal(qb.language.rollback("punto1"), "ROLLBACK TO SAVEPOINT punto1");
     });
 
     test("rollback sin savepoint", { only: false }, async () => {
-      assert.equal(qb.rollback(), "ROLLBACK");
+      assert.equal(qb.language.rollback(), "ROLLBACK");
     });
 
     test("commit", { only: false }, async () => {
-      assert.equal(qb.commit(), "COMMIT");
+      assert.equal(qb.language.commit(), "COMMIT");
     });
 
     test("startTransaction", { only: false }, async () => {
-      const result = qb.startTransaction({
+      const result = qb.language.startTransaction({
         access: "READ WRITE",
         isolation: "SERIALIZABLE"
       });
