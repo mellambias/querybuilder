@@ -1,484 +1,897 @@
-# SQLite QueryBuilder# @querybuilder/sqlite
+# @querybuilder/sqlite# @querybuilder/sqlite
 
 
 
-Implementación completa del QueryBuilder para SQLite, siguiendo la misma metodología utilizada para MongoDB. SQLite es una base de datos embebida que sigue el estándar SQL con características específicas.SQLite implementation for QueryBuilder - Lightweight, serverless SQL database support.
+Adaptador SQLite para QueryBuilder - Base de datos SQL ligera, embebida y sin servidor.Adaptador SQLite para QueryBuilder - Base de datos SQL ligera, embebida y sin servidor.
 
 
 
-## 🚀 Características## 📋 Features
+## 📦 Instalación## � Instalación
 
 
 
-### ✅ Funcionalidad Completa✅ **Complete SQLite support** - All major SQLite features  
+```bash```bash
 
-- **DDL (Data Definition Language)**: CREATE/DROP TABLE, INDEX, VIEW✅ **Lightweight & Fast** - No server required, file-based database  
+# Instalar el paquete SQLite# Instalar el paquete SQLite
 
-- **DQL (Data Query Language)**: SELECT, UNION, CASE WHEN✅ **Modern SQLite features** - STRICT tables, WITHOUT ROWID, JSON support  
-
-- **DML (Data Manipulation Language)**: INSERT, UPDATE, DELETE con opciones SQLite✅ **Transaction support** - BEGIN, COMMIT, ROLLBACK, SAVEPOINT  
-
-- **Funciones de Cadena**: SUBSTR, CONCAT, TRIM, LENGTH, UPPER, LOWER✅ **PRAGMA commands** - Database configuration and optimization  
-
-- **Funciones de Utilidad**: COALESCE, NULLIF✅ **Dual driver support** - better-sqlite3 (recommended) or sqlite3  
-
-- **Funciones de Fecha**: DATE, TIME, DATETIME con 'now'✅ **Type safety** - Full TypeScript-ready implementation  
-
-- **Funciones Agregadas**: COUNT, SUM, AVG, MIN, MAX
-
-- **Window Functions**: ROW_NUMBER, RANK, LAG, LEAD (SQLite 3.25+)## 🚀 Installation
-
-- **JSON Functions**: JSON_EXTRACT, JSON_SET, JSON_VALID (SQLite 3.45+)
-
-- **Funciones Matemáticas**: ABS, ROUND, RANDOM```bash
-
-# Install the SQLite package
-
-### 🎯 Características Específicas de SQLitenpm install @querybuilder/sqlite
-
-- **PRAGMA Statements**: Configuración de base de datos
-
-- **UPSERT**: INSERT con ON CONFLICT# Install SQLite driver (choose one)
-
-- **INSERT OR REPLACE/IGNORE**: Manejo de conflictosnpm install better-sqlite3  # Recommended - synchronous, faster
-
-- **ATTACH/DETACH**: Múltiples bases de datos# OR
-
-- **Common Table Expressions (CTE)**: WITH RECURSIVEnpm install sqlite3         # Traditional - asynchronous
-
-- **Full-Text Search**: FTS5 support```
+npm install @querybuilder/core @querybuilder/sqlitenpm install @querybuilder/core @querybuilder/sqlite
 
 
 
-## 📁 Estructura del Proyecto## 💻 Basic Usage
+# Instalar driver SQLite (elige uno)# Instalar driver SQLite (elige uno)
+
+npm install better-sqlite3  # Recomendado - síncrono, más rápidonpm install better-sqlite3  # Recomendado - síncrono, más rápido
+
+# O# O
+
+npm install sqlite3         # Tradicional - asíncrononpm install sqlite3         # Tradicional - asíncrono
+
+``````
 
 
 
-```### Simple Query Builder
+## 🚀 Uso Básico
+
+
+
+```javascript## 📁 Estructura del Proyecto## 💻 Basic Usage
+
+import QueryBuilder from '@querybuilder/core';
+
+import { SQLite } from '@querybuilder/sqlite';
+
+
+
+// Crear instancia con adaptador SQLite```### Simple Query Builder
+
+const qb = new QueryBuilder(SQLite);
 
 sqlite/
 
-├── SQLite.js                 # Clase principal```javascript
+// Operaciones CRUD
 
-├── package.json             # Configuración del paqueteimport { SQLite } from '@querybuilder/sqlite';
+const insert = qb.insertInto('users', {├── SQLite.js                 # Clase principal```javascript
 
-├── comandos/import { QueryBuilder } from '@querybuilder/core';
+  name: 'John Doe',
 
-│   └── sqlite.js           # Comandos específicos de SQLite
+  email: 'john@example.com',├── package.json             # Configuración del paqueteimport { SQLite } from '@querybuilder/sqlite';
 
-├── test/// Create SQLite instance
+  age: 30
+
+});├── comandos/import { QueryBuilder } from '@querybuilder/core';
+
+
+
+const select = qb.select('*').from('users').where('age', '>=', 18);│   └── sqlite.js           # Comandos específicos de SQLite
+
+const update = qb.update('users').set({ status: 'active' }).where('id', '=', 1);
+
+const remove = qb.deleteFrom('users').where('inactive', '=', true);├── test/// Create SQLite instance
+
+```
 
 │   └── test-funciones-sqlite.js  # Suite de pruebas completaconst sqlite = new SQLite();
 
+## 🔧 Características Principales
+
 └── README.md               # Documentación
 
-```// Use with QueryBuilder
+### ✅ DDL Completo
 
-const qb = new QueryBuilder(sqlite);
+```javascript```// Use with QueryBuilder
 
-## 🛠 Instalación
+// Crear tabla con características SQLite
 
-// Build queries
+qb.createTable('users')const qb = new QueryBuilder(sqlite);
+
+  .addColumn('id', 'INTEGER PRIMARY KEY AUTOINCREMENT')
+
+  .addColumn('name', 'TEXT NOT NULL')## 🛠 Instalación
+
+  .addColumn('email', 'TEXT UNIQUE')
+
+  .addColumn('data', 'JSON')// Build queries
+
+  .addColumn('created_at', "DATETIME DEFAULT (datetime('now'))");
 
 ```bashconst createTable = qb.createTable('users', {
 
-# Instalar dependencias  cols: {
+// Tabla STRICT (SQLite 3.37+)
 
-npm install sqlite3    id: { type: 'INTEGER', primaryKey: true, autoIncrement: true },
+qb.createTable('logs')# Instalar dependencias  cols: {
 
-    name: { type: 'TEXT', notNull: true },
+  .strict()
 
-# Ejecutar pruebas    email: { type: 'TEXT', unique: true },
+  .addColumn('id', 'INTEGER PRIMARY KEY')npm install sqlite3    id: { type: 'INTEGER', primaryKey: true, autoIncrement: true },
 
-npm test    created_at: { type: 'DATETIME', default: 'CURRENT_TIMESTAMP' }
+  .addColumn('level', 'TEXT NOT NULL')
 
-```  }
+  .addColumn('message', 'TEXT');    name: { type: 'TEXT', notNull: true },
+
+
+
+// Tabla WITHOUT ROWID (optimización)# Ejecutar pruebas    email: { type: 'TEXT', unique: true },
+
+qb.createTable('settings')
+
+  .withoutRowId()npm test    created_at: { type: 'DATETIME', default: 'CURRENT_TIMESTAMP' }
+
+  .addColumn('key', 'TEXT PRIMARY KEY')
+
+  .addColumn('value', 'TEXT');```  }
+
+```
 
 });
 
-## 📋 Uso Básico
+### ✅ UPSERT (INSERT ... ON CONFLICT)
 
-console.log(createTable.toString());
+```javascript## 📋 Uso Básico
 
-### Importar la Clase// CREATE TABLE users (
+// UPSERT básico
 
-//   id INTEGER PRIMARY KEY AUTOINCREMENT,
+qb.insertInto('users', { email: 'user@test.com', name: 'John' })console.log(createTable.toString());
 
-```javascript//   name TEXT NOT NULL,
+  .onConflict('email')
+
+  .doUpdate();### Importar la Clase// CREATE TABLE users (
+
+
+
+// UPSERT con actualización selectiva//   id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+qb.insertInto('stats', { user_id: 1, views: 1 })
+
+  .onConflict('user_id')```javascript//   name TEXT NOT NULL,
+
+  .doUpdate({ views: 'views + 1' });
 
 import SQLite from '@querybuilder/sqlite';//   email TEXT UNIQUE,
 
-//   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+// INSERT OR REPLACE
 
-const sqlite = new SQLite();// )
-
-``````
+qb.insertOrReplace('cache', { key: 'user:1', value: '{"name":"John"}' });//   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 
 
 
-### DDL Operations### With Database Driver
+// INSERT OR IGNOREconst sqlite = new SQLite();// )
+
+qb.insertOrIgnore('logs', { event: 'login', user_id: 1 });
+
+`````````
 
 
+
+### ✅ Funciones JSON (SQLite 3.38+)
+
+```javascript
+
+// Extraer datos JSON### DDL Operations### With Database Driver
+
+qb.select("json_extract(data, '$.email') as email")
+
+  .from('users')
+
+  .where("json_extract(data, '$.active')", '=', 1);
 
 ```javascript```javascript
 
-// Crear base de datos con PRAGMAimport { SQLite } from '@querybuilder/sqlite';
+// Modificar JSON
 
-const createDB = sqlite.createDatabase('myapp.db', {import { SqliteDriver } from '@querybuilder/sqlite/driver';
+qb.update('users')// Crear base de datos con PRAGMAimport { SQLite } from '@querybuilder/sqlite';
 
-    pragma: ['foreign_keys = ON', 'journal_mode = WAL']import { QueryBuilder } from '@querybuilder/core';
+  .set({ data: "json_set(data, '$.lastLogin', datetime('now'))" })
 
-});
-
-// Setup database connection
-
-// Crear tablaconst driver = new SqliteDriver('./myapp.db', {
-
-const createTable = sqlite.createTable('users', {  verbose: true,
-
-    columns: {  foreignKeys: true
-
-        id: 'INTEGER PRIMARY KEY AUTOINCREMENT',});
-
-        name: 'TEXT NOT NULL',
-
-        email: 'TEXT UNIQUE',const sqlite = new SQLite();
-
-        created_at: 'DATETIME DEFAULT CURRENT_TIMESTAMP'const qb = new QueryBuilder(sqlite);
-
-    },
-
-    ifNotExists: true// Connect and execute
-
-});await driver.connect();
+  .where('id', '=', 1);const createDB = sqlite.createDatabase('myapp.db', {import { SqliteDriver } from '@querybuilder/sqlite/driver';
 
 
 
-// Crear índice// Create table
+// Validar JSON    pragma: ['foreign_keys = ON', 'journal_mode = WAL']import { QueryBuilder } from '@querybuilder/core';
+
+qb.select('*')
+
+  .from('documents')});
+
+  .where('json_valid(content)', '=', 1);
+
+```// Setup database connection
+
+
+
+### ✅ Window Functions (SQLite 3.25+)// Crear tablaconst driver = new SqliteDriver('./myapp.db', {
+
+```javascript
+
+// ROW_NUMBERconst createTable = sqlite.createTable('users', {  verbose: true,
+
+qb.select([
+
+  '*',    columns: {  foreignKeys: true
+
+  'ROW_NUMBER() OVER (ORDER BY salary DESC) as rank'
+
+]).from('employees');        id: 'INTEGER PRIMARY KEY AUTOINCREMENT',});
+
+
+
+// PARTITION BY        name: 'TEXT NOT NULL',
+
+qb.select([
+
+  'name',        email: 'TEXT UNIQUE',const sqlite = new SQLite();
+
+  'department',
+
+  'salary',        created_at: 'DATETIME DEFAULT CURRENT_TIMESTAMP'const qb = new QueryBuilder(sqlite);
+
+  'RANK() OVER (PARTITION BY department ORDER BY salary DESC) as dept_rank'
+
+]).from('employees');    },
+
+
+
+// LAG y LEAD    ifNotExists: true// Connect and execute
+
+qb.select([
+
+  'date',});await driver.connect();
+
+  'sales',
+
+  'LAG(sales) OVER (ORDER BY date) as prev_day_sales',
+
+  'LEAD(sales) OVER (ORDER BY date) as next_day_sales'
+
+]).from('daily_sales');// Crear índice// Create table
+
+```
 
 const createIndex = sqlite.createIndex('idx_user_email', {await driver.query(qb.createTable('users', {
 
-    table: 'users',  cols: {
+### ✅ Common Table Expressions (CTEs)
 
-    columns: ['email'],    id: { type: 'INTEGER', primaryKey: true, autoIncrement: true },
+```javascript    table: 'users',  cols: {
 
-    unique: true    name: 'TEXT NOT NULL',
+// CTE simple
 
-});    email: 'TEXT UNIQUE'
+qb.with('active_users',     columns: ['email'],    id: { type: 'INTEGER', primaryKey: true, autoIncrement: true },
 
-  }
+  qb.select('*').from('users').where('active', '=', 1)
 
-// Crear vista}).toString());
-
-const createView = sqlite.createView('active_users', {
-
-    query: 'SELECT * FROM users WHERE active = 1',// Insert data
-
-    ifNotExists: trueconst insert = qb.insert('users', {
-
-});  name: 'John Doe',
-
-```  email: 'john@example.com'
-
-});
-
-### DQL Operations
-
-const result = await driver.query(insert.toString(), insert.getParams());
-
-```javascriptconsole.log('Inserted ID:', result.insertId);
-
-// UNION queries
-
-const union = sqlite.union(// Query data
-
-    'SELECT name FROM active_users',const select = qb.select('*').from('users').where('email = ?');
-
-    'SELECT name FROM inactive_users'const users = await driver.query(select.toString(), ['john@example.com']);
-
-);console.log('Users:', users.rows);
+).select('*').from('active_users');    unique: true    name: 'TEXT NOT NULL',
 
 
 
-// CASE WHENawait driver.disconnect();
+// CTE recursivo});    email: 'TEXT UNIQUE'
 
-const caseWhen = sqlite.case([```
+qb.withRecursive('counter', 
 
-    {when: "status = 'active'", then: "'Usuario Activo'"},
+  // Base case  }
 
-    {when: "status = 'inactive'", then: "'Usuario Inactivo'"}## 🔧 SQLite Specific Features
+  'SELECT 1 as n',
 
-], "'Estado Desconocido'", 'status_description');
+  // Recursive case// Crear vista}).toString());
 
-```### PRAGMA Commands
+  'SELECT n + 1 FROM counter WHERE n < 10'
+
+).select('*').from('counter');const createView = sqlite.createView('active_users', {
 
 
 
-### String Functions```javascript
+// Múltiples CTEs    query: 'SELECT * FROM users WHERE active = 1',// Insert data
 
-const sqlite = new SQLite();
+qb.with('high_earners', 
+
+    qb.select('*').from('employees').where('salary', '>', 100000)    ifNotExists: trueconst insert = qb.insert('users', {
+
+  )
+
+  .with('dept_avg',});  name: 'John Doe',
+
+    qb.select(['department', 'AVG(salary) as avg_salary'])
+
+      .from('employees')```  email: 'john@example.com'
+
+      .groupBy('department')
+
+  )});
+
+  .select('*')
+
+  .from('high_earners')### DQL Operations
+
+  .join('dept_avg', 'high_earners.department', '=', 'dept_avg.department');
+
+```const result = await driver.query(insert.toString(), insert.getParams());
+
+
+
+### ✅ Full-Text Search (FTS5)```javascriptconsole.log('Inserted ID:', result.insertId);
 
 ```javascript
 
+// Crear tabla FTS5// UNION queries
+
+qb.raw(`
+
+  CREATE VIRTUAL TABLE articles_fts USING fts5(const union = sqlite.union(// Query data
+
+    title, 
+
+    content,     'SELECT name FROM active_users',const select = qb.select('*').from('users').where('email = ?');
+
+    content='articles', 
+
+    content_rowid='id'    'SELECT name FROM inactive_users'const users = await driver.query(select.toString(), ['john@example.com']);
+
+  )
+
+`););console.log('Users:', users.rows);
+
+
+
+// Búsqueda de texto completo
+
+qb.select('*')
+
+  .from('articles_fts')// CASE WHENawait driver.disconnect();
+
+  .where('articles_fts', 'MATCH', '"sqlite querybuilder"');
+
+const caseWhen = sqlite.case([```
+
+// Búsqueda con ranking
+
+qb.select(['title', 'rank'])    {when: "status = 'active'", then: "'Usuario Activo'"},
+
+  .from('articles_fts')
+
+  .where('articles_fts', 'MATCH', 'database')    {when: "status = 'inactive'", then: "'Usuario Inactivo'"}## 🔧 SQLite Specific Features
+
+  .orderBy('rank');
+
+```], "'Estado Desconocido'", 'status_description');
+
+
+
+### ✅ PRAGMA Statements```### PRAGMA Commands
+
+```javascript
+
+// Configurar journal mode
+
+qb.pragma('journal_mode', 'WAL');
+
+### String Functions```javascript
+
+// Habilitar foreign keys
+
+qb.pragma('foreign_keys', 'ON');const sqlite = new SQLite();
+
+
+
+// Ver información de tabla```javascript
+
+qb.pragma('table_info', 'users');
+
 // Substring// Enable foreign keys
 
-const substr = sqlite.substr('name', 1, 10, 'short_name');console.log(sqlite.pragma('foreign_keys', 1));
+// Optimizar base de datos
 
-// PRAGMA foreign_keys = 1
+qb.pragma('optimize');const substr = sqlite.substr('name', 1, 10, 'short_name');console.log(sqlite.pragma('foreign_keys', 1));
 
-// Concatenación (usando || de SQLite)
 
-const concat = sqlite.concat(['first_name', "' '", 'last_name'], 'full_name');// Set journal mode to WAL
 
-console.log(sqlite.pragma('journal_mode', 'WAL'));
+// Configurar cache// PRAGMA foreign_keys = 1
 
-// Trim// PRAGMA journal_mode = WAL
+qb.pragma('cache_size', 10000);
 
-const trim = sqlite.trim('description', null, 'clean_description');
+```// Concatenación (usando || de SQLite)
+
+
+
+### ✅ Transaccionesconst concat = sqlite.concat(['first_name', "' '", 'last_name'], 'full_name');// Set journal mode to WAL
+
+```javascript
+
+// Transacción básicaconsole.log(sqlite.pragma('journal_mode', 'WAL'));
+
+const transaction = qb.transaction()
+
+  .begin()// Trim// PRAGMA journal_mode = WAL
+
+  .add(qb.insertInto('users', { name: 'John' }))
+
+  .add(qb.insertInto('logs', { action: 'user_created' }))const trim = sqlite.trim('description', null, 'clean_description');
+
+  .commit();
 
 // Check database info
 
-// Lengthconsole.log(sqlite.pragma('database_list'));
+// Con savepoint
 
-const length = sqlite.length('content', 'content_length');// PRAGMA database_list
+const tx = qb.transaction()// Lengthconsole.log(sqlite.pragma('database_list'));
+
+  .begin()
+
+  .add(qb.update('accounts').set({ balance: 'balance - 100' }).where('id', 1))const length = sqlite.length('content', 'content_length');// PRAGMA database_list
+
+  .savepoint('sp1')
+
+  .add(qb.update('accounts').set({ balance: 'balance + 100' }).where('id', 2))``````
+
+  .commit();
+
+
+
+// Rollback
+
+const rollbackTx = qb.transaction()### Utility Functions### Modern SQLite Features
+
+  .begin()
+
+  .add(qb.deleteFrom('temp_data'))
+
+  .rollback();
+
+``````javascript```javascript
+
+
+
+### ✅ ATTACH/DETACH Database// COALESCE// STRICT tables (SQLite 3.37+)
+
+```javascript
+
+// Adjuntar otra base de datosconst coalesce = sqlite.coalesce(['nickname', 'first_name', "'Anonymous'"], 'display_name');const strictTable = qb.createTable('products', {
+
+qb.attach('backup.db', 'backup_db');
+
+  cols: {
+
+// Usar tablas de la BD adjunta
+
+qb.select('*').from('backup_db.users');// NULLIF    id: 'INTEGER PRIMARY KEY',
+
+
+
+// Copiar datos entre basesconst nullif = sqlite.nullif('status', "'unknown'", 'clean_status');    name: 'TEXT NOT NULL',
+
+qb.insertInto('backup_db.users')
+
+  .select('*')```    price: 'REAL'
+
+  .from('main.users');
+
+  },
+
+// Desconectar base de datos
+
+qb.detach('backup_db');### Date/Time Functions  strict: true
+
+```
+
+});
+
+## 📚 Tipos de Datos SQLite
+
+```javascript
+
+SQLite usa tipado dinámico con clases de almacenamiento:
+
+// Fecha actual// WITHOUT ROWID tables
+
+```javascript
+
+// Tipos principalesconst currentDate = sqlite.currentDate(); // DATE('now')const withoutRowid = qb.createTable('settings', {
+
+qb.createTable('example')
+
+  .addColumn('id', 'INTEGER PRIMARY KEY')  cols: {
+
+  .addColumn('name', 'TEXT NOT NULL')
+
+  .addColumn('amount', 'REAL')// Hora actual    key: 'TEXT PRIMARY KEY',
+
+  .addColumn('data', 'BLOB')
+
+  .addColumn('active', 'INTEGER'); // Para BOOLEAN (0/1)const currentTime = sqlite.currentTime(); // TIME('now')    value: 'TEXT'
+
+
+
+// Tipos estrictos (STRICT tables)  },
+
+qb.createTable('strict_example')
+
+  .strict()// Timestamp actual  withoutRowid: true
+
+  .addColumn('id', 'INTEGER PRIMARY KEY')
+
+  .addColumn('value', 'INT')    // Permite NULLconst now = sqlite.now(); // DATETIME('now')});
+
+  .addColumn('name', 'TEXT')
+
+  .addColumn('price', 'REAL')
+
+  .addColumn('any_data', 'ANY'); // Permite cualquier tipo
+
+```// Formato personalizado// Partial indexes
+
+
+
+## 🎯 Funciones SQLiteconst customDate = sqlite.currentDate('%d/%m/%Y', 'formatted_date');const partialIndex = sqlite.createIndex('idx_active_users', {
+
+
+
+### Funciones de String```  table: 'users',
+
+```javascript
+
+qb.select([  columns: ['email'],
+
+  "SUBSTR(name, 1, 5) as short_name",
+
+  "LENGTH(email) as email_length",### SQLite Specific Features  where: 'active = 1'
+
+  "UPPER(status) as status_upper",
+
+  "LOWER(name) as name_lower",});
+
+  "TRIM(description) as clean_desc",
+
+  "name || ' ' || surname as full_name" // Concatenación```javascript```
+
+]).from('users');
+
+```// PRAGMA statements
+
+
+
+### Funciones de Fechaconst pragma1 = sqlite.pragma('foreign_keys', 'ON');### Transactions
+
+```javascript
+
+qb.select([const pragma2 = sqlite.pragma('table_info', 'users');
+
+  "DATE('now') as today",
+
+  "TIME('now') as current_time",```javascript
+
+  "DATETIME('now') as now",
+
+  "STRFTIME('%Y-%m-%d', created_at) as date_only",// UPSERT (INSERT con ON CONFLICT)// Basic transaction
+
+  "JULIANDAY('now') - JULIANDAY(created_at) as days_ago"
+
+]).from('events');const upsert = sqlite.upsert('users',console.log(sqlite.startTransaction());
+
+```
+
+    {name: 'John', email: 'john@example.com'},// BEGIN
+
+### Funciones Matemáticas
+
+```javascript    ['email'],
+
+qb.select([
+
+  'ABS(balance) as absolute',    {name: 'John Updated'}// Transaction types
+
+  'ROUND(price, 2) as rounded_price',
+
+  'RANDOM() as random_num',);console.log(sqlite.startTransaction({ type: 'IMMEDIATE' }));
+
+  'MAX(salary, 50000) as adjusted_salary',
+
+  'MIN(age, 65) as capped_age'// BEGIN IMMEDIATE
+
+]).from('data');
+
+```// INSERT OR REPLACE
+
+
+
+### Funciones de Agregaciónconst insertOrReplace = sqlite.insertOrReplace('users', {console.log(sqlite.startTransaction({ type: 'EXCLUSIVE' }));
+
+```javascript
+
+qb.select([    id: 1,// BEGIN EXCLUSIVE
+
+  'COUNT(*) as total',
+
+  'SUM(amount) as total_amount',    name: 'Jane',
+
+  'AVG(price) as average_price',
+
+  'MIN(created_at) as first_date',    email: 'jane@example.com'// Savepoints
+
+  'MAX(updated_at) as last_update',
+
+  'GROUP_CONCAT(tag, ", ") as tags'});console.log(sqlite.savepoint('sp1'));
+
+]).from('orders').groupBy('customer_id');
+
+```// SAVEPOINT sp1
+
+
+
+## 🔌 Drivers SQLite// Table information
+
+
+
+### better-sqlite3 (Recomendado)const tableInfo = sqlite.tableInfo('users');console.log(sqlite.rollback('sp1'));
+
+```javascript
+
+import Database from 'better-sqlite3';const listTables = sqlite.listTables();// ROLLBACK TO sp1
+
+
+
+const db = new Database('mydb.sqlite');```
+
+
+
+// Síncrono - más simpleconsole.log(sqlite.releaseSavepoint('sp1'));
+
+const result = db.prepare('SELECT * FROM users').all();
+
+### Window Functions (SQLite 3.25+)// RELEASE SAVEPOINT sp1
+
+// Con QueryBuilder
+
+const query = qb.select('*').from('users').toString();```
+
+const rows = db.prepare(query).all();
+
+``````javascript
+
+
+
+### sqlite3 (Tradicional)// ROW_NUMBER### Database Maintenance
+
+```javascript
+
+import sqlite3 from 'sqlite3';const rowNumber = sqlite.rowNumber('created_at DESC', 'department', 'row_num');
+
+
+
+const db = new sqlite3.Database('mydb.sqlite');```javascript
+
+
+
+// Asíncrono// RANK// Vacuum database
+
+db.all('SELECT * FROM users', [], (err, rows) => {
+
+  if (err) throw err;const rank = sqlite.rank('score DESC', 'category', 'position');console.log(sqlite.vacuum());
+
+  console.log(rows);
+
+});// VACUUM
+
+
+
+// Con promesas// LAG/LEAD
+
+const { promisify } = require('util');
+
+const all = promisify(db.all.bind(db));const lag = sqlite.lag('amount', 1, 0, 'date', 'user_id', 'prev_amount');// Analyze statistics
+
+const rows = await all('SELECT * FROM users');
+
+```const lead = sqlite.lead('amount', 1, 0, 'date', 'user_id', 'next_amount');console.log(sqlite.analyze());
+
+
+
+## 📖 Ejemplos Avanzados```// ANALYZE
+
+
+
+### Migración de Datos
+
+```javascript
+
+// Crear tabla temporal### JSON Functions (SQLite 3.45+)// Reindex
+
+qb.createTable('users_new')
+
+  .addColumn('id', 'INTEGER PRIMARY KEY')console.log(sqlite.reindex());
+
+  .addColumn('email', 'TEXT UNIQUE NOT NULL')
+
+  .addColumn('data', 'JSON');```javascript// REINDEX
+
+
+
+// Copiar datos con transformación// JSON_EXTRACT```
+
+qb.insertInto('users_new')
+
+  .select([const jsonExtract = sqlite.jsonExtract('metadata', '$.name', 'extracted_name');
+
+    'id',
+
+    'email',## 📊 Driver Features
+
+    "json_object('name', name, 'age', age) as data"
+
+  ])// JSON_SET
+
+  .from('users_old');
+
+const jsonSet = sqlite.jsonSet('data', '$.updated', "'2024-01-01'", 'updated_data');### Connection Options
+
+// Renombrar tabla
+
+qb.raw('ALTER TABLE users_old RENAME TO users_backup');
+
+qb.raw('ALTER TABLE users_new RENAME TO users');
+
+```// JSON_VALID```javascript
+
+
+
+### Análisis con Window Functionsconst jsonValid = sqlite.jsonValid('json_column', 'is_valid');const driver = new SqliteDriver('./database.db', {
+
+```javascript
+
+// Ranking y percentiles```  verbose: true,        // Log SQL statements
+
+qb.select([
+
+  'product_name',  readonly: false,      // Read-only database
+
+  'sales',
+
+  'PERCENT_RANK() OVER (ORDER BY sales DESC) as percentile',### Math Functions  fileMustExist: false, // Database file must exist
+
+  'NTILE(4) OVER (ORDER BY sales DESC) as quartile',
+
+  'CUME_DIST() OVER (ORDER BY sales DESC) as cumulative_dist'  timeout: 5000,        // Connection timeout
+
+]).from('products');
+
+``````javascript});
+
+
+
+### JSON Complejo// Valor absoluto```
+
+```javascript
+
+// Consulta JSON anidadoconst abs = sqlite.abs('balance', 'absolute_balance');
+
+qb.select([
+
+  'id',### Prepared Statements
+
+  "json_extract(profile, '$.address.city') as city",
+
+  "json_extract(profile, '$.preferences.theme') as theme"// Redondear
+
+]).from('users')
+
+  .where("json_extract(profile, '$.verified')", '=', 1);const round = sqlite.round('price', 2, 'rounded_price');```javascript
+
+
+
+// Actualizar JSON anidado// With better-sqlite3
+
+qb.update('users')
+
+  .set({// Número aleatorioconst stmt = driver.prepare('SELECT * FROM users WHERE age > ?');
+
+    profile: "json_set(profile, '$.lastLogin', datetime('now'), '$.loginCount', json_extract(profile, '$.loginCount') + 1)"
+
+  })const random = sqlite.random('random_value');const users = stmt.all(18);
+
+  .where('id', '=', 1);
 
 ``````
 
 
 
-### Utility Functions### Modern SQLite Features
+## 🧪 Testing// Transaction with better-sqlite3
 
 
 
-```javascript```javascript
+```javascript## 🧪 Ejecutar Pruebasconst results = await driver.transaction([
 
-// COALESCE// STRICT tables (SQLite 3.37+)
+import { test } from 'node:test';
 
-const coalesce = sqlite.coalesce(['nickname', 'first_name', "'Anonymous'"], 'display_name');const strictTable = qb.createTable('products', {
+import assert from 'node:assert/strict';  { sql: 'INSERT INTO users (name) VALUES (?)', params: ['Alice'] },
 
-  cols: {
+import QueryBuilder from '@querybuilder/core';
 
-// NULLIF    id: 'INTEGER PRIMARY KEY',
-
-const nullif = sqlite.nullif('status', "'unknown'", 'clean_status');    name: 'TEXT NOT NULL',
-
-```    price: 'REAL'
-
-  },
-
-### Date/Time Functions  strict: true
-
-});
-
-```javascript
-
-// Fecha actual// WITHOUT ROWID tables
-
-const currentDate = sqlite.currentDate(); // DATE('now')const withoutRowid = qb.createTable('settings', {
-
-  cols: {
-
-// Hora actual    key: 'TEXT PRIMARY KEY',
-
-const currentTime = sqlite.currentTime(); // TIME('now')    value: 'TEXT'
-
-  },
-
-// Timestamp actual  withoutRowid: true
-
-const now = sqlite.now(); // DATETIME('now')});
+import { SQLite } from '@querybuilder/sqlite';```bash  { sql: 'INSERT INTO users (name) VALUES (?)', params: ['Bob'] }
 
 
 
-// Formato personalizado// Partial indexes
+test('SQLite operations', () => {# Ejecutar todas las pruebas]);
 
-const customDate = sqlite.currentDate('%d/%m/%Y', 'formatted_date');const partialIndex = sqlite.createIndex('idx_active_users', {
+  const qb = new QueryBuilder(SQLite);
 
-```  table: 'users',
+  npm run test:all```
 
-  columns: ['email'],
+  const create = qb.createTable('test')
 
-### SQLite Specific Features  where: 'active = 1'
+    .addColumn('id', 'INTEGER PRIMARY KEY')
+
+    .toString();
+
+  # O directamente### Database Introspection
+
+  assert.ok(create.includes('CREATE TABLE'));
+
+  assert.ok(create.includes('INTEGER PRIMARY KEY'));node test/test-funciones-sqlite.js
 
 });
 
-```javascript```
+`````````javascript
 
-// PRAGMA statements
 
-const pragma1 = sqlite.pragma('foreign_keys', 'ON');### Transactions
 
-const pragma2 = sqlite.pragma('table_info', 'users');
+## ⚡ Características SQLite// Get all tables
 
-```javascript
 
-// UPSERT (INSERT con ON CONFLICT)// Basic transaction
 
-const upsert = sqlite.upsert('users',console.log(sqlite.startTransaction());
+- **Sin servidor**: Base de datos embebida en archivoLas pruebas validan:const tables = await driver.getTables();
 
-    {name: 'John', email: 'john@example.com'},// BEGIN
+- **Transaccional**: ACID completo
 
-    ['email'],
+- **Tipado dinámico**: Flexibilidad en tipos de datos- ✅ Todas las funciones DDLconsole.log('Tables:', tables);
 
-    {name: 'John Updated'}// Transaction types
+- **Ligera**: ~600KB de biblioteca
 
-);console.log(sqlite.startTransaction({ type: 'IMMEDIATE' }));
+- **Multiplataforma**: Windows, Linux, macOS- ✅ Operaciones DQL complejas
 
-// BEGIN IMMEDIATE
-
-// INSERT OR REPLACE
-
-const insertOrReplace = sqlite.insertOrReplace('users', {console.log(sqlite.startTransaction({ type: 'EXCLUSIVE' }));
-
-    id: 1,// BEGIN EXCLUSIVE
-
-    name: 'Jane',
-
-    email: 'jane@example.com'// Savepoints
-
-});console.log(sqlite.savepoint('sp1'));
-
-// SAVEPOINT sp1
-
-// Table information
-
-const tableInfo = sqlite.tableInfo('users');console.log(sqlite.rollback('sp1'));
-
-const listTables = sqlite.listTables();// ROLLBACK TO sp1
-
-```
-
-console.log(sqlite.releaseSavepoint('sp1'));
-
-### Window Functions (SQLite 3.25+)// RELEASE SAVEPOINT sp1
-
-```
-
-```javascript
-
-// ROW_NUMBER### Database Maintenance
-
-const rowNumber = sqlite.rowNumber('created_at DESC', 'department', 'row_num');
-
-```javascript
-
-// RANK// Vacuum database
-
-const rank = sqlite.rank('score DESC', 'category', 'position');console.log(sqlite.vacuum());
-
-// VACUUM
-
-// LAG/LEAD
-
-const lag = sqlite.lag('amount', 1, 0, 'date', 'user_id', 'prev_amount');// Analyze statistics
-
-const lead = sqlite.lead('amount', 1, 0, 'date', 'user_id', 'next_amount');console.log(sqlite.analyze());
-
-```// ANALYZE
-
-
-
-### JSON Functions (SQLite 3.45+)// Reindex
-
-console.log(sqlite.reindex());
-
-```javascript// REINDEX
-
-// JSON_EXTRACT```
-
-const jsonExtract = sqlite.jsonExtract('metadata', '$.name', 'extracted_name');
-
-## 📊 Driver Features
-
-// JSON_SET
-
-const jsonSet = sqlite.jsonSet('data', '$.updated', "'2024-01-01'", 'updated_data');### Connection Options
-
-
-
-// JSON_VALID```javascript
-
-const jsonValid = sqlite.jsonValid('json_column', 'is_valid');const driver = new SqliteDriver('./database.db', {
-
-```  verbose: true,        // Log SQL statements
-
-  readonly: false,      // Read-only database
-
-### Math Functions  fileMustExist: false, // Database file must exist
-
-  timeout: 5000,        // Connection timeout
-
-```javascript});
-
-// Valor absoluto```
-
-const abs = sqlite.abs('balance', 'absolute_balance');
-
-### Prepared Statements
-
-// Redondear
-
-const round = sqlite.round('price', 2, 'rounded_price');```javascript
-
-// With better-sqlite3
-
-// Número aleatorioconst stmt = driver.prepare('SELECT * FROM users WHERE age > ?');
-
-const random = sqlite.random('random_value');const users = stmt.all(18);
-
-```
-
-// Transaction with better-sqlite3
-
-## 🧪 Ejecutar Pruebasconst results = await driver.transaction([
-
-  { sql: 'INSERT INTO users (name) VALUES (?)', params: ['Alice'] },
-
-```bash  { sql: 'INSERT INTO users (name) VALUES (?)', params: ['Bob'] }
-
-# Ejecutar todas las pruebas]);
-
-npm run test:all```
-
-
-
-# O directamente### Database Introspection
-
-node test/test-funciones-sqlite.js
-
-``````javascript
-
-// Get all tables
-
-Las pruebas validan:const tables = await driver.getTables();
-
-- ✅ Todas las funciones DDLconsole.log('Tables:', tables);
-
-- ✅ Operaciones DQL complejas
+- **Dominio público**: Sin restricciones de licencia
 
 - ✅ Funciones de cadena y utilidad// Get table schema
 
+## 📄 Versiones Soportadas
+
 - ✅ Funciones de fecha/horaconst schema = await driver.getTableInfo('users');
 
-- ✅ Características específicas de SQLiteconsole.log('User table schema:', schema);
+- **SQLite 3.35+**: Características básicas
 
-- ✅ Window Functions y JSON
+- **SQLite 3.37+**: STRICT tables- ✅ Características específicas de SQLiteconsole.log('User table schema:', schema);
 
-- ✅ Construcción de queries complejas// Get complete database schema
+- **SQLite 3.38+**: Funciones JSON mejoradas
 
-const fullSchema = await driver.getSchema();
+- **SQLite 3.45+**: Últimas mejoras JSON- ✅ Window Functions y JSON
 
-## 🎯 Ventajas de SQLiteconsole.log('Database schema:', fullSchema);
 
-```
 
-### Para Desarrollo
+## 📄 Licencia- ✅ Construcción de queries complejas// Get complete database schema
 
-- **Sin servidor**: Archivo único, fácil distribución## 🔄 Migration from Other Databases
 
-- **ACID compliant**: Transacciones confiables
 
-- **SQL estándar**: Sintaxis familiar### From MySQL
+MPL-2.0const fullSchema = await driver.getSchema();
+
+
+
+## 🤝 Contribuciones## 🎯 Ventajas de SQLiteconsole.log('Database schema:', fullSchema);
+
+
+
+Las contribuciones son bienvenidas. Por favor, abre un issue o pull request en el repositorio.```
+
+
+
+## 🔗 Enlaces### Para Desarrollo
+
+
+
+- [@querybuilder/core](../core/README.md)- **Sin servidor**: Archivo único, fácil distribución## 🔄 Migration from Other Databases
+
+- [@querybuilder/mysql](../mysql/README.md)
+
+- [@querybuilder/postgresql](../postgresql/README.md)- **ACID compliant**: Transacciones confiables
+
+- [@querybuilder/mongodb](../mongodb/README.md)
+
+- [SQLite Documentation](https://www.sqlite.org/docs.html)- **SQL estándar**: Sintaxis familiar### From MySQL
+
 
 - **Zero-configuration**: No requiere configuración
 
