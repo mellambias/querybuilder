@@ -2,7 +2,7 @@ import { test, suite, afterEach, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import QueryBuilder from "../src/querybuilder.js";
 import MySQL from "../src/sql/MySQL.js";
-import { config } from "../packages/@querybuilder/core/config.js";
+import { config } from "../config.js";
 import { getResultFromTest } from "../src/test/utilsForTest/mysqlUtils.js";
 
 // Setup siguiendo exactamente el patrón de los tests existentes

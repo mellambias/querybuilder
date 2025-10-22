@@ -4,7 +4,7 @@
  * Test simple para verificar configuración
  */
 
-import { config } from '../../core/config.js';
+import { config } from '../../../../config.js';
 import { initializeDatabase, cleanupDatabase, createTestDatabase } from './test-setup.js';
 
 console.log('🔧 Verificando configuración del core...');

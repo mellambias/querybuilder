@@ -8,11 +8,11 @@ import { log } from "./utils/utils.js";
  * Delega la generación de comandos SQL a un objeto de lenguaje pasado como builder.
  * Delega la ejecución de comandos SQL a una función pasada como builder.
  * @class Cursor
- * @param {string} name - Nombre del cursor.
+ * @param {cursorName} name - Nombre del cursor.
  * @param {Expresion} expresion - Expresión asociada al cursor.
- * @param {Object} options - Opciones del cursor.
+ * @param {createCursorOptions} options - Opciones del cursor.
  * @param {QueryBuilder} builder - Instancia del QueryBuilder.
- * @param {Function} next - Función para obtener el siguiente valor.
+ * @param {next} next - Objeto next para encadenamiento.
  */
 class Cursor {
 	constructor(name, expresion, options, builder, next) {
@@ -31,6 +31,8 @@ class Cursor {
 
 	/**
 	 * Abre el cursor.
+	 * @method open
+	 * @memberof Cursor
 	 * @returns {Cursor} - La instancia del cursor.
 	 */
 	open() {
@@ -40,7 +42,9 @@ class Cursor {
 	}
 	/**
 	 * Cierra el cursor.
-	 * @param {Object} next - Objeto con la propiedad 'q' para agregar comandos adicionales.
+	 * @method close
+	 * @memberof Cursor
+	 * @param {next} next - Objeto next con la propiedad 'q' para agregar comandos adicionales.
 	 * @returns {Cursor} - La instancia del cursor.
 	 */
 	close(next) {
@@ -55,6 +59,9 @@ class Cursor {
 	/**
 	 * Genera métodos de fetch para diferentes direcciones.
 	 * Soporta NEXT, PRIOR, FIRST, LAST, ABSOLUTE y RELATIVE.
+	 * @method fetches
+	 * @memberof Cursor
+	 * @private
 	 */
 	fetches() {
 		const directions = ["NEXT", "PRIOR", "FIRST", "LAST"];
@@ -90,7 +97,9 @@ class Cursor {
 
 	/**
 	 * Realiza un fetch en el cursor.
-	 * @param {Object} hostVars - Variables de host para la consulta.
+	 * @method fetch
+	 * @memberof Cursor
+	 * @param {hostVars} hostVars - Variables de host para la consulta.
 	 * @returns {string} - Comando SQL generado para el fetch.
 	 */
 
@@ -104,6 +113,8 @@ class Cursor {
 	}
 	/** 
 	 * Agrega un comando al cursor.
+	 * @method add
+	 * @memberof Cursor
 	 * @param {string|QueryBuilder} command - Comando SQL o instancia de QueryBuilder.
 	 * @returns {Cursor} - La instancia del cursor.
 	 */
@@ -120,6 +131,8 @@ class Cursor {
 	}
 	/**
 	 * Convierte el cursor a una cadena de texto SQL.
+	 * @method toString
+	 * @memberof Cursor
 	 * @returns {string} - Comando SQL completo del cursor.
 	 */
 	toString() {
@@ -134,6 +147,8 @@ class Cursor {
 	}
 	/**
 	 * Ejecuta el cursor utilizando la función de ejecución del builder.
+	 * @method execute
+	 * @memberof Cursor
 	 * @returns {Promise} - Resultado de la ejecución del cursor.
 	 */
 	execute() {

@@ -12,7 +12,7 @@ import { existsSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { initializeDatabase, cleanupDatabase, createTestDatabase } from './test-setup.js';
-import { config } from '../../core/config.js';
+import { config } from '../../../../config.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

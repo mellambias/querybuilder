@@ -519,7 +519,7 @@ class Core {
 	 * 
 	 * @method createTable
 	 * @memberof Core
-	 * @param {table} name - Name of the table to create
+	 * @param {tableName} name - Name of the table to create
 	 * @param {createTableOptions} [options={}] - Table creation options (temporary, constraints, etc.)
 	 * @returns {string} CREATE TABLE SQL statement
 	 * @example
@@ -1177,7 +1177,7 @@ class Core {
 
 	/**
 	 * Genera cláusula USING para JOIN con columnas comunes
-	 * @param {string|Column|Array<string|Column>} columnsInCommon - Columna(s) común(es) entre tablas
+	 * @param {columnName|Array<columnName>} columnsInCommon - Columna(s) común(es) entre tablas
 	 * @returns {string} Cláusula USING formateada
 	 * @example
 	 * using('id') // USING (id)
@@ -1700,7 +1700,7 @@ class Core {
 	 * Genera una consulta SQL COUNT
 	 * @method count
 	 * @memberof Core
-	 * @param {string|column|QueryBuilder} column - Columna o expresión a contar
+	 * @param {columnName|QueryBuilder} column - Columna o expresión a contar
 	 * @param {string} [alias] - Alias opcional para el resultado
 	 * @returns {string} - "COUNT(*) [AS total]"
 
@@ -1708,7 +1708,7 @@ class Core {
 	 * Genera una consulta SQL AVG
 	 * @method avg
 	 * @memberof Core
-	 * @param {string|column|QueryBuilder} column - Columna o expresión a contar
+	 * @param {columnName|QueryBuilder} column - Columna o expresión a contar
 	 * @param {string} [alias] - Alias opcional para el resultado
 	 * @returns {string} - "AVG(column) [AS average]"
 	 */
@@ -1716,7 +1716,7 @@ class Core {
 	 * Genera una consulta SQL MAX
 	 * @method max
 	 * @memberof Core
-	 * @param {string|column|QueryBuilder} column - Columna o expresión a contar
+	 * @param {columnName|QueryBuilder} column - Columna o expresión a contar
 	 * @param {string} [alias] - Alias opcional para el resultado
 	 * @returns {string} - "MAX(column) [AS maximum]"
 	 */
@@ -1724,7 +1724,7 @@ class Core {
 	 * Genera una consulta SQL MIN
 	 * @method min
 	 * @memberof Core
-	 * @param {string|column|QueryBuilder} column - Columna o expresión a contar
+	 * @param {columnName|QueryBuilder} column - Columna o expresión a contar
 	 * @param {string} [alias] - Alias opcional para el resultado
 	 * @returns {string} - "MIN(column) [AS minimum]"
 	 */
@@ -1732,7 +1732,7 @@ class Core {
 	 * Genera una consulta SQL SUM
 	 * @method sum
 	 * @memberof Core
-	 * @param {string|column|QueryBuilder} column - Columna o expresión a contar
+	 * @param {columnName|QueryBuilder} column - Columna o expresión a contar
 	 * @param {string} [alias] - Alias opcional para el resultado
 	 * @returns {string} - "SUM(column) [AS total]"
 	 */
@@ -1740,7 +1740,7 @@ class Core {
 	 * Genera una consulta SQL UPPER
 	 * @method upper
 	 * @memberof Core
-	 * @param {string|column|QueryBuilder} column - Columna o expresión a convertir a mayúsculas
+	 * @param {columnName|QueryBuilder} column - Columna o expresión a convertir a mayúsculas
 	 * @param {string} [alias] - Alias opcional para el resultado
 	 * @returns {string} - "UPPER(column) [AS alias]"
 	 */
@@ -1748,7 +1748,7 @@ class Core {
 	 * Genera una consulta SQL LOWER
 	 * @method lower
 	 * @memberof Core
-	 * @param {string|column|QueryBuilder} column - Columna o expresión a convertir a minúsculas
+	 * @param {columnName|QueryBuilder} column - Columna o expresión a convertir a minúsculas
 	 * @param {string} [alias] - Alias opcional para el resultado
 	 * @returns {string} - "LOWER(column) [AS alias]"
 	 */
@@ -1777,7 +1777,7 @@ class Core {
 	 * Función SQL SUBSTRING
 	 * @function substr
 	 * @memberof Core
-	 * @param {string|column} column - Columna
+	 * @param {columnName} column - Columna
 	 * @param {int} inicio - Valor inicial
 	 * @param  {...any} options
 	 * @returns {string} - "SUBSTRING(column FROM inicio [FOR longitud]) [AS alias]"
@@ -1845,7 +1845,7 @@ class Core {
 	 * o dos parámetros (casos, defecto) si no se usa columna AS
 	 * @method case
 	 * @memberof Core
-	 * @param {string|column} [column] - nombre de la columna AS
+	 * @param {columnName} [column] - nombre de la columna AS
 	 * @param {Array<Casos>} casos - Array<column,string> => [ [condicion, resultado],...]
 	 * @param {string} defecto - Caso else
 	 * @returns {Expresion} - instancia de Expresion
@@ -1953,7 +1953,7 @@ class Core {
 	 * @method fetch
 	 * @memberof Core
 	 * @param {string} cursorName - Nombre del cursor
-	 * @param {Array<string>} hostVars - Variables host donde se almacenarán las filas
+	 * @param {hostVars} hostVars - Variables host donde se almacenarán las filas
 	 * @returns {string} - Declaración SQL para realizar la operación FETCH
 	 */
 	fetch(cursorName, hostVars) {
@@ -1972,28 +1972,28 @@ class Core {
 	 * @method fetchNext
 	 * @memberof Core
 	 * @param {string} cursorName - Nombre del cursor
-	 * @param {Array<string>} hostVars - Variables host donde se almacenarán las filas
+	 * @param {hostVars} hostVars - Variables host donde se almacenarán las filas
 	 * @returns {string} - Declaración SQL para realizar la operación FETCH NEXT
 	 */
 	/**
 	 * @method fetchPrior
 	 * @memberof Core
 	 * @param {string} cursorName - Nombre del cursor
-	 * @param {Array<string>} hostVars - Variables host donde se almacenarán las filas
+	 * @param {hostVars} hostVars - Variables host donde se almacenarán las filas
 	 * @returns {string} - Declaración SQL para realizar la operación FETCH PRIOR
 	 */
 	/**
 	 * @method fetchFirst
 	 * @memberof Core
 	 * @param {string} cursorName - Nombre del cursor
-	 * @param {Array<string>} hostVars - Variables host donde se almacenarán las filas
+	 * @param {hostVars} hostVars - Variables host donde se almacenarán las filas
 	 * @returns {string} - Declaración SQL para realizar la operación FETCH FIRST
 	 */
 	/**
 	 * @method fetchLast
 	 * @memberof Core
 	 * @param {string} cursorName - Nombre del cursor
-	 * @param {Array<string>} hostVars - Variables host donde se almacenarán las filas
+	 * @param {hostVars} hostVars - Variables host donde se almacenarán las filas
 	 * @returns {string} - Declaración SQL para realizar la operación FETCH LAST
 	 */
 	/**
@@ -2001,7 +2001,7 @@ class Core {
 	 * @memberof Core
 	 * @param {string} cursorName - Nombre del cursor
 	 * @param {number} filas - Número de filas a recuperar
-	 * @param {Array<string>} hostVars - Variables host donde se almacenarán las filas
+	 * @param {hostVars} hostVars - Variables host donde se almacenarán las filas
 	 * @returns {string} - Declaración SQL para realizar la operación FETCH ABSOLUTE
 	 */
 	/**
@@ -2009,7 +2009,7 @@ class Core {
 	 * @memberof Core
 	 * @param {string} cursorName - Nombre del cursor
 	 * @param {number} filas - Número de filas a recuperar
-	 * @param {Array<string>} hostVars - Variables host donde se almacenarán las filas
+	 * @param {hostVars} hostVars - Variables host donde se almacenarán las filas
 	 * @returns {string} - Declaración SQL para realizar la operación FETCH RELATIVE
 	 */
 	fetches() {

@@ -13,7 +13,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { config } from '../../core/config.js';
+import { config } from '../../../../config.js';
 import MySqlDriver from '../drivers/MySqlDriver.js';
 import QueryBuilder from '../../core/querybuilder.js';
 import MySQL from '../MySQL.js';

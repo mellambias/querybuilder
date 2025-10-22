@@ -2,7 +2,7 @@ import { test, suite, afterEach, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import QueryBuilder from "../src/querybuilder.js";
 import PostgreSQL from "../src/sql/PostgreSQL.js";
-import { config } from "../packages/@querybuilder/core/config.js";
+import { config } from "../config.js";
 
 // SETUP PostgreSQL con características avanzadas
 const PgSQL = config.databases.PostgreSQL;

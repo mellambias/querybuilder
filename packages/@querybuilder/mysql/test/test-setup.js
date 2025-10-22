@@ -7,7 +7,7 @@
 
 import mysql from 'mysql2/promise';
 import { randomBytes } from 'crypto';
-import { config } from '../../core/config.js';
+import { config } from '../../../../config.js';
 
 // Configuración de timeout para operaciones de base de datos
 const DB_TIMEOUT = 30000;

@@ -7761,7 +7761,7 @@
  * 8. **Documentar propósito**: Comentarios en tablas
  * 
  * @global
- * @typedef {string} types.tabla
+ * @typedef {string} types.tableName
  * 
  * @example
  * // 1. Nombre simple
@@ -9195,6 +9195,158 @@
  * @see {@link QueryBuilder#update} - Actualización de registros
  * @see {@link QueryBuilder#delete} - Eliminación de registros
  * @see {@link QueryBuilder#raw} - Para ejecutar comandos DECLARE/OPEN/FETCH/CLOSE
+ */
+
+/**
+ * Variables de host para almacenar resultados de operaciones FETCH en cursores.
+ * 
+ * Las host variables (o variables host) son variables del lenguaje de programación
+ * que reciben los valores recuperados de un cursor mediante operaciones FETCH.
+ * Se utilizan principalmente en programación embedded SQL o cuando se trabaja
+ * con cursores explícitos en procedimientos almacenados.
+ * 
+ * **Formatos soportados:**
+ * - **Array de strings**: Lista de nombres de variables para múltiples columnas
+ * - **String**: Nombre de variable única o lista separada por comas
+ * 
+ * **Convenciones de nomenclatura:**
+ * - Prefijo `:` en SQL estándar (ej: `:miVariable`)
+ * - Prefijo `@` en SQL Server (ej: `@miVariable`)
+ * - Prefijo `v_` común en procedimientos (ej: `v_id`, `v_nombre`)
+ * - Sin prefijo en el código (el QueryBuilder lo agrega automáticamente)
+ * 
+ * @global
+ * @typedef {Array<string>|string} hostVars
+ * 
+ * @example
+ * // 1. Array de variables para múltiples columnas
+ * const vars = ['id', 'nombre', 'email', 'created_at'];
+ * cursor.fetch(vars);
+ * // SQL: FETCH cursor_name INTO :id, :nombre, :email, :created_at
+ * 
+ * @example
+ * // 2. String con lista separada por comas
+ * cursor.fetch(':id, :nombre, :email');
+ * // SQL: FETCH cursor_name INTO :id, :nombre, :email
+ * 
+ * @example
+ * // 3. Variable única (string)
+ * cursor.fetch('total_registros');
+ * // SQL: FETCH cursor_name INTO :total_registros
+ * 
+ * @example
+ * // 4. Variables con prefijo en procedimiento almacenado
+ * const procedureVars = ['v_producto_id', 'v_precio', 'v_stock'];
+ * cursor.fetchNext(procedureVars);
+ * // SQL: FETCH NEXT FROM cursor_name INTO :v_producto_id, :v_precio, :v_stock
+ * 
+ * @example
+ * // 5. FETCH con diferentes direcciones
+ * const vars = ['id', 'nombre', 'salario'];
+ * 
+ * cursor.fetchNext(vars);      // FETCH NEXT ... INTO :id, :nombre, :salario
+ * cursor.fetchPrior(vars);     // FETCH PRIOR ... INTO :id, :nombre, :salario
+ * cursor.fetchFirst(vars);     // FETCH FIRST ... INTO :id, :nombre, :salario
+ * cursor.fetchLast(vars);      // FETCH LAST ... INTO :id, :nombre, :salario
+ * cursor.fetchAbsolute(5, vars);   // FETCH ABSOLUTE 5 ... INTO :id, :nombre, :salario
+ * cursor.fetchRelative(-2, vars);  // FETCH RELATIVE -2 ... INTO :id, :nombre, :salario
+ * 
+ * @example
+ * // 6. PostgreSQL - Uso en función PL/pgSQL
+ * // CREATE FUNCTION procesar_empleados() RETURNS void AS $$
+ * // DECLARE
+ * //   v_id INTEGER;
+ * //   v_nombre VARCHAR(100);
+ * //   v_salario DECIMAL(10,2);
+ * //   emp_cursor CURSOR FOR SELECT id, nombre, salario FROM empleados;
+ * // BEGIN
+ * //   OPEN emp_cursor;
+ * //   FETCH emp_cursor INTO v_id, v_nombre, v_salario;
+ * //   -- Procesar...
+ * //   CLOSE emp_cursor;
+ * // END;
+ * // $$ LANGUAGE plpgsql;
+ * 
+ * const vars = ['v_id', 'v_nombre', 'v_salario'];
+ * cursor.fetch(vars);
+ * 
+ * @example
+ * // 7. Oracle - Variables de bind
+ * // Variables en bloque PL/SQL
+ * const oracleVars = ['emp_id', 'emp_name', 'emp_dept'];
+ * cursor.fetch(oracleVars);
+ * // FETCH cursor_name INTO :emp_id, :emp_name, :emp_dept
+ * 
+ * @example
+ * // 8. SQL Server - Variables locales
+ * // DECLARE @id INT, @nombre NVARCHAR(100), @activo BIT
+ * const sqlServerVars = ['@id', '@nombre', '@activo'];
+ * cursor.fetch(sqlServerVars);
+ * // FETCH NEXT FROM cursor_name INTO @id, @nombre, @activo
+ * 
+ * @example
+ * // 9. Validación de correspondencia columnas-variables
+ * // ❌ ERROR: Número de variables no coincide
+ * qb.raw('DECLARE cur CURSOR FOR SELECT id, nombre, email FROM usuarios');
+ * cursor.fetch(['id', 'nombre']);  // Faltan variables!
+ * 
+ * // ✅ CORRECTO: Número de variables coincide
+ * cursor.fetch(['id', 'nombre', 'email']);
+ * 
+ * @example
+ * // 10. Uso en loop de procesamiento
+ * const vars = ['producto_id', 'precio', 'stock'];
+ * 
+ * qb.raw('DECLARE productos_cursor CURSOR FOR SELECT id, precio, stock FROM productos');
+ * qb.raw('OPEN productos_cursor');
+ * 
+ * // Loop de fetch (pseudocódigo)
+ * let hasRows = true;
+ * while (hasRows) {
+ *   const result = cursor.fetch(vars);
+ *   if (result) {
+ *     // Procesar :producto_id, :precio, :stock
+ *   } else {
+ *     hasRows = false;
+ *   }
+ * }
+ * 
+ * qb.raw('CLOSE productos_cursor');
+ * 
+ * @example
+ * // 11. Nombres descriptivos vs abreviados
+ * // ✅ RECOMENDADO: Nombres descriptivos
+ * ['cliente_id', 'cliente_nombre', 'cliente_email', 'fecha_registro']
+ * 
+ * // ⚠️ ACEPTABLE: Nombres cortos si el contexto es claro
+ * ['id', 'name', 'email', 'created']
+ * 
+ * // ❌ EVITAR: Nombres muy cortos o confusos
+ * ['c1', 'c2', 'c3', 'c4']
+ * 
+ * @example
+ * // 12. Compatibilidad entre SGBDs
+ * // PostgreSQL: Usa : para variables
+ * cursor.fetch(['id', 'nombre']);
+ * // FETCH ... INTO :id, :nombre
+ * 
+ * // SQL Server: Usa @ para variables locales
+ * cursor.fetch(['@id', '@nombre']);
+ * // FETCH ... INTO @id, @nombre
+ * 
+ * // Oracle: Usa : para bind variables
+ * cursor.fetch(['id', 'nombre']);
+ * // FETCH ... INTO :id, :nombre
+ * 
+ * @see {@link Cursor#fetch} - Método fetch básico
+ * @see {@link Cursor#fetchNext} - Fetch siguiente fila
+ * @see {@link Cursor#fetchPrior} - Fetch fila anterior
+ * @see {@link Cursor#fetchFirst} - Fetch primera fila
+ * @see {@link Cursor#fetchLast} - Fetch última fila
+ * @see {@link Cursor#fetchAbsolute} - Fetch posición absoluta
+ * @see {@link Cursor#fetchRelative} - Fetch posición relativa
+ * @see {@link createCursorOptions} - Opciones para crear cursores
+ * @see {@link types.cursorName} - Nombres de cursores
  */
 
 /**

@@ -1,8 +1,8 @@
 import { test, suite, afterEach, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import QueryBuilder from "../src/querybuilder.js";
-import MongoDB from "../src/noSql/MongoDB.js";
-import { config } from "../packages/@querybuilder/core/config.js";
+import { MongoDB } from "@querybuilder/mongodb";
+import { config } from "../config.js";
 
 // SETUP MongoDB siguiendo el patrón de MySQL/PostgreSQL
 const MongoDBConfig = config.databases.MongoDB;
@@ -15,7 +15,7 @@ const queryBuilder = new QueryBuilder(MongoDB, {
 let qb = queryBuilder.driver(MongoDBConfig.driver, MongoDBConfig.params);
 
 suite("🍃 MongoDB QueryBuilder.execute() Integración Completa", { concurrency: false }, async () => {
-	
+
 	beforeEach(async () => {
 		// Setup base de datos de prueba para MongoDB
 		try {
@@ -31,16 +31,16 @@ suite("🍃 MongoDB QueryBuilder.execute() Integración Completa", { concurrency
 
 	test("🎯 Test 1: MongoDB Driver Verification - QueryBuilder.execute()", async () => {
 		console.log("\n🔥 Verificando integración MongoDB Driver");
-		
+
 		try {
 			// Verificar que el driver está configurado correctamente
 			assert.ok(qb.driverDB, "QueryBuilder debe tener driverDB configurado");
 			assert.ok(qb.driverDB.constructor.name === "MongodbDriver", "Debe usar MongodbDriver");
-			
+
 			console.log("Driver MongoDB:", qb.driverDB.constructor.name);
 			console.log("Host:", qb.driverDB.params.host);
 			console.log("Port:", qb.driverDB.params.port);
-			
+
 			// Verificar métodos básicos del QueryBuilder
 			assert.ok(typeof qb.execute === 'function', "execute() debe estar disponible");
 			assert.ok(typeof qb.createDatabase === 'function', "createDatabase() debe estar disponible");
@@ -49,9 +49,9 @@ suite("🍃 MongoDB QueryBuilder.execute() Integración Completa", { concurrency
 			assert.ok(typeof qb.find === 'function', "find() debe estar disponible");
 			assert.ok(typeof qb.update === 'function', "update() debe estar disponible");
 			assert.ok(typeof qb.delete === 'function', "delete() debe estar disponible");
-			
+
 			console.log("✅ Driver MongoDB configurado correctamente");
-			
+
 		} catch (error) {
 			console.log("MongoDB driver verification:", error.message);
 			assert.ok(true, "Verificación de driver completada");
@@ -60,7 +60,7 @@ suite("🍃 MongoDB QueryBuilder.execute() Integración Completa", { concurrency
 
 	test("🎯 Test 2: MongoDB CREATE DATABASE - QueryBuilder.execute()", async () => {
 		console.log("\n🔥 Probando CREATE DATABASE en MongoDB");
-		
+
 		try {
 			// MongoDB crea bases de datos automáticamente, pero podemos probar el comando
 			const result = await qb
@@ -68,14 +68,14 @@ suite("🍃 MongoDB QueryBuilder.execute() Integración Completa", { concurrency
 				.execute();
 
 			console.log("MongoDB CREATE DATABASE result:", result);
-			
+
 			// Verificar que el QueryBuilder retornó correctamente
 			assert.ok(result instanceof QueryBuilder, "execute() debe retornar QueryBuilder");
-			
+
 			qb.dropQuery();
-			
+
 			console.log("✅ CREATE DATABASE MongoDB exitoso");
-			
+
 		} catch (error) {
 			console.log("MongoDB CREATE DATABASE:", error.message);
 			// MongoDB maneja esto de forma diferente, registramos el intento
@@ -85,27 +85,27 @@ suite("🍃 MongoDB QueryBuilder.execute() Integración Completa", { concurrency
 
 	test("🎯 Test 3: MongoDB CREATE COLLECTION (Table) - QueryBuilder.execute()", async () => {
 		console.log("\n🔥 Probando CREATE TABLE (Collection) en MongoDB");
-		
+
 		try {
 			// En MongoDB, createTable equivale a crear una colección
 			const result = await qb
 				.use("test_mongodb_integration")
-				.createTable("usuarios_mongo", { 
-					cols: { 
+				.createTable("usuarios_mongo", {
+					cols: {
 						_id: "ObjectId",
 						nombre: "String",
 						email: "String",
 						perfil: "Object",
 						tags: "Array",
 						fecha_creacion: "Date"
-					} 
+					}
 				})
 				.execute();
 			qb.dropQuery();
 
 			assert.ok(result instanceof QueryBuilder, "execute() debe retornar QueryBuilder");
 			console.log("✅ CREATE TABLE (Collection) MongoDB exitoso");
-			
+
 		} catch (error) {
 			console.log("MongoDB CREATE TABLE:", error.message);
 			assert.ok(error.message || true, "QueryBuilder.execute() procesó CREATE TABLE MongoDB");
@@ -114,7 +114,7 @@ suite("🍃 MongoDB QueryBuilder.execute() Integración Completa", { concurrency
 
 	test("🎯 Test 4: MongoDB INSERT documento - QueryBuilder.execute()", async () => {
 		console.log("\n🔥 Probando INSERT en MongoDB");
-		
+
 		try {
 			// En MongoDB, INSERT se convierte en insertOne/insertMany
 			const result = await qb
@@ -135,7 +135,7 @@ suite("🍃 MongoDB QueryBuilder.execute() Integración Completa", { concurrency
 
 			assert.ok(result instanceof QueryBuilder, "INSERT execute() debe retornar QueryBuilder");
 			console.log("✅ INSERT MongoDB exitoso con documentos complejos");
-			
+
 		} catch (error) {
 			console.log("MongoDB INSERT:", error.message);
 			assert.ok(error.message || true, "QueryBuilder.execute() procesó INSERT MongoDB");
@@ -144,7 +144,7 @@ suite("🍃 MongoDB QueryBuilder.execute() Integración Completa", { concurrency
 
 	test("🎯 Test 5: MongoDB FIND (SELECT) - QueryBuilder.execute()", async () => {
 		console.log("\n🔥 Probando FIND (SELECT) en MongoDB");
-		
+
 		try {
 			// Preparar datos primero
 			await qb
@@ -174,7 +174,7 @@ suite("🍃 MongoDB QueryBuilder.execute() Integración Completa", { concurrency
 
 			assert.ok(selectResult instanceof QueryBuilder, "FIND execute() debe retornar QueryBuilder");
 			console.log("✅ FIND (SELECT) MongoDB exitoso con filtros");
-			
+
 		} catch (error) {
 			console.log("MongoDB FIND:", error.message);
 			assert.ok(error.message || true, "QueryBuilder.execute() procesó FIND MongoDB");
@@ -183,7 +183,7 @@ suite("🍃 MongoDB QueryBuilder.execute() Integración Completa", { concurrency
 
 	test("🎯 Test 6: MongoDB UPDATE documento - QueryBuilder.execute()", async () => {
 		console.log("\n🔥 Probando UPDATE en MongoDB");
-		
+
 		try {
 			// Preparar datos
 			await qb
@@ -203,9 +203,9 @@ suite("🍃 MongoDB QueryBuilder.execute() Integración Completa", { concurrency
 			// UPDATE usando operadores MongoDB
 			const updateResult = await qb
 				.use("test_mongodb_integration")
-				.update("config_mongo", 
+				.update("config_mongo",
 					{ nombre: "sistema" }, // filtro
-					{ 
+					{
 						$set: {
 							"configuracion.tema": "claro",
 							"configuracion.version": "2.0"
@@ -218,7 +218,7 @@ suite("🍃 MongoDB QueryBuilder.execute() Integración Completa", { concurrency
 
 			assert.ok(updateResult instanceof QueryBuilder, "UPDATE execute() debe retornar QueryBuilder");
 			console.log("✅ UPDATE MongoDB exitoso con operadores");
-			
+
 		} catch (error) {
 			console.log("MongoDB UPDATE:", error.message);
 			assert.ok(error.message || true, "QueryBuilder.execute() procesó UPDATE MongoDB");
@@ -227,7 +227,7 @@ suite("🍃 MongoDB QueryBuilder.execute() Integración Completa", { concurrency
 
 	test("🎯 Test 7: MongoDB operaciones con arrays y objetos - QueryBuilder.execute()", async () => {
 		console.log("\n🔥 Probando operaciones complejas MongoDB");
-		
+
 		try {
 			// Crear colección con documentos complejos
 			const result = await qb
@@ -253,7 +253,7 @@ suite("🍃 MongoDB QueryBuilder.execute() Integración Completa", { concurrency
 
 			assert.ok(result instanceof QueryBuilder, "Complex operations execute() debe retornar QueryBuilder");
 			console.log("✅ Operaciones complejas MongoDB exitosas");
-			
+
 		} catch (error) {
 			console.log("MongoDB complex operations:", error.message);
 			assert.ok(error.message || true, "QueryBuilder.execute() procesó operaciones complejas MongoDB");
@@ -262,7 +262,7 @@ suite("🍃 MongoDB QueryBuilder.execute() Integración Completa", { concurrency
 
 	test("🎯 Test 8: MongoDB DELETE documento - QueryBuilder.execute()", async () => {
 		console.log("\n🔥 Probando DELETE en MongoDB");
-		
+
 		try {
 			// Preparar datos para DELETE
 			await qb
@@ -285,7 +285,7 @@ suite("🍃 MongoDB QueryBuilder.execute() Integración Completa", { concurrency
 
 			assert.ok(deleteResult instanceof QueryBuilder, "DELETE execute() debe retornar QueryBuilder");
 			console.log("✅ DELETE MongoDB exitoso");
-			
+
 		} catch (error) {
 			console.log("MongoDB DELETE:", error.message);
 			assert.ok(error.message || true, "QueryBuilder.execute() procesó DELETE MongoDB");
@@ -294,7 +294,7 @@ suite("🍃 MongoDB QueryBuilder.execute() Integración Completa", { concurrency
 
 	test("🎯 Test 9: MongoDB agregaciones básicas - QueryBuilder.execute()", async () => {
 		console.log("\n🔥 Probando agregaciones MongoDB");
-		
+
 		try {
 			// Preparar datos para agregaciones
 			await qb
@@ -324,7 +324,7 @@ suite("🍃 MongoDB QueryBuilder.execute() Integración Completa", { concurrency
 
 			assert.ok(aggResult instanceof QueryBuilder, "Aggregate execute() debe retornar QueryBuilder");
 			console.log("✅ Agregaciones MongoDB exitosas");
-			
+
 		} catch (error) {
 			console.log("MongoDB aggregations:", error.message);
 			assert.ok(error.message || true, "QueryBuilder.execute() procesó agregaciones MongoDB");
@@ -352,7 +352,7 @@ suite("🍃 MongoDB QueryBuilder.execute() Integración Completa", { concurrency
 		console.log("   Características específicas MongoDB soportadas");
 		console.log("   API consistente con MySQL y PostgreSQL");
 		console.log("=".repeat(80));
-		
+
 		assert.ok(true, "MongoDB QueryBuilder.execute() integración completa verificada");
 	});
 });

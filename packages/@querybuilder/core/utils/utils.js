@@ -23,7 +23,6 @@ import Types from "../types/Type.js";
 import sqlReservedWords from "../types/reservedWords.js";
 import { privilegios, objectTypes } from "../types/privilegios.js";
 import QueryBuilder from "../querybuilder.js";
-import Command from "../noSql/Command.js";
 
 /**
  * Divide un comando SQL extrayendo la parte principal y los parámetros
@@ -139,7 +138,7 @@ String.prototype.toCapital = function () {
  * // Valida que el primer valor sea String, segundo Number, tercero Array
  */
 function check(format, values) {
-	const clasesPosibles = { QueryBuilder, Command };
+	const clasesPosibles = { QueryBuilder };
 	const ini = format.indexOf("(") + 1;
 	const fin = format.indexOf(")");
 	const datas = format

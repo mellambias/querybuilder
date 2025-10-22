@@ -6,7 +6,7 @@
 
 import MySqlDriver from '../drivers/MySqlDriver.js';
 import { initializeDatabase, cleanupDatabase, createTestDatabase } from './test-setup.js';
-import { config } from '../../core/config.js';
+import { config } from '../../../../config.js';
 
 async function debugDriver() {
   console.log('🔍 Debugging MySqlDriver response format...');

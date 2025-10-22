@@ -9,7 +9,7 @@
 
 import MySqlDriver from '../drivers/MySqlDriver.js';
 import { initializeDatabase, cleanupDatabase, createTestDatabase, test, describe } from './test-setup.js';
-import { config } from '../../core/config.js';
+import { config } from '../../../../config.js';
 
 // Variable global para el driver
 let driver;

@@ -4,7 +4,6 @@ import Cursor from "./cursor.js";
 import Transaction from "./transaction.js";
 import Expresion from "./expresion.js";
 import Value from "./value.js";
-import Command from "./noSql/Command.js";
 
 /**
  * @fileoverview QueryBuilder Core Package - API fluida para construir y ejecutar consultas de base de datos
@@ -123,9 +122,6 @@ class QueryBuilder {
 							switch (true) {
 								case next instanceof QueryBuilder:
 									isOfType += "QueryBuilder";
-									break;
-								case next instanceof Command:
-									isOfType += "Command";
 									break;
 								case next instanceof Cursor:
 									isOfType += "Cursor";
@@ -1001,7 +997,7 @@ class QueryBuilder {
 	 * @description
 	 * Comprueba en tiempo de ejecucion que los tipos de "tables" corresponden con los de "alias"
 	 * y que la longitud de los arrays sea la correcta.
-	 * @param {tabla|Array<tabla>} tables - tabla o lista de tablas
+	 * @param {tableName|Array<tableName>} tables - tabla o lista de tablas
 	 * @param {alias|Array<alias>} alias - alias o lista de alias
 	 * @throws {Error} Si los tipos o longitudes no coinciden
 	 * @example
@@ -1042,7 +1038,7 @@ class QueryBuilder {
 	 * @memberof QueryBuilder
 	 * @description
 	 * Especifica la tabla o vista de donde se van a obtener los datos.
-	 * @param {tabla|Array<tabla>} tables - tabla o tablas de donde obtener los datos
+	 * @param {tableName|Array<tableName>} tables - tabla o tablas de donde obtener los datos
 	 * @param {alias|Array<alias>} alias - alias o lista de alias correspondiente a las tablas
 	 * @returns {next} Objeto pasado al siguiente comando para encadenar
 	 * @example
@@ -1163,7 +1159,7 @@ class QueryBuilder {
 	 * - RIGHT JOIN: Devuelve todas las filas de la tabla derecha y las filas coincidentes de la tabla izquierda.
 	 * - FULL JOIN: Devuelve filas cuando hay una coincidencia en una de las tablas.
 	 * cada funcion recibe tres parametros
-	 * @param {tabla|Array<tabla>} tables - tabla o lista de tablas a unir
+	 * @param {tableName|Array<tableName>} tables - tabla o lista de tablas a unir
 	 * @param {alias|Array<alias>} alias - tabla o lista de alias aplicables a las tablas en el mismo orden
 	 * @returns {next} - Objeto pasado al siguiente comando para encadenar
 	 * @example
@@ -1178,7 +1174,7 @@ class QueryBuilder {
 	 * @memberof QueryBuilder
 	 * @description
 	 * Realiza un CROSS JOIN entre tablas.
-	 * @param {tabla|Array<tabla>} tables - tabla o lista de tablas a unir
+	 * @param {tableName|Array<tableName>} tables - tabla o lista de tablas a unir
 	 * @param {alias|Array<alias>} alias - tabla o lista de alias aplicables a las tablas en el mismo orden
 	 * @returns {next} - Objeto pasado al siguiente comando para encadenar
 	 * @example
@@ -1190,7 +1186,7 @@ class QueryBuilder {
 	 * @memberof QueryBuilder
 	 * @description
 	 * Realiza un NATURAL JOIN entre tablas.
-	 * @param {tabla|Array<tabla>} tables - tabla o lista de tablas a unir
+	 * @param {tableName|Array<tableName>} tables - tabla o lista de tablas a unir
 	 * @param {alias|Array<alias>} alias - tabla o lista de alias aplicables a las tablas en el mismo orden
 	 * @returns {next} - Objeto pasado al siguiente comando para encadenar
 	 * @example
@@ -1202,7 +1198,7 @@ class QueryBuilder {
 	 * @memberof QueryBuilder
 	 * @description
 	 * Realiza un INNER JOIN entre tablas.
-	 * @param {tabla|Array<tabla>} tables - tabla o lista de tablas a unir
+	 * @param {tableName|Array<tableName>} tables - tabla o lista de tablas a unir
 	 * @param {alias|Array<alias>} alias - tabla o lista de alias aplicables a las tablas en el mismo orden
 	 * @returns {next} - Objeto pasado al siguiente comando para encadenar
 	 * @example
@@ -1214,7 +1210,7 @@ class QueryBuilder {
 	 * @memberof QueryBuilder
 	 * @description
 	 * Realiza un JOIN entre tablas.
-	 * @param {tabla|Array<tabla>} tables - tabla o lista de tablas a unir
+	 * @param {tableName|Array<tableName>} tables - tabla o lista de tablas a unir
 	 * @param {alias|Array<alias>} alias - tabla o lista de alias aplicables a las tablas en el mismo orden
 	 * @returns {next} - Objeto pasado al siguiente comando para encadenar
 	 * @example
@@ -1226,7 +1222,7 @@ class QueryBuilder {
 	 * @memberof QueryBuilder
 	 * @description
 	 * Realiza un LEFT JOIN entre tablas.
-	 * @param {tabla|Array<tabla>} tables - tabla o lista de tablas a unir
+	 * @param {tableName|Array<tableName>} tables - tabla o lista de tablas a unir
 	 * @param {alias|Array<alias>} alias - tabla o lista de alias aplicables a las tablas en el mismo orden
 	 * @returns {next} - Objeto pasado al siguiente comando para encadenar
 	 * @example
@@ -1238,7 +1234,7 @@ class QueryBuilder {
 	 * @memberof QueryBuilder
 	 * @description
 	 * Realiza un RIGHT JOIN entre tablas.
-	 * @param {tabla|Array<tabla>} tables - tabla o lista de tablas a unir
+	 * @param {tableName|Array<tableName>} tables - tabla o lista de tablas a unir
 	 * @param {alias|Array<alias>} alias - tabla o lista de alias aplicables a las tablas en el mismo orden
 	 * @returns {next} - Objeto pasado al siguiente comando para encadenar
 	 * @example
@@ -1250,7 +1246,7 @@ class QueryBuilder {
 	 * @memberof QueryBuilder
 	 * @description
 	 * Realiza un FULL JOIN entre tablas.
-	 * @param {tabla|Array<tabla>} tables - tabla o lista de tablas a unir
+	 * @param {tableName|Array<tableName>} tables - tabla o lista de tablas a unir
 	 * @param {alias|Array<alias>} alias - tabla o lista de alias aplicables a las tablas en el mismo orden
 	 * @returns {next} - Objeto pasado al siguiente comando para encadenar
 	 * @example
@@ -2017,7 +2013,7 @@ class QueryBuilder {
 	 * - String: Nombre simple de columna como `"id"`, `"nombre"`, `"email"`
 	 * - QueryBuilder: Subconsulta que retorna un valor para usar como columna derivada
 	 * - Expresion: Expresión SQL compleja como función agregada o cálculo
-	 * @param {tabla|alias} [table] - Nombre de la tabla o alias de tabla. Si se proporciona, se genera una
+	 * @param {tableName|alias} [table] - Nombre de la tabla o alias de tabla. Si se proporciona, se genera una
 	 * referencia cualificada como `tabla.columna` o `alias.columna`. Opcional para columnas sin ambigüedad.
 	 * @returns {Column} Instancia de Column con métodos adicionales para manipulación:
 	 * - `.as(alias)`: Asignar alias a la columna
@@ -2151,7 +2147,7 @@ class QueryBuilder {
 	 * Funcionalmente equivalente a `col(name, table)`, pero con sintaxis `coltn(table, name)`.
 	 * Ambos métodos retornan objetos Column idénticos con los mismos métodos disponibles.
 	 * 
-	 * @param {tabla|alias} table - Nombre de la tabla o alias de tabla. Se especifica primero
+	 * @param {tableName|alias} table - Nombre de la tabla o alias de tabla. Se especifica primero
 	 * para crear una referencia cualificada como `tabla.columna` o `alias.columna`.
 	 * @param {string|QueryBuilder|Expresion} name - Nombre de la columna, subconsulta o expresión:
 	 * - String: Nombre simple de columna como `"id"`, `"nombre"`, `"email"`
@@ -3207,7 +3203,7 @@ class QueryBuilder {
 	 * | SQLite        | ✅ Sí         | ✅ RETURNING | ✅ OR REPLACE | ✅ Sí      |
 	 * | MongoDB       | ⚠️ insertOne()| ⚠️ N/A    | ⚠️ upsert   | ⚠️ insertMany() |
 	 * 
-	 * @param {tabla} table - Nombre de la tabla donde insertar los datos
+	 * @param {tableName} table - Nombre de la tabla donde insertar los datos
 	 * @param {Array<Array<*>>|Array<*>} values - Valores a insertar:
 	 * - Array de arrays: Múltiples filas como `[[val1, val2], [val3, val4]]`
 	 * - Array simple: Una sola fila como `[val1, val2, val3]`
@@ -3341,7 +3337,7 @@ class QueryBuilder {
 	 * | SQLite        | ✅ Sí         | ⚠️ Limitado | ✅ RETURNING | ❌ No |
 	 * | MongoDB       | ⚠️ updateOne()| ⚠️ N/A    | ⚠️ findAndModify | ⚠️ N/A |
 	 * 
-	 * @param {tabla} table - Nombre de la tabla donde actualizar los datos
+	 * @param {tableName} table - Nombre de la tabla donde actualizar los datos
 	 * @param {Object} sets - Objeto con pares clave-valor donde la clave es el nombre de
 	 * la columna y el valor es el nuevo dato. Formato: `{columna1: valor1, columna2: valor2}`
 	 * @returns {next} Objeto next para continuar el encadenamiento fluido (típicamente con WHERE)
@@ -3480,7 +3476,7 @@ class QueryBuilder {
 	 * | SQLite        | ✅ Sí         | ❌ No      | ✅ RETURNING | ❌ No |
 	 * | MongoDB       | ⚠️ deleteOne()| ⚠️ N/A     | ⚠️ findAndDelete | ⚠️ N/A |
 	 * 
-	 * @param {tabla} from - Nombre de la tabla de la cual eliminar registros
+	 * @param {tableName} from - Nombre de la tabla de la cual eliminar registros
 	 * @returns {next} Objeto next para continuar el encadenamiento fluido (típicamente con WHERE)
 	 * @throws {Error} Cuando el parámetro no es una tabla válida
 	 * @example

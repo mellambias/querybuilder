@@ -5,7 +5,7 @@
 
 import QueryBuilder from '../../../../src/querybuilder.js';
 import MongoDB from '../MongoDB.js';
-import { config } from '../../core/config.js';
+import { config } from '../../../../config.js';
 
 async function demoCompleto() {
   console.log('🚀 Demo Completo: QueryBuilder + MongoDB + SQL Avanzado\n');
