@@ -1,10 +1,46 @@
 /**
- * Operadores específicos de MySQL
- * Incluye operadores aritméticos, de comparación, lógicos, de cadena, etc.
+ * @fileoverview MySQL Operators - Operadores SQL de MySQL
+ * @module @querybuilder/mysql/operators
+ * @description Colección completa de operadores SQL soportados por MySQL,
+ * incluyendo operadores aritméticos, de comparación, lógicos, bit a bit, de asignación,
+ * y operadores especiales de MySQL como el spaceship operator (<=>) y REGEXP.
+ * @version 2.0.0
+ * @author QueryBuilder Team
+ * @license MPL-2.0
+ * @since 1.0.0
+ * 
+ * @example
+ * // Usar operadores en WHERE
+ * import { ComparisonOperators, LogicalOperators } from '@querybuilder/mysql/operators';
+ * 
+ * qb.select('*')
+ *   .from('users')
+ *   .where('age', ComparisonOperators.GREATER_THAN, 18)
+ *   .and('status', ComparisonOperators.IN, ['active', 'pending']);
+ * 
+ * @example
+ * // Operador NULL-safe de MySQL
+ * qb.select('*')
+ *   .from('users')
+ *   .where('deleted_at', ComparisonOperators.SPACESHIP, null);
  */
 
 /**
  * Operadores aritméticos de MySQL
+ * @namespace ArithmeticOperators
+ * @memberof module:@querybuilder/mysql/operators
+ * @description Operadores para operaciones matemáticas básicas
+ * 
+ * @property {string} ADD - Suma (+)
+ * @property {string} SUBTRACT - Resta (-)
+ * @property {string} MULTIPLY - Multiplicación (*)
+ * @property {string} DIVIDE - División (/)
+ * @property {string} MODULO - Módulo (%)
+ * @property {string} DIV - División entera
+ * @property {string} MOD - Módulo alternativo
+ * 
+ * @example
+ * qb.select('price * 1.21 as price_with_tax').from('products');
  */
 export const ArithmeticOperators = {
   ADD: '+',

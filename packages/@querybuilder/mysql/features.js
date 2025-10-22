@@ -1,10 +1,48 @@
 /**
- * Características específicas de MySQL
- * Incluye funcionalidades, limitaciones y peculiaridades de MySQL
+ * @fileoverview MySQL Features - Características y capacidades de MySQL
+ * @module @querybuilder/mysql/features
+ * @description Documentación completa de características, funcionalidades y limitaciones
+ * específicas de MySQL. Incluye soporte de tipos de datos, características de consultas,
+ * funcionalidades de índices, transacciones, y compatibilidad con diferentes versiones.
+ * @version 2.0.0
+ * @author QueryBuilder Team
+ * @license MPL-2.0
+ * @since 1.0.0
+ * 
+ * @example
+ * // Verificar soporte de características
+ * import { QueryFeatures, DataTypeFeatures } from '@querybuilder/mysql/features';
+ * 
+ * if (QueryFeatures.WINDOW_FUNCTIONS) {
+ *   // Usar window functions (MySQL 8.0+)
+ *   qb.select('ROW_NUMBER() OVER (ORDER BY created_at) as row_num').from('users');
+ * }
+ * 
+ * @example
+ * // Verificar soporte de tipos
+ * if (DataTypeFeatures.JSON_NATIVE_TYPE) {
+ *   qb.createTable('logs').addColumn('data', 'JSON');
+ * }
  */
 
 /**
  * Características de tipos de datos de MySQL
+ * @namespace DataTypeFeatures
+ * @memberof module:@querybuilder/mysql/features
+ * @description Capacidades y características de los tipos de datos en MySQL
+ * 
+ * @property {boolean} JSON_NATIVE_TYPE - Soporte de tipo JSON nativo (MySQL 5.7+)
+ * @property {boolean} JSON_FUNCTIONS - Funciones JSON disponibles
+ * @property {boolean} UNSIGNED_INTEGERS - Soporte de enteros sin signo
+ * @property {boolean} ENUM_TYPE - Soporte de tipo ENUM
+ * @property {boolean} SET_TYPE - Soporte de tipo SET
+ * @property {boolean} GEOMETRY_TYPES - Tipos de datos espaciales/geométricos
+ * 
+ * @example
+ * // Verificar características antes de usar
+ * if (DataTypeFeatures.JSON_NATIVE_TYPE) {
+ *   console.log('JSON nativo soportado');
+ * }
  */
 export const DataTypeFeatures = {
   // JSON support (MySQL 5.7+)

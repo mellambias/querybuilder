@@ -1,10 +1,52 @@
 /**
- * Funciones específicas de MySQL
- * Consolidado de JSON, Strings, Math, Date, Aggregation, etc.
+ * @fileoverview MySQL Functions - Funciones SQL nativas de MySQL
+ * @module @querybuilder/mysql/functions
+ * @description Colección completa de funciones SQL nativas soportadas por MySQL,
+ * organizadas por categorías: JSON, String, Math, Date/Time, Aggregation, Window, etc.
+ * Compatible con MySQL 5.7+ y MySQL 8.0+.
+ * @version 2.0.0
+ * @author QueryBuilder Team
+ * @license MPL-2.0
+ * @since 1.0.0
+ * 
+ * @example
+ * // Usar funciones en consultas
+ * import { JsonFunctions, StringFunctions } from '@querybuilder/mysql/functions';
+ * 
+ * qb.select([
+ *   JsonFunctions.JSON_EXTRACT + '(data, "$.name") as name',
+ *   StringFunctions.CONCAT + '(first_name, " ", last_name) as full_name'
+ * ]).from('users');
+ * 
+ * @example
+ * // Funciones de agregación
+ * import { AggregateFunctions } from '@querybuilder/mysql/functions';
+ * 
+ * qb.select([
+ *   AggregateFunctions.COUNT + '(*) as total',
+ *   AggregateFunctions.AVG + '(price) as avg_price'
+ * ]).from('products').groupBy('category');
  */
 
 /**
  * Funciones JSON de MySQL
+ * @namespace JsonFunctions
+ * @memberof module:@querybuilder/mysql/functions
+ * @description Funciones para manipular datos JSON en MySQL 5.7+
+ * 
+ * @property {string} JSON_ARRAY - Crea un array JSON
+ * @property {string} JSON_OBJECT - Crea un objeto JSON
+ * @property {string} JSON_EXTRACT - Extrae datos de un documento JSON
+ * @property {string} JSON_SET - Inserta o actualiza datos en JSON
+ * @property {string} JSON_CONTAINS - Verifica si JSON contiene un valor
+ * 
+ * @example
+ * // Extraer campo JSON
+ * qb.select('JSON_EXTRACT(data, "$.email") as email').from('users');
+ * 
+ * @example
+ * // Crear objeto JSON
+ * qb.select('JSON_OBJECT("name", name, "age", age) as user_json').from('users');
  */
 export const JsonFunctions = {
   // Construction functions

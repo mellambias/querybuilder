@@ -1,10 +1,42 @@
 /**
- * Tipos de datos específicos de MySQL
- * Consolidado de todas las características de tipos MySQL
+ * @fileoverview MySQL Data Types - Tipos de datos SQL de MySQL
+ * @module @querybuilder/mysql/types
+ * @description Definiciones completas de todos los tipos de datos soportados por MySQL,
+ * incluyendo tipos numéricos, de texto, fecha/hora, JSON, espaciales, y tipos específicos
+ * de MySQL como ENUM, SET, y tipos con atributos UNSIGNED, ZEROFILL, AUTO_INCREMENT.
+ * @version 2.0.0
+ * @author QueryBuilder Team
+ * @license MPL-2.0
+ * @since 1.0.0
+ * 
+ * @example
+ * // Usar tipos en definición de columnas
+ * import { IntegerTypes, TextTypes, JsonTypes } from '@querybuilder/mysql/types';
+ * 
+ * qb.createTable('users')
+ *   .addColumn('id', IntegerTypes.INT, { primaryKey: true, autoIncrement: true })
+ *   .addColumn('name', `${TextTypes.VARCHAR}(255)`)
+ *   .addColumn('profile', JsonTypes.JSON);
+ * 
+ * @example
+ * // Tipos con atributos
+ * qb.createTable('products')
+ *   .addColumn('id', `${IntegerTypes.BIGINT} UNSIGNED`, { autoIncrement: true })
+ *   .addColumn('price', `${NumericTypes.DECIMAL}(10, 2)`)
+ *   .addColumn('stock', `${IntegerTypes.INT} UNSIGNED DEFAULT 0`);
  */
 
 /**
  * Tipos JSON de MySQL
+ * @namespace JsonTypes
+ * @memberof module:@querybuilder/mysql/types
+ * @description Tipo de datos JSON nativo (MySQL 5.7+)
+ * 
+ * @property {string} JSON - Tipo JSON nativo para almacenar documentos JSON
+ * 
+ * @example
+ * qb.createTable('documents')
+ *   .addColumn('data', JsonTypes.JSON);
  */
 export const JsonTypes = {
   JSON: 'JSON'
