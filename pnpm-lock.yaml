@@ -48,6 +48,9 @@ importers:
       jsdoc:
         specifier: ^4.0.5
         version: 4.0.5
+      marked:
+        specifier: ^17.0.0
+        version: 17.0.0
       nodemon:
         specifier: ^3.0.0
         version: 3.1.10
@@ -1206,6 +1209,11 @@ packages:
 
   markdown-it@14.1.0:
     resolution: {integrity: sha512-a54IwgWPaeBCAAsv13YgmALOF1elABB08FxO9i+r4VFk5Vl4pKokRPeX8u5TCgSsPi6ec1otfLjdOpVcgbpshg==}
+    hasBin: true
+
+  marked@17.0.0:
+    resolution: {integrity: sha512-KkDYEWEEiYJw/KC+DVm1zzlpMQSMIu6YRltkcCvwheCp8HWPXCk9JwOmHJKBlGfzcpzcIt6x3sMnTsRm/51oDg==}
+    engines: {node: '>= 20'}
     hasBin: true
 
   marked@4.3.0:
@@ -3138,6 +3146,8 @@ snapshots:
       mdurl: 2.0.0
       punycode.js: 2.3.1
       uc.micro: 2.1.0
+
+  marked@17.0.0: {}
 
   marked@4.3.0: {}
 

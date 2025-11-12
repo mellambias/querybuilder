@@ -58,6 +58,7 @@
     "docdash": "^2.0.2",
     "fs-extra": "^11.3.2",
     "jsdoc": "^4.0.5",
+    "marked": "^17.0.0",
     "nodemon": "^3.0.0",
     "rollup": "4.0.0",
     "rollup-plugin-cleanup": "^3.2.1",

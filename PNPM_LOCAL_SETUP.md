@@ -51,7 +51,11 @@ npm init -y
     "@querybuilder/core": "file:../QueryBuilder/dist/@querybuilder/core",
     "@querybuilder/mysql": "file:../QueryBuilder/dist/@querybuilder/mysql",
     "@querybuilder/postgresql": "file:../QueryBuilder/dist/@querybuilder/postgresql",
-    "@querybuilder/mongodb": "file:../QueryBuilder/dist/@querybuilder/mongodb"
+    "@querybuilder/mongodb": "file:../QueryBuilder/dist/@querybuilder/mongodb",
+    "@querybuilder/sqlite": "file:../QueryBuilder/dist/@querybuilder/sqlite",
+    "@querybuilder/redis": "file:../QueryBuilder/dist/@querybuilder/redis",
+    "@querybuilder/cassandra": "file:../QueryBuilder/dist/@querybuilder/cassandra",
+    "@querybuilder/chroma": "file:../QueryBuilder/dist/@querybuilder/chroma"
   }
 }
 ```
@@ -69,20 +73,38 @@ import QueryBuilder from '@querybuilder/core';
 import MySQL from '@querybuilder/mysql';
 import PostgreSQL from '@querybuilder/postgresql';
 import MongoDB from '@querybuilder/mongodb';
+import SQLite from '@querybuilder/sqlite';
+import Redis from '@querybuilder/redis';
+import Cassandra from '@querybuilder/cassandra';
+import Chroma from '@querybuilder/chroma';
 
 // Importación con exportación nombrada
 import { QueryBuilder } from '@querybuilder/core';
 import { MySQL } from '@querybuilder/mysql';
 import { PostgreSQL } from '@querybuilder/postgresql';
 import { MongoDB } from '@querybuilder/mongodb';
+import { SQLite } from '@querybuilder/sqlite';
+import { Redis } from '@querybuilder/redis';
+import { Cassandra } from '@querybuilder/cassandra';
+import { Chroma } from '@querybuilder/chroma';
 
-// Crear instancias
-const qb = new QueryBuilder(MySQL);
+// Crear instancias - Bases de datos SQL
 const mysql = new MySQL();
 const postgresql = new PostgreSQL();
-const mongodb = new MongoDB();
+const sqlite = new SQLite();
 
-console.log('✅ QueryBuilder funcionando con PNPM!');
+// Crear instancias - Bases de datos NoSQL
+const mongodb = new MongoDB();
+const redis = new Redis();
+const cassandra = new Cassandra();
+
+// Crear instancias - Bases de datos especializadas
+const chroma = new Chroma();
+
+// Usar con QueryBuilder
+const qb = new QueryBuilder(MySQL);
+
+console.log('✅ QueryBuilder funcionando con PNPM y todos los adaptadores!');
 ```
 
 ## 🏗️ Arquitectura del Sistema
@@ -103,9 +125,25 @@ dist/
 │   ├── postgresql.min.js     # PostgreSQL minificado
 │   ├── postgresql.bundle.min.js
 │   └── package.json
-└── @querybuilder/mongodb/
-    ├── mongodb.min.js        # MongoDB minificado
-    ├── mongodb.bundle.min.js
+├── @querybuilder/mongodb/
+│   ├── mongodb.min.js        # MongoDB minificado
+│   ├── mongodb.bundle.min.js
+│   └── package.json
+├── @querybuilder/sqlite/
+│   ├── sqlite.min.js         # SQLite minificado
+│   ├── sqlite.bundle.min.js
+│   └── package.json
+├── @querybuilder/redis/
+│   ├── redis.min.js          # Redis minificado
+│   ├── redis.bundle.min.js
+│   └── package.json
+├── @querybuilder/cassandra/
+│   ├── cassandra.min.js      # Cassandra minificado
+│   ├── cassandra.bundle.min.js
+│   └── package.json
+└── @querybuilder/chroma/
+    ├── chroma.min.js         # Chroma minificado
+    ├── chroma.bundle.min.js
     └── package.json
 ```
 
@@ -138,21 +176,36 @@ pnpm test
 ```javascript
 // test.js
 import QueryBuilder from '@querybuilder/core';
-import { MySQL, PostgreSQL, MongoDB } from '@querybuilder/core';
+import MySQL from '@querybuilder/mysql';
+import PostgreSQL from '@querybuilder/postgresql';
+import MongoDB from '@querybuilder/mongodb';
+import SQLite from '@querybuilder/sqlite';
+import Redis from '@querybuilder/redis';
+import Cassandra from '@querybuilder/cassandra';
+import Chroma from '@querybuilder/chroma';
 
 console.log('Tipos:', {
   QueryBuilder: typeof QueryBuilder,
   MySQL: typeof MySQL,
   PostgreSQL: typeof PostgreSQL,
-  MongoDB: typeof MongoDB
+  MongoDB: typeof MongoDB,
+  SQLite: typeof SQLite,
+  Redis: typeof Redis,
+  Cassandra: typeof Cassandra,
+  Chroma: typeof Chroma
 });
 
 // Crear instancias
 const mysql = new MySQL();
 const postgresql = new PostgreSQL();
 const mongodb = new MongoDB();
+const sqlite = new SQLite();
+const redis = new Redis();
+const cassandra = new Cassandra();
+const chroma = new Chroma();
 
 console.log('✅ Todas las instancias creadas correctamente');
+console.log('✅ 8 adaptadores de bases de datos funcionando');
 ```
 
 ## 🚨 Solución de Problemas
@@ -180,6 +233,10 @@ console.log('✅ Todas las instancias creadas correctamente');
 | MySQL | ~185KB | 64KB | 16.9KB | 65% |
 | PostgreSQL | ~210KB | 67KB | 17.9KB | 68% |
 | MongoDB | ~220KB | 72KB | 19.4KB | 67% |
+| SQLite | ~95KB | 32KB | 8.5KB | 66% |
+| Redis | ~120KB | 38KB | 10.2KB | 68% |
+| Cassandra | ~240KB | 78KB | 21KB | 67% |
+| Chroma | ~150KB | 48KB | 13KB | 68% |
 
 ## 🔄 Flujo de Desarrollo
 
@@ -196,5 +253,3 @@ console.log('✅ Todas las instancias creadas correctamente');
 - **Optimización máxima**: Solo archivos minificados
 - **Compatibilidad amplia**: Funciona con npm, pnpm y yarn
 - **Workflow eficiente**: Scripts automatizados para todo el proceso
-
-¡El sistema PNPM local está completamente configurado y funcionando! 🚀

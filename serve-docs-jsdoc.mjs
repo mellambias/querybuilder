@@ -29,7 +29,8 @@ const mimeTypes = {
   '.woff': 'font/woff',
   '.woff2': 'font/woff2',
   '.ttf': 'font/ttf',
-  '.eot': 'application/vnd.ms-fontobject'
+  '.eot': 'application/vnd.ms-fontobject',
+  '.md': 'text/markdown; charset=utf-8'
 };
 
 const server = http.createServer((req, res) => {

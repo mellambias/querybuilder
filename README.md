@@ -370,12 +370,6 @@ Abre tu navegador en **http://localhost:3000** para ver la documentación comple
 - `docs:serve` - Solo servidor HTTP (sin regeneración)
 - `docs:jsdoc-watch` - Solo watch (regenera pero no sirve)
 
-### 📑 **Recursos Adicionales**
-- **Documentación JSDoc**: `docs/jsdoc/index.html` - Documentación completa del API
-- **Configuración**: [CONFIG.md](./CONFIG.md) - Guía de configuración de bases de datos
-- **Ejemplos**: [examples/](./examples/) - Ejemplos de uso
-- **Desarrollo Local**: [LOCAL_PUBLISHING.md](./LOCAL_PUBLISHING.md) - Testing local de paquetes
-
 **Características de la documentación:**
 - ✅ Búsqueda integrada y rápida
 - ✅ Navegación lateral interactiva

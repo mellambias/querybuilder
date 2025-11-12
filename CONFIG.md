@@ -15,6 +15,10 @@ Abre `config.js` y actualiza con tus credenciales reales:
 import { MySqlDriver } from "@querybuilder/mysql";
 import { PostgreSQLDriver } from "@querybuilder/postgresql";
 import { MongodbDriver } from "@querybuilder/mongodb";
+import { SQLiteDriver } from "@querybuilder/sqlite";
+import { RedisDriver } from "@querybuilder/redis";
+import { CassandraDriver } from "@querybuilder/cassandra";
+import { ChromaDriver } from "@querybuilder/chroma";
 
 const config = {
 	databases: {
@@ -56,6 +60,43 @@ const config = {
 				}
 			},
 		},
+		SQLite: {
+			version: "5.x",
+			driver: SQLiteDriver,
+			params: {
+				filename: "./database.sqlite"    // ⚠️ Reemplazar con tu ruta
+			},
+		},
+		Redis: {
+			version: "7.x",
+			driver: RedisDriver,
+			params: {
+				host: "localhost",
+				port: 6379,
+				password: "tu_password",         // ⚠️ Reemplazar (opcional)
+				db: 0                            // Base de datos Redis (0-15)
+			},
+		},
+		Cassandra: {
+			version: "4.x",
+			driver: CassandraDriver,
+			params: {
+				contactPoints: ["localhost"],
+				localDataCenter: "datacenter1",
+				keyspace: "tu_keyspace",         // ⚠️ Reemplazar
+				credentials: {
+					username: "tu_usuario_cassandra", // ⚠️ Reemplazar (opcional)
+					password: "tu_password"           // ⚠️ Reemplazar (opcional)
+				}
+			},
+		},
+		Chroma: {
+			version: "1.x",
+			driver: ChromaDriver,
+			params: {
+				path: "http://localhost:8000"    // ⚠️ URL del servidor Chroma
+			},
+		},
 	},
 };
 
@@ -74,18 +115,41 @@ export default config;
 ### **🌍 Variables de Entorno (Recomendado para Producción)**
 ```bash
 # Crear archivo .env
+
+# MySQL
 DB_MYSQL_HOST=localhost
 DB_MYSQL_USER=tu_usuario
 DB_MYSQL_PASSWORD=tu_password
 DB_MYSQL_DATABASE=tu_bd
 
+# PostgreSQL
 DB_POSTGRES_HOST=localhost
 DB_POSTGRES_USER=tu_usuario
 DB_POSTGRES_PASSWORD=tu_password
 DB_POSTGRES_DATABASE=tu_bd
 
+# MongoDB
 DB_MONGO_URL=mongodb://usuario:password@localhost:27017
 DB_MONGO_DATABASE=tu_bd
+
+# SQLite
+DB_SQLITE_FILENAME=./database.sqlite
+
+# Redis
+DB_REDIS_HOST=localhost
+DB_REDIS_PORT=6379
+DB_REDIS_PASSWORD=tu_password
+DB_REDIS_DB=0
+
+# Cassandra
+DB_CASSANDRA_CONTACT_POINTS=localhost
+DB_CASSANDRA_DATACENTER=datacenter1
+DB_CASSANDRA_KEYSPACE=tu_keyspace
+DB_CASSANDRA_USERNAME=tu_usuario
+DB_CASSANDRA_PASSWORD=tu_password
+
+# Chroma
+DB_CHROMA_PATH=http://localhost:8000
 ```
 
 ## 🧪 **Configuración para Tests**
@@ -96,16 +160,52 @@ Se recomienda usar bases de datos separadas para testing:
 ```javascript
 export const testConfigs = {
   mysql: {
-    ...mysqlConfig,
-    database: 'querybuilder_test'
+    ...config.databases.MySql8,
+    params: {
+      ...config.databases.MySql8.params,
+      database: 'querybuilder_test'
+    }
   },
   postgres: {
-    ...postgresConfig,
-    database: 'querybuilder_test'
+    ...config.databases.PostgreSQL,
+    params: {
+      ...config.databases.PostgreSQL.params,
+      database: 'querybuilder_test'
+    }
   },
   mongo: {
-    ...mongoConfig,
-    database: 'querybuilder_test'
+    ...config.databases.MongoDB,
+    params: {
+      ...config.databases.MongoDB.params,
+      database: 'querybuilder_test'
+    }
+  },
+  sqlite: {
+    ...config.databases.SQLite,
+    params: {
+      filename: './test.sqlite'
+    }
+  },
+  redis: {
+    ...config.databases.Redis,
+    params: {
+      ...config.databases.Redis.params,
+      db: 15  // Usar última base de datos para tests
+    }
+  },
+  cassandra: {
+    ...config.databases.Cassandra,
+    params: {
+      ...config.databases.Cassandra.params,
+      keyspace: 'querybuilder_test'
+    }
+  },
+  chroma: {
+    ...config.databases.Chroma,
+    params: {
+      ...config.databases.Chroma.params,
+      path: 'http://localhost:8001'  // Puerto diferente para tests
+    }
   }
 };
 ```
@@ -115,19 +215,27 @@ export const testConfigs = {
 ### **Importar Configuración**
 ```javascript
 import { QueryBuilder } from "@querybuilder/core";
-import { MySQL, MySqlDriver } from "@querybuilder/mysql";
-import { PostgreSQL, PostgreSQLDriver } from "@querybuilder/postgresql";
-import { MongoDB, MongodbDriver } from "@querybuilder/mongodb";
+import { MySQL } from "@querybuilder/mysql";
+import { PostgreSQL } from "@querybuilder/postgresql";
+import { MongoDB } from "@querybuilder/mongodb";
+import { SQLite } from "@querybuilder/sqlite";
+import { Redis } from "@querybuilder/redis";
+import { Cassandra } from "@querybuilder/cassandra";
+import { Chroma } from "@querybuilder/chroma";
 import config from './config.js';
 
-// Usar configuración MySQL
-const qbMySQL = new QueryBuilder(MySQL).driver(MySqlDriver, config.databases.MySql8.params);
+// Bases de datos SQL
+const qbMySQL = new QueryBuilder(MySQL).driver(config.databases.MySql8.driver, config.databases.MySql8.params);
+const qbPostgres = new QueryBuilder(PostgreSQL).driver(config.databases.PostgreSQL.driver, config.databases.PostgreSQL.params);
+const qbSQLite = new QueryBuilder(SQLite).driver(config.databases.SQLite.driver, config.databases.SQLite.params);
 
-// Usar configuración PostgreSQL
-const qbPostgres = new QueryBuilder(PostgreSQL).driver(PostgreSQLDriver, config.databases.PostgreSQL.params);
+// Bases de datos NoSQL
+const qbMongo = new QueryBuilder(MongoDB).driver(config.databases.MongoDB.driver, config.databases.MongoDB.params);
+const qbCassandra = new QueryBuilder(Cassandra).driver(config.databases.Cassandra.driver, config.databases.Cassandra.params);
 
-// Usar configuración MongoDB
-const qbMongo = new QueryBuilder(MongoDB).driver(MongodbDriver, config.databases.MongoDB.params);
+// Bases de datos especializadas
+const qbRedis = new QueryBuilder(Redis).driver(config.databases.Redis.driver, config.databases.Redis.params);
+const qbChroma = new QueryBuilder(Chroma).driver(config.databases.Chroma.driver, config.databases.Chroma.params);
 ```
 
 ### **Configuración Condicional por Entorno**
@@ -152,7 +260,44 @@ const config = {
 export default config[env];
 ```
 
-## 🔧 **Troubleshooting**
+## � **Guía de Bases de Datos**
+
+### **MySQL / MariaDB** - SQL Relacional
+- **Uso**: Aplicaciones web, e-commerce, sistemas CRUD
+- **Puerto por defecto**: 3306
+- **Características**: Transacciones ACID, joins complejos, índices
+
+### **PostgreSQL** - SQL Avanzado
+- **Uso**: Aplicaciones empresariales, análisis de datos
+- **Puerto por defecto**: 5432
+- **Características**: JSONB, full-text search, extensiones GIS
+
+### **MongoDB** - NoSQL Documento
+- **Uso**: APIs REST, datos semi-estructurados, prototipos rápidos
+- **Puerto por defecto**: 27017
+- **Características**: Esquema flexible, escalabilidad horizontal, agregaciones
+
+### **SQLite** - SQL Embebido
+- **Uso**: Apps móviles, apps de escritorio, prototipos
+- **Archivo**: Base de datos en un solo archivo
+- **Características**: Sin servidor, cero configuración, portable
+
+### **Redis** - In-Memory Cache
+- **Uso**: Cache, sesiones, pub/sub, colas de mensajes
+- **Puerto por defecto**: 6379
+- **Características**: Extremadamente rápido, TTL, estructuras de datos
+
+### **Cassandra** - NoSQL Distribuido
+- **Uso**: Big Data, time-series, alta disponibilidad
+- **Puerto por defecto**: 9042
+- **Características**: Sin punto único de falla, escalabilidad lineal
+
+### **Chroma** - Vector Database
+- **Uso**: IA, búsqueda semántica, embeddings, RAG
+- **Puerto por defecto**: 8000
+- **Características**: Búsqueda por similitud, integración con LLMs
+
+## �🔧 **Troubleshooting**
 
 ### **Errores Comunes**
 

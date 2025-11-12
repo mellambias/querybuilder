@@ -47,8 +47,20 @@ pnpm install @querybuilder/mysql
 # Controladores para PostgreSQL
 pnpm install @querybuilder/postgresql
 
-# PaControladores MongoDB
+# Controladores paraMongoDB
 pnpm install @querybuilder/mongodb
+
+# Controladores para SQLite
+pnpm install @querybuilder/sqlite
+
+# Controladores para chromadb
+pnpm install @querybuilder/chromadb
+
+# Controladores para cassandra
+pnpm install @querybuilder/cassandra
+
+# Controladores para redis
+pnpm install @querybuilder/redis
 ```
 
 ## Uso básico
@@ -64,8 +76,11 @@ SELECT * FROM users WHERE active = 1;
 
 // Usando adaptadores específicos
 import { MySQL } from '@querybuilder/mysql';
+import config from "./config.js"; // archivo con configuración de conexión
 
-const qb = new QueryBuilder(MySQL);
+const mysqldb = config.databases.MySql8;
+const qb = new QueryBuilder(MySQL).driver(mysqldb.driver, mysqldb.params);
+
 const mysqlQuery = await qb.select('*')
 .from('users')
 .limit(10)
@@ -83,6 +98,10 @@ packages/
 │   ├── mysql/         # Adaptador MySQL
 │   ├── postgresql/    # Adaptador PostgreSQL
 │   └── mongodb/       # Adaptador MongoDB
+│   ├── sqlite/        # Adaptador SQLite
+│   ├── chroma/        # Adaptador ChromaDB
+│   ├── cassandra/     # Adaptador Cassandra
+│   └── redis/         # Adaptador Redis
 ```
 
-Cada paquete es independiente y puede instalarse por separado según tus necesidades.
+Cada paquete es independiente y puede instalarse por separado según las necesidades del proyecto.
