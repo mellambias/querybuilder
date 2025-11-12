@@ -1,696 +1,817 @@
-# Chroma Vector Database Integration
+# @querybuilder/chroma
 
-Integración completa de Chroma vector database con QueryBuilder, proporcionando operaciones de embeddings, búsqueda semántica y análisis de similitud vectorial.
-
-## 🔥 Características Principales
-
-- **Búsqueda Semántica Avanzada**: Encuentra documentos similares usando procesamiento de lenguaje natural
-- **Embeddings Automáticos**: Generación automática de vectores usando múltiples modelos
-- **Filtrado Inteligente**: Combina búsqueda vectorial con filtros tradicionales
-- **Múltiples Modelos**: Soporte para OpenAI, HuggingFace, Cohere, Google y más
-- **API Consistente**: Mantiene la misma metodología que otros drivers de QueryBuilder
-- **Operaciones en Lote**: Procesamiento eficiente de grandes volúmenes de datos
-- **TypeScript Ready**: Tipado completo para mejor experiencia de desarrollo
+Adaptador ChromaDB para QueryBuilder - Base de datos vectorial para aplicaciones de IA y Machine Learning.
 
 ## 📦 Instalación
 
 ```bash
-# Instalar el paquete
-npm install @querybuilder/chroma
+# Instalar el paquete ChromaDB
+npm install @querybuilder/core @querybuilder/chroma
 
-# O con pnpm
-pnpm add @querybuilder/chroma
-
-# También necesitas el cliente oficial de Chroma
+# Instalar cliente ChromaDB
 npm install chromadb
 ```
 
-## 🚀 Configuración Inicial
-
-### Servidor Chroma Local
+## 🐳 Servidor ChromaDB
 
 ```bash
-# Usando Docker (recomendado)
+# Opción 1: Docker (recomendado)
 docker run -p 8000:8000 chromadb/chroma
 
-# O instalación local
+# Opción 2: Python (local)
 pip install chromadb
-chroma run --host localhost --port 8000
+chroma run --host localhost --port 8000 --path ./chroma_data
 ```
 
-### Cliente Básico
+## 🚀 Uso Básico
 
 ```javascript
-import Chroma from '@querybuilder/chroma';
+import { ChromaClient } from 'chromadb';
 
-const chroma = new Chroma({
-	path: 'http://localhost:8000',
-	tenant: 'default_tenant',
-	database: 'default_database'
-});
-```
-
-## 🎯 Casos de Uso
-
-### 1. Búsqueda Semántica en Documentos
-
-```javascript
-// Crear colección para documentos
-const collection = await chroma.createCollection({
-	name: 'company_docs',
-	metadata: { 
-		description: 'Documentos internos de la empresa',
-		model: 'sentence-transformers'
-	}
+// Conectar a ChromaDB
+const client = new ChromaClient({
+  path: 'http://localhost:8000'
 });
 
-// Añadir documentos
-await chroma.add({
-	collection: 'company_docs',
-	ids: ['policy_1', 'manual_2', 'guide_3'],
-	documents: [
-		'Política de recursos humanos y beneficios para empleados',
-		'Manual técnico de arquitectura de software',
-		'Guía de mejores prácticas para desarrollo'
-	],
-	metadatas: [
-		{ type: 'policy', department: 'hr', priority: 'high' },
-		{ type: 'manual', department: 'tech', priority: 'medium' },
-		{ type: 'guide', department: 'tech', priority: 'low' }
-	]
-});
-
-// Búsqueda semántica
-const results = await chroma.query({
-	collection: 'company_docs',
-	queryTexts: ['información sobre beneficios de empleados'],
-	nResults: 5,
-	where: { department: 'hr' }
-});
-
-console.log('Documentos encontrados:', results.documents[0]);
-console.log('Puntuaciones de similitud:', results.distances[0]);
-```
-
-### 2. Sistema de Recomendaciones
-
-```javascript
-// Colección de productos
-await chroma.createCollection({
-	name: 'products',
-	metadata: { purpose: 'product recommendations' }
-});
-
-// Añadir productos con descripciones
-await chroma.add({
-	collection: 'products',
-	ids: ['prod_1', 'prod_2', 'prod_3'],
-	documents: [
-		'Smartphone con cámara de alta resolución y batería de larga duración',
-		'Laptop para gaming con procesador de última generación',
-		'Auriculares inalámbricos con cancelación de ruido'
-	],
-	metadatas: [
-		{ category: 'electronics', price: 599, brand: 'TechCorp' },
-		{ category: 'computers', price: 1299, brand: 'GameTech' },
-		{ category: 'audio', price: 199, brand: 'SoundPro' }
-	]
-});
-
-// Encontrar productos similares
-const recommendations = await chroma.query({
-	collection: 'products',
-	queryTexts: ['dispositivo móvil con buena cámara'],
-	nResults: 3,
-	where: { price: { $lt: 1000 } }
-});
-```
-
-### 3. Análisis de Sentimientos y Contenido
-
-```javascript
-// Sistema de análisis de feedback
-await chroma.createCollection({
-	name: 'customer_feedback',
-	embeddingFunction: 'openai' // Usar embeddings de OpenAI
-});
-
-// Procesar feedback de clientes
-const feedbacks = [
-	'El producto es excelente, muy satisfecho con la compra',
-	'Servicio al cliente muy lento, necesita mejorar',
-	'Calidad precio muy buena, lo recomiendo',
-	'Entrega tardía pero producto de calidad'
-];
-
-await chroma.add({
-	collection: 'customer_feedback',
-	ids: feedbacks.map((_, i) => `feedback_${i}`),
-	documents: feedbacks,
-	metadatas: feedbacks.map((text, i) => ({
-		sentiment: analyzeSentiment(text), // Función externa
-		length: text.length,
-		date: new Date().toISOString()
-	}))
-});
-
-// Encontrar feedback similar
-const similarFeedback = await chroma.query({
-	collection: 'customer_feedback',
-	queryTexts: ['problemas con el servicio'],
-	nResults: 5,
-	where: { sentiment: 'negative' }
-});
-```
-
-## 🛠️ API Completa
-
-### Gestión de Colecciones
-
-```javascript
 // Crear colección
-const collection = await chroma.createCollection({
-	name: 'my_collection',
-	metadata: { version: '1.0' },
-	embeddingFunction: 'default' // o 'openai', 'huggingface', etc.
+const collection = await client.getOrCreateCollection({
+  name: 'documents',
+  metadata: { description: 'Document embeddings' }
+});
+
+// Agregar documentos
+await collection.add({
+  ids: ['doc1', 'doc2', 'doc3'],
+  documents: [
+    'ChromaDB is a vector database for AI',
+    'Machine learning needs efficient search',
+    'Embeddings represent data as vectors'
+  ]
+});
+
+// Buscar similares
+const results = await collection.query({
+  queryTexts: ['What is a vector database?'],
+  nResults: 2
+});
+
+console.log(results.documents[0]);
+```
+
+## 📊 Operaciones de Colección
+
+### ✅ Crear y Gestionar Colecciones
+```javascript
+import { ChromaClient } from 'chromadb';
+
+const client = new ChromaClient({ path: 'http://localhost:8000' });
+
+// Crear colección nueva
+const collection = await client.createCollection({
+  name: 'my_collection',
+  metadata: {
+    description: 'My first collection',
+    created: new Date().toISOString()
+  }
 });
 
 // Obtener colección existente
-const existing = await chroma.getCollection('my_collection');
+const existing = await client.getCollection({ name: 'my_collection' });
 
 // Obtener o crear (idempotente)
-const collection = await chroma.getOrCreateCollection({
-	name: 'my_collection',
-	metadata: { created_at: new Date().toISOString() }
+const collection2 = await client.getOrCreateCollection({
+  name: 'documents'
 });
 
-// Listar colecciones
-const collections = await chroma.listCollections();
+// Listar todas las colecciones
+const collections = await client.listCollections();
+console.log('Colecciones:', collections.map(c => c.name));
 
 // Eliminar colección
-await chroma.deleteCollection('my_collection');
+await client.deleteCollection({ name: 'old_collection' });
 ```
 
-### Operaciones CRUD
-
+### ✅ Información de Colección
 ```javascript
-// CREATE - Añadir documentos
-await chroma.add({
-	collection: 'docs',
-	ids: ['doc1', 'doc2'],
-	documents: ['Texto 1', 'Texto 2'],
-	metadatas: [{ tag: 'info' }, { tag: 'data' }],
-	embeddings: [[0.1, 0.2, ...], [0.3, 0.4, ...]] // Opcional
-});
-
-// READ - Obtener documentos
-const docs = await chroma.get({
-	collection: 'docs',
-	ids: ['doc1'], // Opcional
-	where: { tag: 'info' }, // Opcional
-	limit: 10,
-	offset: 0,
-	include: ['documents', 'metadatas', 'embeddings']
-});
-
-// UPDATE - Actualizar documentos
-await chroma.update({
-	collection: 'docs',
-	ids: ['doc1'],
-	documents: ['Texto actualizado'],
-	metadatas: [{ tag: 'info', updated: true }]
-});
-
-// DELETE - Eliminar documentos
-await chroma.delete({
-	collection: 'docs',
-	ids: ['doc2'], // O usar where para eliminar por condiciones
-	where: { tag: 'obsolete' }
-});
-
-// UPSERT - Insertar o actualizar
-await chroma.upsert({
-	collection: 'docs',
-	ids: ['doc3'],
-	documents: ['Nuevo o actualizado'],
-	metadatas: [{ status: 'active' }]
-});
-```
-
-### Búsquedas y Consultas
-
-```javascript
-// Búsqueda por similitud de texto
-const results = await chroma.query({
-	collection: 'docs',
-	queryTexts: ['buscar documentos similares'],
-	nResults: 10,
-	where: { status: 'active' },
-	whereDocument: { $contains: 'importante' },
-	include: ['documents', 'metadatas', 'distances']
-});
-
-// Búsqueda por vectores
-const vectorResults = await chroma.query({
-	collection: 'docs',
-	queryEmbeddings: [[0.1, 0.2, 0.3, ...]],
-	nResults: 5,
-	where: { category: 'technical' }
-});
-
-// Búsqueda híbrida (texto + filtros)
-const hybridResults = await chroma.hybridSearch({
-	collection: 'docs',
-	queryTexts: ['machine learning'],
-	nResults: 15,
-	where: { 
-		$and: [
-			{ domain: 'AI' },
-			{ year: { $gte: 2020 } }
-		]
-	}
-});
-
 // Contar documentos
-const count = await chroma.count({ collection: 'docs' });
+const count = await collection.count();
+console.log(`Total documentos: ${count}`);
 
-// Vista previa de la colección
-const preview = await chroma.peek({ 
-	collection: 'docs', 
-	limit: 5 
-});
+// Ver muestra de documentos
+const sample = await collection.peek({ limit: 5 });
+console.log('Muestra:', sample);
+
+// Obtener metadata de la colección
+console.log('Metadata:', collection.metadata);
+console.log('Nombre:', collection.name);
 ```
 
-### Filtros Avanzados
+## 📝 Operaciones CRUD
 
+### ✅ ADD - Agregar Documentos
 ```javascript
-// Operadores de comparación
-const filters = {
-	// Igualdad
-	exact: { field: { $eq: 'value' } },
-	notEqual: { field: { $ne: 'value' } },
-	
-	// Comparaciones numéricas
-	greater: { score: { $gt: 0.8 } },
-	greaterEqual: { score: { $gte: 0.8 } },
-	less: { score: { $lt: 0.5 } },
-	lessEqual: { score: { $lte: 0.5 } },
-	
-	// Operadores de conjunto
-	inList: { category: { $in: ['tech', 'science'] } },
-	notInList: { status: { $nin: ['deleted', 'archived'] } },
-	
-	// Operadores lógicos
-	andCondition: {
-		$and: [
-			{ category: 'tech' },
-			{ score: { $gt: 0.7 } }
-		]
-	},
-	orCondition: {
-		$or: [
-			{ priority: 'high' },
-			{ urgent: true }
-		]
-	},
-	notCondition: {
-		$not: { status: 'inactive' }
-	}
+// Agregar documentos básicos
+await collection.add({
+  ids: ['id1', 'id2', 'id3'],
+  documents: [
+    'First document text',
+    'Second document text',
+    'Third document text'
+  ]
+});
+
+// Agregar con metadata
+await collection.add({
+  ids: ['doc1', 'doc2'],
+  documents: [
+    'ChromaDB stores vector embeddings',
+    'Vector search enables semantic similarity'
+  ],
+  metadatas: [
+    { category: 'database', author: 'Alice', tags: ['vectors', 'db'] },
+    { category: 'ml', author: 'Bob', tags: ['search', 'ai'] }
+  ]
+});
+
+// Agregar con embeddings personalizados
+await collection.add({
+  ids: ['custom1'],
+  documents: ['Custom embedding document'],
+  embeddings: [[0.1, 0.2, 0.3, 0.4, 0.5]]  // Vector de 5 dimensiones
+});
+
+// Agregar múltiples documentos
+const largeData = {
+  ids: Array.from({ length: 100 }, (_, i) => `doc_${i}`),
+  documents: Array.from({ length: 100 }, (_, i) => `Document ${i} content`),
+  metadatas: Array.from({ length: 100 }, (_, i) => ({ index: i, batch: 1 }))
 };
 
-// Filtros de documento
-const documentFilters = {
-	contains: { $contains: 'keyword' },
-	notContains: { $not_contains: 'spam' }
-};
+await collection.add(largeData);
 ```
 
-## 🤖 Funciones de Embedding
-
-### Configuración de Modelos
-
+### ✅ GET - Obtener Documentos
 ```javascript
-// Default (modelo local)
-const defaultCollection = await chroma.createCollection({
-	name: 'default_docs',
-	embeddingFunction: 'default'
+// Obtener por IDs
+const docs = await collection.get({
+  ids: ['doc1', 'doc2']
 });
 
-// OpenAI
-const openaiCollection = await chroma.createCollection({
-	name: 'openai_docs',
-	embeddingFunction: 'openai',
-	embeddingConfig: {
-		apiKey: 'your-openai-api-key',
-		model: 'text-embedding-ada-002'
-	}
+console.log('Documentos:', docs.documents);
+console.log('Metadatas:', docs.metadatas);
+console.log('Embeddings:', docs.embeddings);
+
+// Obtener con filtro de metadata
+const filtered = await collection.get({
+  where: { category: 'ml' }
 });
 
-// HuggingFace
-const hfCollection = await chroma.createCollection({
-	name: 'huggingface_docs',
-	embeddingFunction: 'huggingface',
-	embeddingConfig: {
-		model: 'sentence-transformers/all-MiniLM-L6-v2'
-	}
+// Obtener con múltiples filtros
+const complex = await collection.get({
+  where: {
+    $and: [
+      { category: 'database' },
+      { author: { $ne: 'Alice' } }
+    ]
+  },
+  limit: 10
 });
 
-// Cohere
-const cohereCollection = await chroma.createCollection({
-	name: 'cohere_docs',
-	embeddingFunction: 'cohere',
-	embeddingConfig: {
-		apiKey: 'your-cohere-api-key',
-		model: 'embed-english-v2.0'
-	}
+// Obtener con filtro de contenido
+const docFiltered = await collection.get({
+  whereDocument: { $contains: 'vector' }
 });
 
-// Google
-const googleCollection = await chroma.createCollection({
-	name: 'google_docs',
-	embeddingFunction: 'google',
-	embeddingConfig: {
-		apiKey: 'your-google-api-key',
-		taskType: 'RETRIEVAL_DOCUMENT'
-	}
+// Obtener todos (con límite)
+const all = await collection.get({
+  limit: 100,
+  offset: 0
 });
 ```
 
-## 🔄 Operaciones Avanzadas
-
-### Operaciones en Lote
-
+### ✅ UPDATE - Actualizar Documentos
 ```javascript
-// Procesar múltiples operaciones
-const operations = [
-	{
-		operation: 'add',
-		params: {
-			collection: 'batch_docs',
-			ids: ['batch_1'],
-			documents: ['Documento 1']
-		}
-	},
-	{
-		operation: 'update',
-		params: {
-			collection: 'batch_docs',
-			ids: ['existing_doc'],
-			documents: ['Documento actualizado']
-		}
-	}
-];
-
-const results = await chroma.batch(operations);
-console.log('Resultados del lote:', results);
-```
-
-### Búsqueda con Embeddings Personalizados
-
-```javascript
-// Usar embeddings pre-calculados
-const customEmbeddings = [
-	[0.1, 0.2, 0.3, ...], // Vector 384D o dimensión del modelo
-	[0.4, 0.5, 0.6, ...]
-];
-
-await chroma.add({
-	collection: 'custom_embeddings',
-	ids: ['custom_1', 'custom_2'],
-	documents: ['Documento con embedding personalizado 1', 'Documento 2'],
-	embeddings: customEmbeddings
+// Actualizar documento completo
+await collection.update({
+  ids: ['doc1'],
+  documents: ['Updated document text'],
+  metadatas: [{ category: 'database', updated: true }]
 });
 
-// Búsqueda por embedding específico
-const similarDocs = await chroma.query({
-	collection: 'custom_embeddings',
-	queryEmbeddings: [customEmbeddings[0]], // Buscar similares al primero
-	nResults: 3
+// Actualizar solo metadata
+await collection.update({
+  ids: ['doc2'],
+  metadatas: [{ views: 100, last_modified: new Date().toISOString() }]
+});
+
+// Actualizar solo documento (mantiene metadata)
+await collection.update({
+  ids: ['doc3'],
+  documents: ['New content only']
+});
+
+// Actualizar embeddings personalizados
+await collection.update({
+  ids: ['custom1'],
+  embeddings: [[0.2, 0.3, 0.4, 0.5, 0.6]]
+});
+
+// Actualizar múltiples
+await collection.update({
+  ids: ['doc1', 'doc2', 'doc3'],
+  metadatas: [
+    { status: 'reviewed' },
+    { status: 'reviewed' },
+    { status: 'pending' }
+  ]
 });
 ```
 
-## 🧪 Testing y Desarrollo
-
-### Configuración de Tests
-
+### ✅ UPSERT - Actualizar o Insertar
 ```javascript
-// Archivo: test.config.js
-export default {
-	testEnvironment: 'node',
-	setupFilesAfterEnv: ['<rootDir>/test/setup.js']
+// Upsert (actualiza si existe, inserta si no)
+await collection.upsert({
+  ids: ['doc1', 'new_doc', 'doc2'],
+  documents: [
+    'Updated doc1',
+    'Brand new document',
+    'Updated doc2'
+  ],
+  metadatas: [
+    { version: 2 },
+    { version: 1 },
+    { version: 2 }
+  ]
+});
+
+// Upsert masivo
+const upsertData = {
+  ids: Array.from({ length: 50 }, (_, i) => `doc_${i}`),
+  documents: Array.from({ length: 50 }, (_, i) => `Content for doc ${i}`),
+  metadatas: Array.from({ length: 50 }, (_, i) => ({ 
+    index: i, 
+    updated: new Date().toISOString() 
+  }))
 };
 
-// setup.js
-import { beforeAll, afterAll } from 'vitest';
+await collection.upsert(upsertData);
+```
 
-beforeAll(async () => {
-	// Configurar servidor de test
-	console.log('Iniciando servidor Chroma para tests...');
+### ✅ DELETE - Eliminar Documentos
+```javascript
+// Eliminar por IDs
+await collection.delete({
+  ids: ['doc1', 'doc2']
 });
 
-afterAll(async () => {
-	// Limpiar después de tests
-	console.log('Limpiando servidor de test...');
+// Eliminar con filtro
+await collection.delete({
+  where: { status: 'obsolete' }
+});
+
+// Eliminar por contenido
+await collection.delete({
+  whereDocument: { $contains: 'deprecated' }
+});
+
+// Eliminar con filtros complejos
+await collection.delete({
+  where: {
+    $and: [
+      { category: 'temp' },
+      { created_at: { $lt: '2024-01-01' } }
+    ]
+  }
 });
 ```
 
-### Tests de Ejemplo
+## 🔍 Búsqueda Semántica
 
+### ✅ Query - Búsqueda por Similitud
 ```javascript
-import { describe, test, expect } from 'vitest';
-import Chroma from '../Chroma.js';
+// Búsqueda básica
+const results = await collection.query({
+  queryTexts: ['machine learning algorithms'],
+  nResults: 5
+});
 
-describe('Chroma Integration', () => {
-	test('should perform semantic search', async () => {
-		const chroma = new Chroma({ path: 'http://localhost:8000' });
-		
-		await chroma.createCollection({ name: 'test_search' });
-		
-		await chroma.add({
-			collection: 'test_search',
-			ids: ['test1'],
-			documents: ['Machine learning algorithms']
-		});
-		
-		const results = await chroma.query({
-			collection: 'test_search',
-			queryTexts: ['AI and ML'],
-			nResults: 1
-		});
-		
-		expect(results.ids[0]).toHaveLength(1);
-		expect(results.documents[0][0]).toContain('Machine learning');
-		
-		await chroma.deleteCollection('test_search');
-	});
+console.log('Documentos:', results.documents[0]);
+console.log('Distancias:', results.distances[0]);
+console.log('Metadatas:', results.metadatas[0]);
+
+// Búsqueda con filtro de metadata
+const filtered = await collection.query({
+  queryTexts: ['database technology'],
+  nResults: 10,
+  where: { category: 'database' }
+});
+
+// Búsqueda con filtros complejos
+const advanced = await collection.query({
+  queryTexts: ['artificial intelligence'],
+  nResults: 5,
+  where: {
+    $and: [
+      { category: { $in: ['ml', 'ai', 'nlp'] } },
+      { author: { $ne: 'Anonymous' } },
+      { year: { $gte: 2023 } }
+    ]
+  }
+});
+
+// Búsqueda con filtro de documento
+const contentFilter = await collection.query({
+  queryTexts: ['vector search'],
+  nResults: 3,
+  whereDocument: { $contains: 'embedding' }
+});
+
+// Múltiples consultas simultáneas
+const multiQuery = await collection.query({
+  queryTexts: [
+    'machine learning',
+    'data science',
+    'neural networks'
+  ],
+  nResults: 3
+});
+
+// Acceder resultados de cada consulta
+multiQuery.documents.forEach((docs, i) => {
+  console.log(`Resultados para consulta ${i + 1}:`, docs);
 });
 ```
 
-## 📊 Ejemplos de Performance
-
-### Benchmark de Operaciones
-
+### ✅ Query con Embeddings Personalizados
 ```javascript
-// Benchmark de inserción masiva
-const benchmarkInsert = async () => {
-	const startTime = Date.now();
-	const batchSize = 1000;
-	
-	const ids = Array.from({ length: batchSize }, (_, i) => `bench_${i}`);
-	const documents = Array.from({ length: batchSize }, (_, i) => 
-		`Documento de benchmark número ${i} con contenido variable`
-	);
-	
-	await chroma.add({
-		collection: 'benchmark',
-		ids,
-		documents
-	});
-	
-	const endTime = Date.now();
-	console.log(`Insertados ${batchSize} documentos en ${endTime - startTime}ms`);
-};
-
-// Benchmark de búsqueda
-const benchmarkSearch = async () => {
-	const startTime = Date.now();
-	
-	const results = await chroma.query({
-		collection: 'benchmark',
-		queryTexts: ['consulta de prueba'],
-		nResults: 100
-	});
-	
-	const endTime = Date.now();
-	console.log(`Búsqueda completada en ${endTime - startTime}ms`);
-	console.log(`Encontrados ${results.ids[0].length} resultados`);
-};
-```
-
-## 🚦 Mejores Prácticas
-
-### 1. Gestión de Colecciones
-
-```javascript
-// ✅ Usar nombres descriptivos
-const collection = await chroma.createCollection({
-	name: 'product_reviews_2024',
-	metadata: {
-		purpose: 'customer sentiment analysis',
-		version: '1.0',
-		created: new Date().toISOString()
-	}
+// Buscar usando vector directo
+const vectorResults = await collection.query({
+  queryEmbeddings: [[0.1, 0.2, 0.3, 0.4, 0.5]],
+  nResults: 5
 });
 
-// ✅ Limpiar colecciones de test
-if (process.env.NODE_ENV === 'test') {
-	await chroma.deleteCollection('test_collection');
+// Múltiples vectores
+const multiVector = await collection.query({
+  queryEmbeddings: [
+    [0.1, 0.2, 0.3, 0.4, 0.5],
+    [0.2, 0.3, 0.4, 0.5, 0.6],
+    [0.3, 0.4, 0.5, 0.6, 0.7]
+  ],
+  nResults: 3
+});
+```
+
+## 🎯 Filtros Avanzados
+
+### Operadores de Metadata
+```javascript
+// $eq - Igual
+await collection.query({
+  queryTexts: ['search query'],
+  where: { category: { $eq: 'ml' } }
+});
+
+// $ne - No igual
+await collection.query({
+  queryTexts: ['search query'],
+  where: { status: { $ne: 'deleted' } }
+});
+
+// $gt, $gte - Mayor que, mayor o igual
+await collection.query({
+  queryTexts: ['search query'],
+  where: { views: { $gte: 100 } }
+});
+
+// $lt, $lte - Menor que, menor o igual
+await collection.query({
+  queryTexts: ['search query'],
+  where: { priority: { $lt: 5 } }
+});
+
+// $in - En lista
+await collection.query({
+  queryTexts: ['search query'],
+  where: { category: { $in: ['ml', 'ai', 'nlp'] } }
+});
+
+// $nin - No en lista
+await collection.query({
+  queryTexts: ['search query'],
+  where: { status: { $nin: ['deleted', 'archived'] } }
+});
+
+// $and - Y lógico
+await collection.query({
+  queryTexts: ['search query'],
+  where: {
+    $and: [
+      { category: 'ml' },
+      { views: { $gte: 100 } }
+    ]
+  }
+});
+
+// $or - O lógico
+await collection.query({
+  queryTexts: ['search query'],
+  where: {
+    $or: [
+      { category: 'ml' },
+      { category: 'ai' }
+    ]
+  }
+});
+```
+
+### Operadores de Documento
+```javascript
+// $contains - Contiene texto
+await collection.query({
+  queryTexts: ['search query'],
+  whereDocument: { $contains: 'machine learning' }
+});
+
+// $not_contains - No contiene
+await collection.query({
+  queryTexts: ['search query'],
+  whereDocument: { $not_contains: 'deprecated' }
+});
+
+// Combinación con metadata
+await collection.query({
+  queryTexts: ['AI applications'],
+  where: { category: 'ml' },
+  whereDocument: { $contains: 'neural network' }
+});
+```
+
+## 🧠 Funciones de Embedding
+
+### ✅ Embedding Functions Integradas
+```javascript
+import { 
+  OpenAIEmbeddingFunction,
+  CohereEmbeddingFunction,
+  HuggingFaceEmbeddingFunction,
+  GoogleGenerativeAiEmbeddingFunction
+} from 'chromadb';
+
+// OpenAI Embeddings
+const openaiEf = new OpenAIEmbeddingFunction({
+  openai_api_key: process.env.OPENAI_API_KEY,
+  model_name: 'text-embedding-3-small'
+});
+
+const openaiCollection = await client.createCollection({
+  name: 'openai_docs',
+  embeddingFunction: openaiEf
+});
+
+// Cohere Embeddings
+const cohereEf = new CohereEmbeddingFunction({
+  cohere_api_key: process.env.COHERE_API_KEY,
+  model: 'embed-english-v3.0'
+});
+
+const cohereCollection = await client.createCollection({
+  name: 'cohere_docs',
+  embeddingFunction: cohereEf
+});
+
+// HuggingFace Embeddings
+const hfEf = new HuggingFaceEmbeddingFunction({
+  huggingface_api_key: process.env.HF_API_KEY,
+  model_name: 'sentence-transformers/all-MiniLM-L6-v2'
+});
+
+const hfCollection = await client.createCollection({
+  name: 'hf_docs',
+  embeddingFunction: hfEf
+});
+
+// Google Generative AI Embeddings
+const googleEf = new GoogleGenerativeAiEmbeddingFunction({
+  google_api_key: process.env.GOOGLE_API_KEY,
+  model_name: 'models/embedding-001'
+});
+
+const googleCollection = await client.createCollection({
+  name: 'google_docs',
+  embeddingFunction: googleEf
+});
+```
+
+## 📖 Patrones Comunes
+
+### RAG (Retrieval Augmented Generation)
+```javascript
+import { ChromaClient } from 'chromadb';
+import OpenAI from 'openai';
+
+const chroma = new ChromaClient({ path: 'http://localhost:8000' });
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+// Preparar base de conocimiento
+const knowledge = await chroma.getOrCreateCollection({ name: 'knowledge_base' });
+
+await knowledge.add({
+  ids: ['k1', 'k2', 'k3'],
+  documents: [
+    'ChromaDB is an open-source vector database for AI applications',
+    'Vector embeddings represent text as numerical vectors',
+    'Semantic search finds similar content based on meaning'
+  ]
+});
+
+// Función RAG
+async function ragQuery(question) {
+  // 1. Buscar contexto relevante
+  const searchResults = await knowledge.query({
+    queryTexts: [question],
+    nResults: 3
+  });
+  
+  const context = searchResults.documents[0].join('\n\n');
+  
+  // 2. Generar respuesta con contexto
+  const completion = await openai.chat.completions.create({
+    model: 'gpt-4',
+    messages: [
+      {
+        role: 'system',
+        content: 'Answer questions based only on the provided context.'
+      },
+      {
+        role: 'user',
+        content: `Context:\n${context}\n\nQuestion: ${question}`
+      }
+    ]
+  });
+  
+  return {
+    answer: completion.choices[0].message.content,
+    sources: searchResults.documents[0],
+    distances: searchResults.distances[0]
+  };
+}
+
+// Usar RAG
+const result = await ragQuery('What is ChromaDB?');
+console.log('Answer:', result.answer);
+console.log('Sources:', result.sources);
+```
+
+### Semantic Search Application
+```javascript
+// Sistema de búsqueda semántica
+class SemanticSearchEngine {
+  constructor(client, collectionName) {
+    this.client = client;
+    this.collectionName = collectionName;
+    this.collection = null;
+  }
+  
+  async initialize() {
+    this.collection = await this.client.getOrCreateCollection({
+      name: this.collectionName,
+      metadata: { description: 'Semantic search engine' }
+    });
+  }
+  
+  async indexDocuments(documents) {
+    const ids = documents.map((_, i) => `doc_${i}`);
+    const texts = documents.map(d => d.text);
+    const metadatas = documents.map(d => ({
+      title: d.title,
+      url: d.url,
+      category: d.category
+    }));
+    
+    await this.collection.add({ ids, documents: texts, metadatas });
+  }
+  
+  async search(query, options = {}) {
+    const {
+      limit = 10,
+      category = null,
+      minRelevance = 0.5
+    } = options;
+    
+    const whereClause = category ? { category } : undefined;
+    
+    const results = await this.collection.query({
+      queryTexts: [query],
+      nResults: limit,
+      where: whereClause
+    });
+    
+    // Filtrar por relevancia mínima
+    const filtered = results.documents[0]
+      .map((doc, i) => ({
+        document: doc,
+        metadata: results.metadatas[0][i],
+        relevance: 1 - results.distances[0][i]
+      }))
+      .filter(r => r.relevance >= minRelevance);
+    
+    return filtered;
+  }
+}
+
+// Uso
+const engine = new SemanticSearchEngine(client, 'search_engine');
+await engine.initialize();
+
+await engine.indexDocuments([
+  { 
+    text: 'Machine learning enables computers to learn from data',
+    title: 'ML Basics',
+    url: '/ml-basics',
+    category: 'education'
+  },
+  {
+    text: 'Deep neural networks power modern AI',
+    title: 'Deep Learning',
+    url: '/deep-learning',
+    category: 'advanced'
+  }
+]);
+
+const results = await engine.search('artificial intelligence', {
+  limit: 5,
+  minRelevance: 0.7
+});
+```
+
+### Document Clustering
+```javascript
+// Agrupar documentos similares
+async function clusterDocuments(collection, numClusters = 5) {
+  // Obtener todos los documentos con embeddings
+  const allDocs = await collection.get({
+    include: ['documents', 'embeddings', 'metadatas']
+  });
+  
+  // Aquí usarías un algoritmo de clustering como K-means
+  // Para simplificar, agrupamos por similitud
+  const clusters = [];
+  
+  for (const doc of allDocs.documents) {
+    // Buscar documentos similares
+    const similar = await collection.query({
+      queryTexts: [doc],
+      nResults: 10
+    });
+    
+    clusters.push({
+      document: doc,
+      similar: similar.documents[0].slice(1) // Excluir el mismo documento
+    });
+  }
+  
+  return clusters;
 }
 ```
 
-### 2. Optimización de Embeddings
+## 🔌 Configuración Avanzada
 
+### Cliente con Autenticación
 ```javascript
-// ✅ Reutilizar función de embedding para colecciones relacionadas
-const embeddingConfig = {
-	embeddingFunction: 'openai',
-	embeddingConfig: { 
-		apiKey: process.env.OPENAI_API_KEY,
-		model: 'text-embedding-ada-002'
-	}
-};
+import { ChromaClient } from 'chromadb';
 
-const docsCollection = await chroma.createCollection({
-	name: 'documents',
-	...embeddingConfig
+// Cliente con autenticación básica
+const client = new ChromaClient({
+  path: 'http://localhost:8000',
+  auth: {
+    provider: 'basic',
+    credentials: 'username:password'
+  }
 });
 
-const commentsCollection = await chroma.createCollection({
-	name: 'comments',
-	...embeddingConfig
+// Cliente con token
+const tokenClient = new ChromaClient({
+  path: 'http://localhost:8000',
+  auth: {
+    provider: 'token',
+    credentials: 'your-api-token'
+  }
 });
 ```
 
-### 3. Manejo de Errores
+### Configuración de Distancia
+```javascript
+// Diferentes métricas de distancia
+const l2Collection = await client.createCollection({
+  name: 'l2_metrics',
+  metadata: { 
+    'hnsw:space': 'l2'  // Distancia euclidiana (default)
+  }
+});
+
+const cosineCollection = await client.createCollection({
+  name: 'cosine_metrics',
+  metadata: { 
+    'hnsw:space': 'cosine'  // Similitud coseno
+  }
+});
+
+const ipCollection = await client.createCollection({
+  name: 'ip_metrics',
+  metadata: { 
+    'hnsw:space': 'ip'  // Producto interno
+  }
+});
+```
+
+## 🧪 Testing
 
 ```javascript
-// ✅ Validación antes de operaciones
-const addDocumentsSafely = async (data) => {
-	// Validar datos
-	const validation = chroma.validateData(data);
-	if (!validation.valid) {
-		throw new Error(`Datos inválidos: ${validation.errors.join(', ')}`);
-	}
-	
-	try {
-		return await chroma.add(data);
-	} catch (error) {
-		console.error('Error al añadir documentos:', error);
-		throw error;
-	}
-};
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { ChromaClient } from 'chromadb';
 
-// ✅ Retry logic para operaciones críticas
-const retryOperation = async (operation, maxRetries = 3) => {
-	for (let i = 0; i < maxRetries; i++) {
-		try {
-			return await operation();
-		} catch (error) {
-			if (i === maxRetries - 1) throw error;
-			await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
-		}
-	}
-};
+test('ChromaDB operations', async () => {
+  const client = new ChromaClient({ path: 'http://localhost:8000' });
+  
+  // Crear colección de prueba
+  const collection = await client.createCollection({
+    name: 'test_collection'
+  });
+  
+  try {
+    // Test ADD
+    await collection.add({
+      ids: ['test1', 'test2'],
+      documents: ['First test', 'Second test']
+    });
+    
+    const count = await collection.count();
+    assert.equal(count, 2);
+    
+    // Test QUERY
+    const results = await collection.query({
+      queryTexts: ['test'],
+      nResults: 2
+    });
+    
+    assert.equal(results.documents[0].length, 2);
+    
+    // Test UPDATE
+    await collection.update({
+      ids: ['test1'],
+      documents: ['Updated test']
+    });
+    
+    const updated = await collection.get({ ids: ['test1'] });
+    assert.equal(updated.documents[0], 'Updated test');
+    
+    // Test DELETE
+    await collection.delete({ ids: ['test2'] });
+    const finalCount = await collection.count();
+    assert.equal(finalCount, 1);
+    
+  } finally {
+    // Cleanup
+    await client.deleteCollection({ name: 'test_collection' });
+  }
+});
 ```
 
-### 4. Búsquedas Eficientes
+## ⚡ Características ChromaDB
 
-```javascript
-// ✅ Usar filtros para reducir el espacio de búsqueda
-const efficientSearch = async (query, filters = {}) => {
-	return await chroma.query({
-		collection: 'large_collection',
-		queryTexts: [query],
-		nResults: 20, // Limitar resultados
-		where: filters, // Filtrar antes de búsqueda vectorial
-		include: ['documents', 'metadatas', 'distances'] // Solo datos necesarios
-	});
-};
+- **Vector Search**: Búsqueda por similitud ultra-rápida
+- **Embeddings Automáticos**: Generación automática con múltiples modelos
+- **Filtrado Flexible**: Combina búsqueda vectorial con filtros
+- **Escalable**: Maneja millones de vectores eficientemente
+- **Open Source**: Código abierto y gratuito
+- **Multi-modal**: Soporta texto, imágenes y más
 
-// ✅ Paginar resultados grandes
-const paginatedResults = async (query, page = 0, pageSize = 50) => {
-	return await chroma.query({
-		collection: 'documents',
-		queryTexts: [query],
-		nResults: pageSize,
-		// Nota: Chroma no soporta offset directo en query,
-		// usar get() con limit/offset para paginación estricta
-	});
-};
-```
+## 📄 Casos de Uso
 
-## 🔧 Troubleshooting
-
-### Problemas Comunes
-
-1. **Error de Conexión al Servidor**
-```bash
-# Verificar que Chroma esté corriendo
-curl http://localhost:8000/api/v1/heartbeat
-
-# Reiniciar servidor
-docker restart chroma-container
-```
-
-2. **Problemas de Memoria con Embeddings**
-```javascript
-// Procesar en lotes pequeños
-const processBatches = async (documents, batchSize = 100) => {
-	for (let i = 0; i < documents.length; i += batchSize) {
-		const batch = documents.slice(i, i + batchSize);
-		await chroma.add({
-			collection: 'large_dataset',
-			ids: batch.map((_, idx) => `doc_${i + idx}`),
-			documents: batch
-		});
-	}
-};
-```
-
-3. **Embeddings Inconsistentes**
-```javascript
-// Verificar dimensiones
-const validateEmbeddings = (embeddings) => {
-	const firstDim = embeddings[0]?.length;
-	return embeddings.every(emb => 
-		emb.length === firstDim && 
-		emb.every(val => typeof val === 'number')
-	);
-};
-```
-
-## 📚 Recursos Adicionales
-
-- [Documentación Oficial de Chroma](https://docs.trychroma.com/)
-- [Chroma GitHub Repository](https://github.com/chroma-core/chroma)
-- [QueryBuilder Core Documentation](../core/README.md)
-- [Ejemplos Avanzados](./examples/)
-- [API Reference](./docs/api.md)
-
-## 🤝 Contribución
-
-Para contribuir al desarrollo de esta integración:
-
-1. Fork el repositorio
-2. Crear una rama para tu feature: `git checkout -b feature/nueva-funcionalidad`
-3. Commit tus cambios: `git commit -am 'Añadir nueva funcionalidad'`
-4. Push a la rama: `git push origin feature/nueva-funcionalidad`
-5. Crear un Pull Request
+- **RAG Systems**: Sistemas de generación aumentada por recuperación
+- **Semantic Search**: Búsqueda por significado, no solo palabras clave
+- **Recommendation Systems**: Recomendaciones basadas en similitud
+- **Document Clustering**: Agrupación automática de documentos
+- **Image Similarity**: Búsqueda de imágenes similares
+- **Question Answering**: Sistemas de preguntas y respuestas
 
 ## 📄 Licencia
 
-MIT © QueryBuilder Team
+MPL-2.0
 
----
+## 🤝 Contribuciones
 
-**¿Necesitas ayuda?** Abre un issue en el repositorio o consulta la documentación completa.
+Las contribuciones son bienvenidas. Por favor, abre un issue o pull request en el repositorio.
+
+## 🔗 Enlaces
+
+- [@querybuilder/core](../core/README.md)
+- [@querybuilder/mongodb](../mongodb/README.md)
+- [@querybuilder/mysql](../mysql/README.md)
+- [@querybuilder/postgresql](../postgresql/README.md)
+- [@querybuilder/sqlite](../sqlite/README.md)
+- [@querybuilder/redis](../redis/README.md)
+- [@querybuilder/cassandra](../cassandra/README.md)
+- [ChromaDB Documentation](https://docs.trychroma.com/)
+- [ChromaDB GitHub](https://github.com/chroma-core/chroma)

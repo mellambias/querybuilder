@@ -1,1179 +1,698 @@
-# Redis Integration for QueryBuilder# @querybuilder/redis
+# @querybuilder/redis
 
+Adaptador Redis para QueryBuilder - Almacén de estructuras de datos en memoria de alto rendimiento.
 
+## 📦 Instalación
 
-Integración completa de Redis con QueryBuilder, proporcionando operaciones de cache, estructuras de datos en memoria, pub/sub y más.Un driver Redis profesional para QueryBuilder que proporciona soporte completo para operaciones de base de datos clave-valor, caché, pub/sub y más.
+```bash
+# Instalar el paquete Redis
+npm install @querybuilder/core @querybuilder/redis
 
-
-
-## 🚀 Características Principales## Instalación
-
-
-
-- **Cache de Alto Rendimiento**: Almacenamiento en memoria ultra-rápido```bash
-
-- **Estructuras de Datos Nativas**: Strings, Hashes, Lists, Sets, Sorted Setsnpm install @querybuilder/redis
-
-- **Pub/Sub en Tiempo Real**: Mensajería y eventos# También necesitas uno de estos clientes Redis:
-
-- **Transacciones Atómicas**: Operaciones ACIDnpm install redis     # Cliente oficial Redis
-
-- **Streams**: Procesamiento de eventos y logs# o
-
-- **TTL y Expiración**: Gestión automática de memorianpm install ioredis   # Cliente IORedis (recomendado para clustering)
-
-- **Pipeline y Clustering**: Operaciones masivas y escalabilidad```
-
-
-
-## 📦 Instalación## Características Principales
-
-
-
-```bash### 🚀 Soporte Multi-Cliente
-
-npm install @querybuilder/redis redis- **redis**: Cliente oficial Redis con soporte completo
-
-```- **ioredis**: Cliente avanzado con clustering automático
-
-- Auto-detección del cliente disponible
-
-## 🔧 Configuración
-
-### 📊 Estructuras de Datos Redis
-
-### Servidor Redis- **Strings**: SET, GET, INCR, DECR, APPEND
-
-- **Hashes**: HSET, HGET, HMSET, HMGET, HDEL
-
-```bash- **Lists**: LPUSH, RPUSH, LPOP, RPOP, LRANGE
-
-# Docker (recomendado)- **Sets**: SADD, SREM, SMEMBERS, SINTER, SUNION
-
-docker run -d -p 6379:6379 --name redis redis:alpine- **Sorted Sets**: ZADD, ZRANGE, ZREVRANGE, ZSCORE
-
-- **Streams**: XADD, XREAD, XGROUP, XACK
-
-# O instalación local- **Bitmaps**: SETBIT, GETBIT, BITCOUNT, BITOP
-
-# Ubuntu/Debian- **HyperLogLog**: PFADD, PFCOUNT, PFMERGE
-
-sudo apt install redis-server
-
-### 🔧 Características Avanzadas
-
-# macOS- **Transacciones**: MULTI, EXEC, DISCARD, WATCH
-
-brew install redis- **Pipelines**: Ejecución en lote optimizada
-
-```- **Pub/Sub**: PUBLISH, SUBSCRIBE, PSUBSCRIBE
-
-- **Clustering**: Soporte automático para Redis Cluster
-
-### Cliente Básico- **Scripting**: Ejecución de scripts Lua
-
-- **Geoespacial**: GEOADD, GEORADIUS, GEODIST
-
-```javascript
-
-import Redis from '@querybuilder/redis';## Uso Básico
-
-
-
-const redis = new Redis({```javascript
-
-  host: 'localhost',import { Redis } from '@querybuilder/redis';
-
-  port: 6379,
-
-  password: 'your-password', // opcional// Conexión simple
-
-  database: 0,const redis = new Redis({
-
-  keyPrefix: 'myapp:', // opcional  host: 'localhost',
-
-});  port: 6379,
-
-```  database: 0
-
-});
-
-## 🎯 Casos de Uso Principales
-
-// Conectar
-
-### 1. Cache de Aplicaciónawait redis.connect();
-
-
-
-```javascript// Operaciones básicas
-
-// Cache básico con TTLawait redis.set('user:1', 'John Doe');
-
-const result = redis.set('user:123', JSON.stringify(userData), { EX: 3600 });const user = await redis.get('user:1');
-
-console.log(result.command); // client.set('user:123', '...', { EX: 3600 })console.log(user); // "John Doe"
-
-
-
-// Obtener desde cache// Operaciones con expiración
-
-const cached = redis.get('user:123');await redis.setex('session:abc123', 3600, 'user_data');
-
-
-
-// Cache múltiple// Cerrar conexión
-
-const cacheMultiple = redis.mset({await redis.disconnect();
-
-  'user:123': JSON.stringify(user1),```
-
-  'user:456': JSON.stringify(user2),
-
-  'user:789': JSON.stringify(user3)## Ejemplos de Uso
-
-});
-
-```### 1. Sistema de Caché
-
-
-
-### 2. Sesiones de Usuario```javascript
-
-import { Redis } from '@querybuilder/redis';
-
-```javascript
-
-// Almacenar sesión como hashclass CacheService {
-
-const session = redis.hset('session:abc123', 'userId', '123');  constructor() {
-
-const userInfo = redis.hset('session:abc123', 'username', 'john_doe');    this.redis = new Redis({
-
-      host: process.env.REDIS_HOST || 'localhost',
-
-// Obtener datos de sesión      port: process.env.REDIS_PORT || 6379
-
-const sessionData = redis.hgetall('session:abc123');    });
-
-  }
-
-// TTL para sesión
-
-const expire = redis.expire('session:abc123', 1800); // 30 minutos  async get(key) {
-
-```    try {
-
-      const cached = await this.redis.get(`cache:${key}`);
-
-### 3. Colas de Trabajos      return cached ? JSON.parse(cached) : null;
-
-    } catch (error) {
-
-```javascript      console.error('Cache get error:', error);
-
-// Añadir trabajo a cola      return null;
-
-const addJob = redis.lpush('jobs:queue', JSON.stringify({    }
-
-  type: 'email',  }
-
-  userId: '123',
-
-  template: 'welcome'  async set(key, data, ttl = 3600) {
-
-}));    try {
-
-      const value = JSON.stringify(data);
-
-// Procesar trabajos (FIFO)      await this.redis.setex(`cache:${key}`, ttl, value);
-
-const processJob = redis.rpop('jobs:queue');      return true;
-
-    } catch (error) {
-
-// Cola de prioridad con sorted sets      console.error('Cache set error:', error);
-
-const priorityJob = redis.zadd('jobs:priority', 10, JSON.stringify(jobData));      return false;
-
-```    }
-
-  }
-
-### 4. Contadores y Estadísticas
-
-  async invalidate(pattern) {
-
-```javascript    const keys = await this.redis.keys(`cache:${pattern}`);
-
-// Incrementar contador    if (keys.length > 0) {
-
-const pageViews = redis.incr('stats:page_views');      await this.redis.del(...keys);
-
-const dailyVisits = redis.incr(`stats:visits:${today}`);    }
-
-  }
-
-// Contadores con incremento específico}
-
-const score = redis.incr('user:123:score', 5);
-
-// Uso
-
-// Estadísticas por categoríaconst cache = new CacheService();
-
-const categoryStats = redis.hincrby('stats:categories', 'technology', 1);await cache.connect();
-
+# Instalar cliente Redis (elige uno)
+npm install redis      # Cliente oficial (recomendado)
+# O
+npm install ioredis    # Cliente con clustering avanzado
 ```
 
-// Cachear datos de usuario
+## 🚀 Uso Básico
 
-### 5. Leaderboards y Rankingsawait cache.set('user:123', { name: 'John', email: 'john@example.com' }, 1800);
+```javascript
+import { Redis } from '@querybuilder/redis';
+import { createClient } from 'redis';
 
+// Conectar a Redis
+const client = createClient({
+  socket: {
+    host: 'localhost',
+    port: 6379
+  }
+});
 
+await client.connect();
 
-```javascript// Recuperar del caché
+// Operaciones básicas
+await client.set('user:1000', 'John Doe');
+const name = await client.get('user:1000');
+console.log(name); // 'John Doe'
 
-// Añadir puntuaciónconst user = await cache.get('user:123');
+// Con expiración (TTL de 1 hora)
+await client.set('session:abc', '{"userId":1000}', { EX: 3600 });
 
-const addScore = redis.zadd('game:leaderboard', 1500, 'player1');```
+await client.disconnect();
+```
 
+## 🔧 Estructuras de Datos
 
+### ✅ Strings (Cadenas)
+```javascript
+// SET/GET básico
+await client.set('key', 'value');
+const value = await client.get('key');
 
-// Top 10 jugadores### 2. Rate Limiting
+// Con opciones
+await client.set('key', 'value', {
+  EX: 3600,      // Expira en 3600 segundos
+  NX: true       // Solo si NO existe (SET IF NOT EXISTS)
+});
 
-const topPlayers = redis.zrange('game:leaderboard', 0, 9, { 
+// SETEX - Set con expiración
+await client.setEx('session:123', 3600, '{"userId":1}');
 
-  withScores: true, ```javascript
+// SETNX - Set si no existe
+const wasSet = await client.setNX('lock:resource', 'locked');
 
-  REV: true class RateLimiter {
+// MSET/MGET - Múltiples valores
+await client.mSet({
+  'key1': 'value1',
+  'key2': 'value2',
+  'key3': 'value3'
+});
 
-});  constructor(redis) {
+const values = await client.mGet(['key1', 'key2', 'key3']);
 
-    this.redis = redis;
+// APPEND - Agregar al final
+await client.append('message', ' world');
 
-// Posición de jugador  }
+// INCR/DECR - Incrementar/Decrementar
+await client.incr('counter');
+await client.incrBy('counter', 10);
+await client.decr('counter');
+await client.decrBy('counter', 5);
 
-const playerRank = redis.zrank('game:leaderboard', 'player1');
+// STRLEN - Longitud de string
+const length = await client.strLen('message');
+```
 
-```  async checkLimit(identifier, maxRequests = 100, windowSeconds = 3600) {
+### ✅ Hashes (Objetos)
+```javascript
+// HSET - Set campo en hash
+await client.hSet('user:1000', 'name', 'John Doe');
 
-    const key = `rate_limit:${identifier}`;
-
-## 🛠️ API Completa    
-
-    // Usar pipeline para operaciones atómicas
-
-### Operaciones de String    const pipeline = this.redis.pipeline();
-
-    pipeline.incr(key);
-
-```javascript    pipeline.expire(key, windowSeconds);
-
-// SET - Establecer valor    
-
-redis.set(key, value, options)    const results = await pipeline.exec();
-
-redis.set('name', 'John', { EX: 3600 }) // con TTL    const currentCount = results[0][1];
-
-    
-
-// GET - Obtener valor    if (currentCount <= maxRequests) {
-
-redis.get(key)      return {
-
-        allowed: true,
-
-// MGET/MSET - Múltiples valores        remaining: maxRequests - currentCount,
-
-redis.mget(['key1', 'key2', 'key3'])        resetTime: Date.now() + (windowSeconds * 1000)
-
-redis.mset({ key1: 'value1', key2: 'value2' })      };
-
-    }
-
-// Operaciones numéricas    
-
-redis.incr(key, increment = 1)    const ttl = await this.redis.ttl(key);
-
-redis.decr(key, decrement = 1)    return {
-
-```      allowed: false,
-
-      remaining: 0,
-
-### Operaciones de Hash      resetTime: Date.now() + (ttl * 1000)
-
-    };
-
-```javascript  }
-
-// HSET - Establecer campo}
-
-redis.hset(key, field, value)```
-
-redis.hmset(key, { field1: 'value1', field2: 'value2' })
-
-### 3. Sistema de Sesiones
+// HSET múltiples campos
+await client.hSet('user:1000', {
+  name: 'John Doe',
+  email: 'john@example.com',
+  age: '30',
+  city: 'New York'
+});
 
 // HGET - Obtener campo
+const email = await client.hGet('user:1000', 'email');
 
-redis.hget(key, field)```javascript
+// HMGET - Obtener múltiples campos
+const [name, age] = await client.hmGet('user:1000', ['name', 'age']);
 
-redis.hmget(key, ['field1', 'field2'])class SessionManager {
+// HGETALL - Obtener todos los campos
+const user = await client.hGetAll('user:1000');
+console.log(user); // { name: 'John Doe', email: 'john@example.com', ... }
 
-redis.hgetall(key) // todos los campos  constructor(redis) {
+// HEXISTS - Verificar si existe campo
+const exists = await client.hExists('user:1000', 'email');
 
-    this.redis = redis;
+// HDEL - Eliminar campo
+await client.hDel('user:1000', 'age');
 
-// HDEL - Eliminar campo    this.sessionTTL = 24 * 60 * 60; // 24 horas
+// HKEYS - Obtener todas las claves
+const keys = await client.hKeys('user:1000');
 
-redis.hdel(key, ['field1', 'field2'])  }
+// HVALS - Obtener todos los valores
+const vals = await client.hVals('user:1000');
 
+// HLEN - Número de campos
+const fieldCount = await client.hLen('user:1000');
+
+// HINCRBY - Incrementar campo numérico
+await client.hIncrBy('user:1000', 'loginCount', 1);
 ```
 
-  async createSession(userId, sessionData) {
-
-### Operaciones de Lista    const sessionId = this.generateSessionId();
-
-    const sessionKey = `session:${sessionId}`;
-
-```javascript    
-
-// PUSH - Añadir elementos    const data = {
-
-redis.lpush(key, values) // al inicio      userId,
-
-redis.rpush(key, values) // al final      createdAt: Date.now(),
-
-      lastAccess: Date.now(),
-
-// POP - Obtener y eliminar      ...sessionData
-
-redis.lpop(key) // del inicio    };
-
-redis.rpop(key) // del final    
-
-    await this.redis.hmset(sessionKey, data);
-
-// RANGE - Obtener rango    await this.redis.expire(sessionKey, this.sessionTTL);
-
-redis.lrange(key, start, stop)    
-
-redis.llen(key) // longitud    return sessionId;
-
-```  }
-
-
-
-### Operaciones de Set  async getSession(sessionId) {
-
-    const sessionKey = `session:${sessionId}`;
-
-```javascript    const sessionData = await this.redis.hgetall(sessionKey);
-
-// SADD - Añadir miembros    
-
-redis.sadd(key, members)    if (Object.keys(sessionData).length === 0) {
-
-      return null;
-
-// Operaciones de set    }
-
-redis.smembers(key) // todos los miembros    
-
-redis.sismember(key, member) // verificar existencia    // Actualizar último acceso
-
-redis.srem(key, members) // eliminar miembros    await this.redis.hset(sessionKey, 'lastAccess', Date.now());
-
-    await this.redis.expire(sessionKey, this.sessionTTL);
-
-// Operaciones entre sets    
-
-redis.sinter([key1, key2]) // intersección    return sessionData;
-
-redis.sunion([key1, key2]) // unión  }
-
-```
-
-  async destroySession(sessionId) {
-
-### Operaciones de Sorted Set    const sessionKey = `session:${sessionId}`;
-
-    await this.redis.del(sessionKey);
-
-```javascript  }
-
-// ZADD - Añadir con puntuación
-
-redis.zadd(key, score, member)  generateSessionId() {
-
-    return require('crypto').randomBytes(32).toString('hex');
-
-// Rangos  }
-
-redis.zrange(key, start, stop, options)}
-
-redis.zrangebyscore(key, min, max, options)```
-
-
-
-// Puntuaciones### 4. Sistema de Colas (Job Queue)
-
-redis.zscore(key, member)
-
-redis.zrank(key, member) // posición```javascript
-
-```class JobQueue {
-
-  constructor(redis, queueName = 'default') {
-
-### Gestión de Claves    this.redis = redis;
-
-    this.queueName = queueName;
-
-```javascript    this.processingKey = `processing:${queueName}`;
-
-// Operaciones básicas  }
-
-redis.del(keys) // eliminar
-
-redis.exists(key) // verificar existencia  async addJob(jobData, priority = 0) {
-
-redis.type(key) // tipo de dato    const job = {
-
-      id: this.generateJobId(),
-
-// TTL y expiración      data: jobData,
-
-redis.expire(key, seconds)      createdAt: Date.now(),
-
-redis.ttl(key) // tiempo restante      priority
-
-    };
-
-// Búsqueda    
-
-redis.keys(pattern) // buscar por patrón    // Usar sorted set para prioridad
-
-```    await this.redis.zadd(
-
-      `queue:${this.queueName}`, 
-
-### Pub/Sub      priority, 
-
-      JSON.stringify(job)
-
-```javascript    );
-
-// Publicar mensaje    
-
-redis.publish(channel, message)    return job.id;
-
-  }
-
-// Suscribirse
-
-redis.subscribe(channels, callback)  async processJob() {
-
-redis.unsubscribe(channels)    // Mover job de cola principal a cola de procesamiento
-
-    const result = await this.redis.zpopmax(`queue:${this.queueName}`);
-
-// Pattern subscription    
-
-redis.psubscribe(patterns, callback)    if (!result || result.length === 0) {
-
-```      return null; // No hay jobs
-
-    }
-
-### Transacciones    
-
-    const jobData = JSON.parse(result[0]);
-
-```javascript    
-
-// Transacción básica    // Agregar a cola de procesamiento
-
-const multi = redis.multi()    await this.redis.hset(
-
-// ... añadir comandos      this.processingKey, 
-
-const results = redis.exec()      jobData.id, 
-
-      JSON.stringify(jobData)
-
-// Con WATCH    );
-
-redis.watch(keys)    
-
-// ... transacción    return jobData;
-
-redis.unwatch()  }
-
-```
-
-  async completeJob(jobId) {
-
-## 🔄 Compatibilidad QueryBuilder    await this.redis.hdel(this.processingKey, jobId);
-
-  }
-
-Redis mantiene compatibilidad con la API de QueryBuilder:
-
-  async failJob(jobId, error) {
-
-```javascript    const jobData = await this.redis.hget(this.processingKey, jobId);
-
-// SELECT equivalente    if (jobData) {
-
-redis.select({ key: 'user:123' }) // → redis.get('user:123')      const job = JSON.parse(jobData);
-
-redis.select({ pattern: 'user:*' }) // → redis.keys('user:*')      job.error = error;
-
-      job.failedAt = Date.now();
-
-// INSERT equivalente      
-
-redis.insert({ key: 'user:123', value: 'data' }) // → redis.set()      // Mover a cola de fallidos
-
-      await this.redis.hset(
-
-// UPDATE equivalente          `failed:${this.queueName}`, 
-
-redis.update({ key: 'user:123', value: 'newdata' }) // → redis.set(..., {XX: true})        jobId, 
-
-        JSON.stringify(job)
-
-// DELETE equivalente      );
-
-redis.delete({ key: 'user:123' }) // → redis.del(['user:123'])      await this.redis.hdel(this.processingKey, jobId);
-
-```    }
-
-  }
-
-## 📊 Ejemplos Avanzados
-
-  generateJobId() {
-
-### Cache Inteligente    return `job_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-  }
-
-```javascript}
-
-class SmartCache {```
-
-  constructor(redis) {
-
-    this.redis = redis;### 5. Leaderboards / Rankings
-
-  }
-
+### ✅ Lists (Listas)
 ```javascript
+// LPUSH/RPUSH - Agregar al inicio/final
+await client.lPush('queue:tasks', 'task1');
+await client.rPush('queue:tasks', 'task2');
 
-  async get(key, fallbackFn, ttl = 3600) {class Leaderboard {
+// Agregar múltiples elementos
+await client.lPush('queue:tasks', ['task3', 'task4', 'task5']);
 
-    // Intentar obtener de cache  constructor(redis, name) {
+// LPOP/RPOP - Extraer del inicio/final
+const task = await client.lPop('queue:tasks');
+const lastTask = await client.rPop('queue:tasks');
 
-    let cached = await this.redis.get(key);    this.redis = redis;
+// LRANGE - Obtener rango de elementos
+const allTasks = await client.lRange('queue:tasks', 0, -1); // Todos
+const first10 = await client.lRange('queue:tasks', 0, 9);   // Primeros 10
 
-        this.key = `leaderboard:${name}`;
+// LLEN - Longitud de la lista
+const length = await client.lLen('queue:tasks');
 
-    if (!cached) {  }
+// LINDEX - Obtener elemento por índice
+const element = await client.lIndex('queue:tasks', 0);
 
-      // Si no existe, ejecutar fallback y cachear
+// LSET - Establecer valor por índice
+await client.lSet('queue:tasks', 0, 'updated-task');
 
-      const data = await fallbackFn();  async addScore(userId, score) {
+// LREM - Eliminar elementos
+await client.lRem('queue:tasks', 0, 'task-to-remove'); // Eliminar todas las ocurrencias
 
-      await this.redis.set(key, JSON.stringify(data), { EX: ttl });    await this.redis.zadd(this.key, score, userId);
+// LTRIM - Recortar lista al rango
+await client.lTrim('queue:tasks', 0, 99); // Mantener solo primeros 100
 
-      return data;  }
+// BLPOP/BRPOP - Pop bloqueante (espera hasta que haya elemento)
+const result = await client.blPop('queue:tasks', 5); // Espera máximo 5 segundos
+```
 
-    }
+### ✅ Sets (Conjuntos)
+```javascript
+// SADD - Agregar miembros al set
+await client.sAdd('tags:article:1', 'javascript');
+await client.sAdd('tags:article:1', ['nodejs', 'redis', 'database']);
 
-      async getTopPlayers(count = 10) {
+// SMEMBERS - Obtener todos los miembros
+const tags = await client.sMembers('tags:article:1');
 
-    return JSON.parse(cached);    const results = await this.redis.zrevrange(
+// SISMEMBER - Verificar si es miembro
+const isMember = await client.sIsMember('tags:article:1', 'javascript');
 
-  }      this.key, 
+// SCARD - Número de miembros
+const count = await client.sCard('tags:article:1');
 
-}      0, 
+// SREM - Eliminar miembros
+await client.sRem('tags:article:1', 'javascript');
 
-      count - 1, 
+// SPOP - Extraer miembro aleatorio
+const randomTag = await client.sPop('tags:article:1');
 
-// Uso      'WITHSCORES'
+// SRANDMEMBER - Obtener miembro aleatorio sin eliminar
+const random = await client.sRandMember('tags:article:1');
 
-const cache = new SmartCache(redis);    );
+// Operaciones de conjuntos
+await client.sAdd('set1', ['a', 'b', 'c']);
+await client.sAdd('set2', ['b', 'c', 'd']);
 
-const user = await cache.get('user:123', () => database.getUser(123));    
+// SINTER - Intersección
+const intersection = await client.sInter(['set1', 'set2']); // ['b', 'c']
 
-```    const players = [];
+// SUNION - Unión
+const union = await client.sUnion(['set1', 'set2']); // ['a', 'b', 'c', 'd']
 
-    for (let i = 0; i < results.length; i += 2) {
+// SDIFF - Diferencia
+const diff = await client.sDiff(['set1', 'set2']); // ['a']
+```
 
-### Rate Limiting      players.push({
+### ✅ Sorted Sets (Conjuntos Ordenados)
+```javascript
+// ZADD - Agregar miembros con score
+await client.zAdd('leaderboard', { score: 100, value: 'player1' });
+await client.zAdd('leaderboard', [
+  { score: 200, value: 'player2' },
+  { score: 150, value: 'player3' },
+  { score: 175, value: 'player4' }
+]);
 
-        userId: results[i],
+// ZRANGE - Obtener rango por índice
+const topPlayers = await client.zRange('leaderboard', 0, 9); // Top 10
 
-```javascript        score: parseInt(results[i + 1]),
+// ZRANGE con scores
+const withScores = await client.zRange('leaderboard', 0, 9, { 
+  REV: true,      // Orden inverso (mayor a menor)
+  WITHSCORES: true 
+});
 
-class RateLimiter {        rank: Math.floor(i / 2) + 1
+// ZRANGEBYSCORE - Obtener por rango de score
+const midRange = await client.zRangeByScore('leaderboard', 100, 200);
 
-  constructor(redis) {      });
+// ZRANK - Obtener posición (rank)
+const rank = await client.zRank('leaderboard', 'player1');
 
-    this.redis = redis;    }
+// ZSCORE - Obtener score
+const score = await client.zScore('leaderboard', 'player1');
 
-  }    
+// ZINCRBY - Incrementar score
+await client.zIncrBy('leaderboard', 10, 'player1');
 
-    return players;
+// ZCARD - Número de miembros
+const count = await client.zCard('leaderboard');
 
-  async checkLimit(userId, limit = 100, window = 60) {  }
+// ZREM - Eliminar miembros
+await client.zRem('leaderboard', 'player1');
 
-    const key = `rate_limit:${userId}:${Math.floor(Date.now() / (window * 1000))}`;
+// ZCOUNT - Contar en rango de score
+const inRange = await client.zCount('leaderboard', 100, 200);
 
-      async getUserRank(userId) {
+// ZPOPMIN/ZPOPMAX - Extraer menor/mayor
+const min = await client.zPopMin('leaderboard');
+const max = await client.zPopMax('leaderboard');
+```
 
-    const current = await this.redis.incr(key);    const rank = await this.redis.zrevrank(this.key, userId);
+## 🎯 Características Avanzadas
 
-    await this.redis.expire(key, window);    const score = await this.redis.zscore(this.key, userId);
+### ✅ Pub/Sub (Publicación/Suscripción)
+```javascript
+import { createClient } from 'redis';
 
-        
+// Crear cliente suscriptor
+const subscriber = createClient();
+await subscriber.connect();
 
-    return {    return {
+// Suscribirse a canales
+await subscriber.subscribe('notifications', (message) => {
+  console.log('Notificación:', message);
+});
 
-      allowed: current <= limit,      userId,
+await subscriber.subscribe('alerts', (message) => {
+  console.log('Alerta:', message);
+});
 
-      remaining: Math.max(0, limit - current),      rank: rank !== null ? rank + 1 : null,
+// Suscripción con patrón
+await subscriber.pSubscribe('user:*', (message, channel) => {
+  console.log(`Mensaje en ${channel}:`, message);
+});
 
-      reset: Date.now() + (window * 1000)      score: score ? parseInt(score) : 0
+// Crear cliente publicador
+const publisher = createClient();
+await publisher.connect();
 
-    };    };
+// Publicar mensajes
+await publisher.publish('notifications', 'Nuevo mensaje');
+await publisher.publish('user:1000', 'Login exitoso');
 
-  }  }
+// Obtener número de suscriptores
+const count = await publisher.pubSubNumSub('notifications');
+```
 
+### ✅ Transacciones (MULTI/EXEC)
+```javascript
+// Transacción básica
+const results = await client
+  .multi()
+  .set('key1', 'value1')
+  .set('key2', 'value2')
+  .incr('counter')
+  .exec();
+
+console.log('Resultados:', results);
+
+// Transferencia entre cuentas (atómica)
+await client
+  .multi()
+  .decrBy('account:1', 100)
+  .incrBy('account:2', 100)
+  .exec();
+
+// Con WATCH (optimistic locking)
+await client.watch('balance');
+const balance = parseInt(await client.get('balance'));
+
+if (balance >= 100) {
+  await client
+    .multi()
+    .decrBy('balance', 100)
+    .exec();
+} else {
+  await client.unwatch();
+}
+```
+
+### ✅ Pipeline (Operaciones en Lote)
+```javascript
+// Pipeline reduce llamadas de red
+const pipeline = client.multi();
+
+for (let i = 0; i < 1000; i++) {
+  pipeline.set(`key:${i}`, `value${i}`);
 }
 
-```  async getUsersAroundRank(userId, range = 5) {
-
-    const userRank = await this.redis.zrevrank(this.key, userId);
-
-### Real-time Analytics    if (userRank === null) return [];
-
-    
-
-```javascript    const start = Math.max(0, userRank - range);
-
-class Analytics {    const end = userRank + range;
-
-  constructor(redis) {    
-
-    this.redis = redis;    return await this.getPlayersByRange(start, end);
-
-  }  }
-
-
-
-  async trackEvent(event, userId, metadata = {}) {  async getPlayersByRange(start, end) {
-
-    const today = new Date().toISOString().split('T')[0];    const results = await this.redis.zrevrange(
-
-    const hour = new Date().getHours();      this.key, 
-
-          start, 
-
-    // Contadores globales      end, 
-
-    await this.redis.incr(`analytics:${event}:${today}`);      'WITHSCORES'
-
-    await this.redis.incr(`analytics:${event}:${today}:${hour}`);    );
-
-        
-
-    // Por usuario    const players = [];
-
-    await this.redis.hincrby(`analytics:users:${today}`, userId, 1);    for (let i = 0; i < results.length; i += 2) {
-
-          players.push({
-
-    // Eventos únicos        userId: results[i],
-
-    await this.redis.sadd(`analytics:unique:${event}:${today}`, userId);        score: parseInt(results[i + 1]),
-
-            rank: start + Math.floor(i / 2) + 1
-
-    // Metadata      });
-
-    if (Object.keys(metadata).length > 0) {    }
-
-      await this.redis.lpush(`analytics:events:${event}`, JSON.stringify({    
-
-        userId,    return players;
-
-        timestamp: Date.now(),  }
-
-        ...metadata}
-
-      }));```
-
-    }
-
-  }### 6. Pub/Sub Real-time
-
-
-
-  async getDailyStats(date) {```javascript
-
-    const events = await this.redis.keys(`analytics:*:${date}`);class PubSubManager {
-
-    const stats = {};  constructor(redis) {
-
-        this.redis = redis;
-
-    for (const key of events) {    this.subscribers = new Map();
-
-      const count = await this.redis.get(key);  }
-
-      stats[key] = parseInt(count);
-
-    }  async publish(channel, message) {
-
-        const data = {
-
-    return stats;      timestamp: Date.now(),
-
-  }      message: typeof message === 'object' ? JSON.stringify(message) : message
-
-}    };
-
-```    
-
-    return await this.redis.publish(channel, JSON.stringify(data));
-
-## 🚦 Mejores Prácticas  }
-
-
-
-### 1. Gestión de Memoria  async subscribe(channel, callback) {
-
-    if (!this.subscribers.has(channel)) {
-
-```javascript      this.subscribers.set(channel, new Set());
-
-// Usar TTL para datos temporales      
-
-redis.set('session:123', data, { EX: 1800 }); // 30 minutos      await this.redis.subscribe(channel, (receivedChannel, message) => {
-
-        if (receivedChannel === channel) {
-
-// Limpiar claves old data          const data = JSON.parse(message);
-
-redis.eval(`          const callbacks = this.subscribers.get(channel);
-
-  local keys = redis.call('KEYS', ARGV[1])          
-
-  local deleted = 0          if (callbacks) {
-
-  for i=1,#keys do            callbacks.forEach(cb => cb(data));
-
-    redis.call('DEL', keys[i])          }
-
-    deleted = deleted + 1        }
-
-  end      });
-
-  return deleted    }
-
-`, [], ['old_data:*']);    
-
-```    this.subscribers.get(channel).add(callback);
-
+const results = await pipeline.exec();
+console.log(`Insertados ${results.length} elementos`);
+
+// Pipeline de lectura
+const keys = Array.from({ length: 100 }, (_, i) => `key:${i}`);
+const readPipeline = client.multi();
+
+keys.forEach(key => readPipeline.get(key));
+const values = await readPipeline.exec();
+```
+
+### ✅ Streams (Procesamiento de Eventos)
+```javascript
+// XADD - Agregar evento al stream
+await client.xAdd('events:user', '*', {
+  event: 'login',
+  userId: '1000',
+  ip: '192.168.1.1',
+  timestamp: Date.now().toString()
+});
+
+// XREAD - Leer eventos
+const events = await client.xRead(
+  { key: 'events:user', id: '0' },
+  { COUNT: 10, BLOCK: 5000 }
+);
+
+// XRANGE - Obtener rango de eventos
+const range = await client.xRange('events:user', '-', '+', { COUNT: 100 });
+
+// XLEN - Longitud del stream
+const length = await client.xLen('events:user');
+
+// Consumer Groups
+await client.xGroupCreate('events:user', 'processors', '0', { MKSTREAM: true });
+
+// XREADGROUP - Leer como grupo
+const messages = await client.xReadGroup('processors', 'consumer1', {
+  key: 'events:user',
+  id: '>'
+});
+
+// XACK - Confirmar procesamiento
+await client.xAck('events:user', 'processors', messageId);
+```
+
+### ✅ Expiración y TTL
+```javascript
+// EXPIRE - Establecer expiración en segundos
+await client.set('key', 'value');
+await client.expire('key', 3600); // 1 hora
+
+// EXPIREAT - Expirar en timestamp
+const timestamp = Math.floor(Date.now() / 1000) + 3600;
+await client.expireAt('key', timestamp);
+
+// TTL - Tiempo restante
+const ttl = await client.ttl('key'); // Segundos restantes
+
+// PERSIST - Eliminar expiración
+await client.persist('key');
+
+// PEXPIRE - Expiración en milisegundos
+await client.pExpire('key', 60000); // 60 segundos
+
+// PTTL - TTL en milisegundos
+const pttl = await client.pTtl('key');
+```
+
+### ✅ Operaciones de Claves
+```javascript
+// EXISTS - Verificar existencia
+const exists = await client.exists('key');
+
+// DEL - Eliminar claves
+await client.del('key1');
+await client.del(['key2', 'key3', 'key4']);
+
+// KEYS - Buscar claves (no usar en producción)
+const keys = await client.keys('user:*');
+
+// SCAN - Buscar claves (preferido)
+let cursor = 0;
+const allKeys = [];
+do {
+  const result = await client.scan(cursor, { MATCH: 'user:*', COUNT: 100 });
+  cursor = result.cursor;
+  allKeys.push(...result.keys);
+} while (cursor !== 0);
+
+// RENAME - Renombrar clave
+await client.rename('oldKey', 'newKey');
+
+// RENAMENX - Renombrar solo si no existe
+await client.renameNX('oldKey', 'newKey');
+
+// TYPE - Obtener tipo de dato
+const type = await client.type('key'); // 'string', 'hash', 'list', etc.
+
+// DUMP/RESTORE - Serializar/Deserializar
+const serialized = await client.dump('key');
+await client.restore('newKey', 0, serialized);
+```
+
+## 📖 Patrones Comunes
+
+### Caché Cache-Aside
+```javascript
+async function getUserById(userId) {
+  const cacheKey = `user:${userId}`;
+  
+  // 1. Intentar obtener de caché
+  const cached = await client.get(cacheKey);
+  if (cached) {
+    return JSON.parse(cached);
   }
+  
+  // 2. Obtener de base de datos
+  const user = await db.users.findById(userId);
+  
+  // 3. Guardar en caché por 1 hora
+  await client.set(cacheKey, JSON.stringify(user), { EX: 3600 });
+  
+  return user;
+}
+```
 
-### 2. Operaciones Atómicas
+### Rate Limiting
+```javascript
+async function checkRateLimit(userId, maxRequests = 100, windowSeconds = 3600) {
+  const key = `rate_limit:${userId}`;
+  const current = await client.incr(key);
+  
+  if (current === 1) {
+    await client.expire(key, windowSeconds);
+  }
+  
+  return current <= maxRequests;
+}
 
-  async unsubscribe(channel, callback) {
+// Uso
+if (await checkRateLimit('user:1000')) {
+  // Permitir request
+} else {
+  // Denegar - límite excedido
+}
+```
 
-```javascript    const callbacks = this.subscribers.get(channel);
+### Distributed Lock
+```javascript
+async function acquireLock(resource, ttl = 10000) {
+  const lockKey = `lock:${resource}`;
+  const lockValue = crypto.randomUUID();
+  
+  const acquired = await client.set(lockKey, lockValue, {
+    NX: true,
+    PX: ttl
+  });
+  
+  return acquired ? lockValue : null;
+}
 
-// Usar transacciones para operaciones relacionadas    if (callbacks) {
+async function releaseLock(resource, lockValue) {
+  const lockKey = `lock:${resource}`;
+  
+  // Usar Lua script para verificar y eliminar atómicamente
+  const script = `
+    if redis.call("get", KEYS[1]) == ARGV[1] then
+      return redis.call("del", KEYS[1])
+    else
+      return 0
+    end
+  `;
+  
+  return await client.eval(script, {
+    keys: [lockKey],
+    arguments: [lockValue]
+  });
+}
+```
 
-const multi = redis.multi();      callbacks.delete(callback);
+### Session Store
+```javascript
+class RedisSessionStore {
+  constructor(client, ttl = 3600) {
+    this.client = client;
+    this.ttl = ttl;
+  }
+  
+  async set(sessionId, data) {
+    const key = `session:${sessionId}`;
+    await this.client.set(key, JSON.stringify(data), { EX: this.ttl });
+  }
+  
+  async get(sessionId) {
+    const key = `session:${sessionId}`;
+    const data = await this.client.get(key);
+    return data ? JSON.parse(data) : null;
+  }
+  
+  async destroy(sessionId) {
+    const key = `session:${sessionId}`;
+    await this.client.del(key);
+  }
+  
+  async touch(sessionId) {
+    const key = `session:${sessionId}`;
+    await this.client.expire(key, this.ttl);
+  }
+}
+```
 
-multi.hincrby('user:123', 'balance', -100);      
+### Leaderboard
+```javascript
+class Leaderboard {
+  constructor(client, key) {
+    this.client = client;
+    this.key = key;
+  }
+  
+  async addScore(player, score) {
+    await this.client.zAdd(this.key, { score, value: player });
+  }
+  
+  async getTopPlayers(count = 10) {
+    return await this.client.zRange(this.key, 0, count - 1, {
+      REV: true,
+      WITHSCORES: true
+    });
+  }
+  
+  async getPlayerRank(player) {
+    return await this.client.zRevRank(this.key, player);
+  }
+  
+  async getPlayerScore(player) {
+    return await this.client.zScore(this.key, player);
+  }
+  
+  async getPlayersInRange(min, max) {
+    return await this.client.zRangeByScore(this.key, min, max, {
+      WITHSCORES: true
+    });
+  }
+}
+```
 
-multi.hincrby('user:456', 'balance', 100);      if (callbacks.size === 0) {
+## 🔌 Configuración Avanzada
 
-multi.lpush('transactions', JSON.stringify(transactionData));        await this.redis.unsubscribe(channel);
+### Cliente Redis Oficial
+```javascript
+import { createClient } from 'redis';
 
-const results = await multi.exec();        this.subscribers.delete(channel);
-
-```      }
-
+const client = createClient({
+  socket: {
+    host: 'localhost',
+    port: 6379,
+    reconnectStrategy: (retries) => {
+      if (retries > 10) {
+        return new Error('Demasiados reintentos');
+      }
+      return Math.min(retries * 50, 500);
     }
-
-### 3. Patrones de Claves  }
-
-
-
-```javascript  async patternSubscribe(pattern, callback) {
-
-// Estructura jerárquica clara    await this.redis.psubscribe(pattern, (pattern, channel, message) => {
-
-const patterns = {      const data = JSON.parse(message);
-
-  user: (id) => `user:${id}`,      callback(channel, data);
-
-  session: (id) => `session:${id}`,    });
-
-  cache: (type, id) => `cache:${type}:${id}`,  }
-
-  stats: (metric, date) => `stats:${metric}:${date}`}
-
-};
-
-```// Uso del Pub/Sub
-
-const pubsub = new PubSubManager(redis);
-
-### 4. Monitoring y Debugging
-
-// Suscribirse a notificaciones de usuario
-
-```javascriptawait pubsub.subscribe('user:notifications', (data) => {
-
-// Información del servidor  console.log('Nueva notificación:', data);
-
-const serverInfo = redis.info();});
-
-const memoryInfo = redis.info('memory');
-
-// Publicar notificación
-
-// Comandos de diagnósticoawait pubsub.publish('user:notifications', {
-
-const slowLog = redis.eval('return redis.call("SLOWLOG", "GET", 10)');  type: 'message',
-
-const clientList = redis.eval('return redis.call("CLIENT", "LIST")');  userId: 123,
-
-```  content: 'Tienes un nuevo mensaje'
-
+  },
+  password: 'mi-password',
+  database: 0,
+  name: 'mi-app',
+  readonly: false
 });
 
-## 🧪 Testing```
+client.on('error', (err) => console.error('Redis Error:', err));
+client.on('connect', () => console.log('Redis Conectado'));
+client.on('reconnecting', () => console.log('Redis Reconectando...'));
 
+await client.connect();
+```
 
+### IORedis (Clustering)
+```javascript
+import Redis from 'ioredis';
 
-```javascript## Configuración de Clustering
-
-import { describe, test, expect } from 'vitest';
-
-import Redis from '@querybuilder/redis';```javascript
-
-import { Redis } from '@querybuilder/redis';
-
-describe('Redis Integration', () => {
-
-  test('should perform basic operations', () => {// Configuración para Redis Cluster
-
-    const redis = new Redis();const redis = new Redis({
-
-      cluster: true,
-
-    const setCmd = redis.set('test', 'value');  nodes: [
-
-    expect(setCmd.command).toBe("client.set('test', 'value')");    { host: '127.0.0.1', port: 7000 },
-
-        { host: '127.0.0.1', port: 7001 },
-
-    const getCmd = redis.get('test');    { host: '127.0.0.1', port: 7002 }
-
-    expect(getCmd.command).toBe("client.get('test')");  ],
-
-  });  redisOptions: {
-
-});    password: 'your-password'
-
-```  }
-
+const client = new Redis.Cluster([
+  { host: 'localhost', port: 7000 },
+  { host: 'localhost', port: 7001 },
+  { host: 'localhost', port: 7002 }
+], {
+  redisOptions: {
+    password: 'mi-password'
+  },
+  clusterRetryStrategy: (times) => {
+    return Math.min(100 * times, 2000);
+  }
 });
 
-## 📈 Performance Tips```
+// Sentinel para alta disponibilidad
+const sentinelClient = new Redis({
+  sentinels: [
+    { host: 'localhost', port: 26379 },
+    { host: 'localhost', port: 26380 }
+  ],
+  name: 'mymaster'
+});
+```
 
+## 🧪 Testing
 
+```javascript
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { createClient } from 'redis';
 
-1. **Pipeline Operations**: Agrupa múltiples comandos## Scripts Lua
+test('Redis operations', async () => {
+  const client = createClient();
+  await client.connect();
+  
+  try {
+    // Test SET/GET
+    await client.set('test:key', 'test-value');
+    const value = await client.get('test:key');
+    assert.equal(value, 'test-value');
+    
+    // Test HASH
+    await client.hSet('test:hash', { field1: 'value1' });
+    const hash = await client.hGetAll('test:hash');
+    assert.deepEqual(hash, { field1: 'value1' });
+    
+    // Cleanup
+    await client.del(['test:key', 'test:hash']);
+  } finally {
+    await client.disconnect();
+  }
+});
+```
 
-2. **Use Appropriate Data Types**: Elige la estructura correcta
+## ⚡ Características Redis
 
-3. **Set TTL**: Evita memory leaks```javascript
+- **En memoria**: Almacenamiento ultra-rápido con persistencia opcional
+- **Estructuras ricas**: Strings, Hashes, Lists, Sets, Sorted Sets, Streams
+- **Pub/Sub**: Mensajería en tiempo real
+- **Transacciones**: Operaciones atómicas con MULTI/EXEC
+- **Clustering**: Escalabilidad horizontal
+- **Replicación**: Alta disponibilidad con Sentinel
+- **Persistencia**: RDB snapshots y AOF logs
+- **Lua scripting**: Operaciones complejas atómicas
 
-4. **Monitor Memory**: Usa `INFO memory`// Contador atómico con límite
+## 📄 Casos de Uso
 
-5. **Connection Pooling**: Para aplicaciones con alta concurrenciaconst atomicCounterScript = `
-
-  local key = KEYS[1]
-
-## 🔗 Recursos  local limit = tonumber(ARGV[1])
-
-  local current = redis.call('GET', key)
-
-- [Redis Documentation](https://redis.io/documentation)  
-
-- [Redis Commands Reference](https://redis.io/commands)  if current == false then
-
-- [QueryBuilder Core](../core/README.md)    redis.call('SET', key, 1)
-
-- [Examples](./examples/)    return 1
-
-  end
-
-## 🤝 Contribución  
-
-  current = tonumber(current)
-
-1. Fork el repositorio  if current < limit then
-
-2. Crear branch: `git checkout -b feature/redis-enhancement`    return redis.call('INCR', key)
-
-3. Commit: `git commit -am 'Add Redis feature'`  else
-
-4. Push: `git push origin feature/redis-enhancement`    return -1
-
-5. Pull Request  end
-
-`;
+- **Caché**: Reducir carga en base de datos
+- **Session Store**: Almacenar sesiones de usuario
+- **Rate Limiting**: Controlar frecuencia de requests
+- **Leaderboards**: Rankings en tiempo real
+- **Real-time Analytics**: Contadores y métricas
+- **Message Queue**: Colas de trabajo con Lists
+- **Pub/Sub**: Chat, notificaciones en tiempo real
+- **Geospatial**: Búsquedas por ubicación
 
 ## 📄 Licencia
 
-const result = await redis.eval(
+MPL-2.0
 
-MIT © QueryBuilder Team  atomicCounterScript, 
+## 🤝 Contribuciones
 
-  1, 
+Las contribuciones son bienvenidas. Por favor, abre un issue o pull request en el repositorio.
 
----  'counter:api_calls', 
+## 🔗 Enlaces
 
-  1000
-
-**Redis** - La base de datos en memoria más popular del mundo, ahora integrada perfectamente con QueryBuilder! 🚀);
-```
-
-## Transacciones
-
-```javascript
-// Transferencia atómica entre cuentas
-async function transferFunds(fromAccount, toAccount, amount) {
-  const multi = redis.multi();
-  
-  // Verificar balance
-  const balance = await redis.get(`balance:${fromAccount}`);
-  if (parseFloat(balance) < amount) {
-    throw new Error('Fondos insuficientes');
-  }
-  
-  // Realizar transferencia
-  multi.decrby(`balance:${fromAccount}`, amount);
-  multi.incrby(`balance:${toAccount}`, amount);
-  multi.zadd('transactions', Date.now(), `${fromAccount}:${toAccount}:${amount}`);
-  
-  const results = await multi.exec();
-  return results.every(result => result[0] === null); // Sin errores
-}
-```
-
-## Monitoreo y Estadísticas
-
-```javascript
-class RedisMonitor {
-  constructor(redis) {
-    this.redis = redis;
-  }
-
-  async getInfo() {
-    const info = await this.redis.info();
-    return this.parseInfo(info);
-  }
-
-  async getMemoryUsage() {
-    const info = await this.redis.info('memory');
-    const parsed = this.parseInfo(info);
-    
-    return {
-      used: parsed.used_memory_human,
-      peak: parsed.used_memory_peak_human,
-      percentage: parsed.used_memory_percentage || 'N/A'
-    };
-  }
-
-  async getConnectedClients() {
-    const info = await this.redis.info('clients');
-    const parsed = this.parseInfo(info);
-    return parseInt(parsed.connected_clients);
-  }
-
-  async getCommandStats() {
-    const info = await this.redis.info('commandstats');
-    const parsed = this.parseInfo(info);
-    
-    const stats = {};
-    Object.keys(parsed).forEach(key => {
-      if (key.startsWith('cmdstat_')) {
-        const command = key.replace('cmdstat_', '');
-        const match = parsed[key].match(/calls=(\d+),usec=(\d+)/);
-        if (match) {
-          stats[command] = {
-            calls: parseInt(match[1]),
-            totalTime: parseInt(match[2]),
-            avgTime: parseInt(match[2]) / parseInt(match[1])
-          };
-        }
-      }
-    });
-    
-    return stats;
-  }
-
-  parseInfo(infoString) {
-    const info = {};
-    infoString.split('\r\n').forEach(line => {
-      if (line && !line.startsWith('#')) {
-        const [key, value] = line.split(':');
-        if (key && value) {
-          info[key] = value;
-        }
-      }
-    });
-    return info;
-  }
-}
-```
-
-## Best Practices
-
-### 1. Gestión de Conexiones
-```javascript
-// Usar pool de conexiones
-const redis = new Redis({
-  host: 'localhost',
-  port: 6379,
-  maxRetriesPerRequest: 3,
-  retryDelayOnFailover: 100,
-  lazyConnect: true
-});
-
-// Manejar eventos de conexión
-redis.on('connect', () => console.log('Redis conectado'));
-redis.on('error', (err) => console.error('Redis error:', err));
-redis.on('close', () => console.log('Redis desconectado'));
-```
-
-### 2. Naming Conventions
-```javascript
-// Usar namespaces claros
-const userKey = `user:${userId}`;
-const sessionKey = `session:${sessionId}`;
-const cacheKey = `cache:products:${categoryId}`;
-
-// Incluir TTL en el nombre cuando sea relevante
-const shortCacheKey = `cache:1h:product:${productId}`;
-const longCacheKey = `cache:24h:category:${categoryId}`;
-```
-
-### 3. Manejo de Errores
-```javascript
-class SafeRedisClient {
-  constructor(redis) {
-    this.redis = redis;
-  }
-
-  async safeGet(key, defaultValue = null) {
-    try {
-      const result = await this.redis.get(key);
-      return result !== null ? result : defaultValue;
-    } catch (error) {
-      console.error(`Error getting key ${key}:`, error);
-      return defaultValue;
-    }
-  }
-
-  async safeSet(key, value, ttl = null) {
-    try {
-      if (ttl) {
-        await this.redis.setex(key, ttl, value);
-      } else {
-        await this.redis.set(key, value);
-      }
-      return true;
-    } catch (error) {
-      console.error(`Error setting key ${key}:`, error);
-      return false;
-    }
-  }
-}
-```
-
-## API Reference
-
-### Métodos de Conexión
-- `connect()` - Establecer conexión
-- `disconnect()` - Cerrar conexión
-- `ping()` - Verificar conectividad
-
-### Operaciones String
-- `set(key, value)` - Establecer valor
-- `get(key)` - Obtener valor
-- `setex(key, seconds, value)` - Set con expiración
-- `incr(key)` - Incrementar
-- `decr(key)` - Decrementar
-- `append(key, value)` - Agregar al final
-
-### Operaciones Hash
-- `hset(key, field, value)` - Set campo hash
-- `hget(key, field)` - Get campo hash
-- `hmset(key, object)` - Set múltiples campos
-- `hgetall(key)` - Get todos los campos
-- `hdel(key, ...fields)` - Eliminar campos
-
-### Operaciones List
-- `lpush(key, ...values)` - Push izquierda
-- `rpush(key, ...values)` - Push derecha
-- `lpop(key)` - Pop izquierda
-- `rpop(key)` - Pop derecha
-- `lrange(key, start, stop)` - Rango de lista
-
-### Operaciones Set
-- `sadd(key, ...members)` - Agregar miembros
-- `srem(key, ...members)` - Remover miembros
-- `smembers(key)` - Todos los miembros
-- `sinter(...keys)` - Intersección
-- `sunion(...keys)` - Unión
-
-### Operaciones Sorted Set
-- `zadd(key, score, member)` - Agregar con score
-- `zrange(key, start, stop)` - Rango por posición
-- `zrevrange(key, start, stop)` - Rango reverso
-- `zscore(key, member)` - Obtener score
-- `zrank(key, member)` - Obtener ranking
-
-## Licencia
-
-MIT License - ver archivo LICENSE para detalles.
-
-## Contribuir
-
-Las contribuciones son bienvenidas. Por favor:
-
-1. Fork el repositorio
-2. Crear una rama feature (`git checkout -b feature/nueva-funcionalidad`)
-3. Commit los cambios (`git commit -am 'Agregar nueva funcionalidad'`)
-4. Push a la rama (`git push origin feature/nueva-funcionalidad`)
-5. Crear un Pull Request
-
-## Soporte
-
-- **Documentación**: [QueryBuilder Docs](https://github.com/tu-usuario/querybuilder)
-- **Issues**: [GitHub Issues](https://github.com/tu-usuario/querybuilder/issues)
-- **Redis Docs**: [Redis Official Documentation](https://redis.io/documentation)
+- [@querybuilder/core](../core/README.md)
+- [@querybuilder/mongodb](../mongodb/README.md)
+- [@querybuilder/mysql](../mysql/README.md)
+- [@querybuilder/postgresql](../postgresql/README.md)
+- [@querybuilder/sqlite](../sqlite/README.md)
+- [Redis Documentation](https://redis.io/docs/)
+- [Node Redis Client](https://github.com/redis/node-redis)
+- [IORedis](https://github.com/luin/ioredis)
