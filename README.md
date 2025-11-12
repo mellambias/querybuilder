@@ -111,11 +111,11 @@ const mongoDB = config.databases.MongoDB
 const qb = new QueryBuilder(MongoDB).driver(mongoDB.driver, mongoDB.params);
 
 // Operaciones NoSQL con sintaxis familiar
-await qb.collection("users")
+await qb.table("users")
   .insert({ name: "Juan", email: "juan@email.com" })
   .execute();
 
-const users = await qb.collection("users")
+const users = await qb.table("users")
   .select()
   .where("name", "Juan")
   .execute();
@@ -204,8 +204,13 @@ import config from "./config.js";
 const chroma = config.databases.Chroma;
 const qb = new QueryBuilder(Chroma).driver(chroma.driver, chroma.params);
 
-// Búsqueda semántica con embeddings
-await qb.collection("documents")
+// Crear/obtener colección de vectores
+const collection = await qb.getOrCreateCollection("documents", {
+  metadata: { description: "Document embeddings" }
+}).execute();
+
+// Agregar documentos con embeddings
+await qb.table("documents")
   .add({
     ids: ["doc1", "doc2"],
     documents: ["The cat sat on the mat", "The dog ran in the park"],
@@ -213,8 +218,8 @@ await qb.collection("documents")
   })
   .execute();
 
-// Búsqueda por similitud
-const results = await qb.collection("documents")
+// Búsqueda por similitud semántica
+const results = await qb.table("documents")
   .query({
     query_texts: ["pet on furniture"],
     n_results: 5
@@ -238,13 +243,17 @@ El QueryBuilder proporciona una interfaz consistente para múltiples paradigmas 
 
 ### API Consistente
 
+QueryBuilder unifica la sintaxis usando siempre `.table()` para todas las bases de datos:
+
 | Operación | SQL | NoSQL | Distribuido | Vector |
 |-----------|-----|-------|-------------|--------|
-| **Insertar** | `.table("users").insert({...})` | `.collection("users").insert({...})` | `.table("events").insert({...})` | `.collection("docs").add({...})` |
-| **Consultar** | `.table("users").select("*")` | `.collection("users").select()` | `.table("events").select()` | `.collection("docs").query({...})` |
+| **Insertar** | `.table("users").insert({...})` | `.table("users").insert({...})` | `.table("events").insert({...})` | `.table("docs").add({...})` |
+| **Consultar** | `.table("users").select("*")` | `.table("users").select()` | `.table("events").select()` | `.table("docs").query({...})` |
 | **Filtrar** | `.where("name", "Juan")` | `.where("name", "Juan")` | `.where("user_id", "uuid")` | `.where({type: "story"})` |
-| **Actualizar** | `.table("users").update({...})` | `.collection("users").update({...})` | `.table("events").update({...})` | `.collection("docs").update({...})` |
-| **Eliminar** | `.table("users").delete()` | `.collection("users").delete()` | `.table("events").delete()` | `.collection("docs").delete()` |
+| **Actualizar** | `.table("users").update({...})` | `.table("users").update({...})` | `.table("events").update({...})` | `.table("docs").update({...})` |
+| **Eliminar** | `.table("users").delete()` | `.table("users").delete()` | `.table("events").delete()` | `.table("docs").delete()` |
+
+**Nota**: En bases de datos NoSQL y Vector, `.table()` actúa como alias para trabajar con colecciones o espacios de datos, manteniendo la API consistente.
 
 ## 🏗️ **Arquitectura Modular**
 
